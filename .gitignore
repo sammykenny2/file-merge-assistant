@@ -1,0 +1,56 @@
+
+# === .NET ===
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.user
+*.suo
+*.cache
+*.nupkg
+*.snupkg
+
+# === .NET Build ===
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# === Visual Studio ===
+.vs/
+*.rsuser
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# === JetBrains Rider ===
+.idea/
+*.sln.iml
+
+# === NuGet ===
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# === Test Results ===
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+TestResult.xml
+coverage*/
+*.coverage
+*.coveragexml
+
+# === Publish ===
+publish/
+PublishOutput/

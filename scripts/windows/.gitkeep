@@ -1,0 +1,3 @@
+# Windows scripts directory
+# Use PowerShell (.ps1) or Batch (.bat, .cmd) scripts
+# Naming convention: PascalCase Verb-Noun (e.g., Setup-Environment.ps1)
