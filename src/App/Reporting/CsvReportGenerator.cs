@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using FileMergeAssistant.Models;
 
@@ -29,8 +30,8 @@ public class CsvReportGenerator : IReportGenerator
         sb.Append(EscapeCsv(file.FilePath)).Append(',');
         sb.Append(file.SizeBytes).Append(',');
         sb.Append(EscapeCsv(file.Hash ?? "")).Append(',');
-        sb.Append(file.CreatedUtc.ToString("o")).Append(',');
-        sb.AppendLine(file.ModifiedUtc.ToString("o"));
+        sb.Append(file.CreatedUtc.ToString("o", CultureInfo.InvariantCulture)).Append(',');
+        sb.AppendLine(file.ModifiedUtc.ToString("o", CultureInfo.InvariantCulture));
       }
       groupIndex++;
     }

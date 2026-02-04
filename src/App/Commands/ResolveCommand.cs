@@ -73,19 +73,36 @@ public static class ResolveCommand
     {
       foreach (var action in decision.Actions)
       {
-        switch (action.Action)
+        try
         {
-          case ResolveAction.Delete:
-            var fileSize = new FileInfo(action.FilePath).Length;
-            await fileOps.DeleteAsync(action.FilePath, dryRun);
-            deletedCount++;
-            freedBytes += fileSize;
-            break;
+          switch (action.Action)
+          {
+            case ResolveAction.Delete:
+              if (!File.Exists(action.FilePath))
+              {
+                logger.Warning("File not found, skipping delete: {FilePath}", action.FilePath);
+                break;
+              }
+              var fileSize = new FileInfo(action.FilePath).Length;
+              await fileOps.DeleteAsync(action.FilePath, dryRun);
+              deletedCount++;
+              freedBytes += fileSize;
+              break;
 
-          case ResolveAction.Move when action.MoveDestination != null:
-            await fileOps.MoveAsync(action.FilePath, action.MoveDestination, dryRun);
-            movedCount++;
-            break;
+            case ResolveAction.Move when action.MoveDestination != null:
+              if (!File.Exists(action.FilePath))
+              {
+                logger.Warning("File not found, skipping move: {FilePath}", action.FilePath);
+                break;
+              }
+              await fileOps.MoveAsync(action.FilePath, action.MoveDestination, dryRun);
+              movedCount++;
+              break;
+          }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+          logger.Warning(ex, "Failed to process file: {FilePath}", action.FilePath);
         }
       }
     }

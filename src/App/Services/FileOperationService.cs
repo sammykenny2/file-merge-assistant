@@ -19,8 +19,15 @@ public class FileOperationService : IFileOperationService
       return Task.CompletedTask;
     }
 
-    _logger.Information("Deleting: {FilePath}", filePath);
-    File.Delete(filePath);
+    try
+    {
+      _logger.Information("Deleting: {FilePath}", filePath);
+      File.Delete(filePath);
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+    {
+      _logger.Warning(ex, "Failed to delete file: {FilePath}", filePath);
+    }
     return Task.CompletedTask;
   }
 
@@ -36,8 +43,15 @@ public class FileOperationService : IFileOperationService
     if (!string.IsNullOrEmpty(destDir))
       Directory.CreateDirectory(destDir);
 
-    _logger.Information("Moving: {Source} -> {Destination}", sourcePath, destinationPath);
-    File.Move(sourcePath, destinationPath, overwrite: false);
+    try
+    {
+      _logger.Information("Moving: {Source} -> {Destination}", sourcePath, destinationPath);
+      File.Move(sourcePath, destinationPath, overwrite: false);
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+    {
+      _logger.Warning(ex, "Failed to move file: {Source} -> {Destination}", sourcePath, destinationPath);
+    }
     return Task.CompletedTask;
   }
 }

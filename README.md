@@ -13,13 +13,13 @@ File Merge Assistant helps you clean up years of accumulated duplicate files acr
 
 ## Current Status
 
-- [ ] Core file scanning and indexing
-- [ ] SHA-256 / xxHash deduplication
-- [ ] Perceptual image hashing
+- [x] Core file scanning and indexing
+- [x] SHA-256 / xxHash deduplication
+- [x] Perceptual image hashing
 - [ ] Video deduplication
-- [ ] Interactive merge/resolve UI
-- [ ] Dry-run / preview mode
-- [ ] Report generation
+- [x] Interactive merge/resolve UI
+- [x] Dry-run / preview mode
+- [x] Report generation
 
 ## Quick Start
 

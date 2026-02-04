@@ -1,6 +1,6 @@
 namespace FileMergeAssistant.Hashing;
 
-public class HashAlgorithmFactory
+public static class HashAlgorithmFactory
 {
   public static IHashAlgorithm Create(string algorithmName)
   {

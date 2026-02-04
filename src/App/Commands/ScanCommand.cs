@@ -98,7 +98,11 @@ public static class ScanCommand
     await store.SaveAsync(scanResult, resultPath);
     logger.Information("Scan results saved to {Path}", resultPath);
 
-    var reportFormat = Enum.Parse<ReportFormat>(format, ignoreCase: true);
+    if (!Enum.TryParse<ReportFormat>(format, ignoreCase: true, out var reportFormat))
+    {
+      AnsiConsole.MarkupLine($"[red]Error: Invalid report format '{format}'. Supported: console, json, csv, all[/]");
+      return;
+    }
     foreach (var generator in reportGenerators)
     {
       if (reportFormat == ReportFormat.All || generator.Format == reportFormat)
