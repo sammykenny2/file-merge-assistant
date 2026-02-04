@@ -1,0 +1,99 @@
+using System.Runtime.CompilerServices;
+using FileMergeAssistant.Hashing;
+using FileMergeAssistant.Models;
+using Serilog;
+
+namespace FileMergeAssistant.Services;
+
+public class FileScanner : IFileScanner
+{
+  private readonly IMetadataExtractor _metadataExtractor;
+  private readonly ILogger _logger;
+
+  public FileScanner(
+    IMetadataExtractor metadataExtractor,
+    ILogger logger)
+  {
+    _metadataExtractor = metadataExtractor;
+    _logger = logger;
+  }
+
+  public int CountFiles(string path, bool recursive, long minSizeBytes = 0)
+  {
+    var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+    return Directory.EnumerateFiles(path, "*", searchOption)
+      .Count(f =>
+      {
+        try
+        {
+          return new FileInfo(f).Length >= minSizeBytes;
+        }
+        catch
+        {
+          return false;
+        }
+      });
+  }
+
+  public async IAsyncEnumerable<ScannedFile> ScanAsync(
+    ScanOptions options,
+    IProgress<ScanProgress>? progress = null,
+    [EnumeratorCancellation] CancellationToken cancellationToken = default)
+  {
+    var hashAlgorithm = HashAlgorithmFactory.Create(options.Algorithm);
+    var searchOption = options.Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+    var files = Directory.EnumerateFiles(options.Path, "*", searchOption);
+    var totalFiles = CountFiles(options.Path, options.Recursive, options.MinSizeBytes);
+    var scanned = 0;
+
+    foreach (var filePath in files)
+    {
+      cancellationToken.ThrowIfCancellationRequested();
+
+      FileInfo fileInfo;
+      try
+      {
+        fileInfo = new FileInfo(filePath);
+        if (fileInfo.Length < options.MinSizeBytes)
+          continue;
+      }
+      catch (Exception ex)
+      {
+        _logger.Warning(ex, "Could not access file: {FilePath}", filePath);
+        continue;
+      }
+
+      string? hash = null;
+      try
+      {
+        hash = await hashAlgorithm.ComputeHashAsync(filePath, cancellationToken);
+      }
+      catch (NotSupportedException)
+      {
+        _logger.Debug("Skipping unsupported file for {Algorithm}: {FilePath}", options.Algorithm, filePath);
+        continue;
+      }
+      catch (Exception ex)
+      {
+        _logger.Warning(ex, "Could not hash file: {FilePath}", filePath);
+        continue;
+      }
+
+      var metadata = await _metadataExtractor.ExtractAsync(filePath, cancellationToken);
+
+      scanned++;
+      progress?.Report(new ScanProgress(scanned, totalFiles, filePath));
+
+      yield return new ScannedFile
+      {
+        FilePath = filePath,
+        SizeBytes = fileInfo.Length,
+        CreatedUtc = fileInfo.CreationTimeUtc,
+        ModifiedUtc = fileInfo.LastWriteTimeUtc,
+        Hash = hash,
+        HashAlgorithm = hashAlgorithm.Name,
+        Metadata = metadata
+      };
+    }
+  }
+}

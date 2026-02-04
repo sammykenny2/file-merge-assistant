@@ -51,6 +51,9 @@ coverage*/
 *.coverage
 *.coveragexml
 
+# === Claude Code ===
+.claude/
+
 # === Publish ===
 publish/
 PublishOutput/
