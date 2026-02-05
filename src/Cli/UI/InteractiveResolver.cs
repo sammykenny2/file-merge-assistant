@@ -1,12 +1,14 @@
 using System.Globalization;
 using FileMergeAssistant.Models;
+using FileMergeAssistant.Resolution;
+using FileMergeAssistant.Utilities;
 using Spectre.Console;
 
-namespace FileMergeAssistant.UI;
+namespace FileMergeAssistant.Cli.UI;
 
 public static class InteractiveResolver
 {
-  public static List<ResolutionDecision> Resolve(IReadOnlyList<DuplicateGroup> groups)
+  public static List<ResolutionDecision> Resolve(IReadOnlyList<DuplicateGroup> groups, IResolutionService resolutionService)
   {
     var decisions = new List<ResolutionDecision>();
 
@@ -15,7 +17,7 @@ public static class InteractiveResolver
       var group = groups[i];
       AnsiConsole.WriteLine();
       AnsiConsole.Write(new Rule($"[bold]Duplicate Group {i + 1}/{groups.Count}[/]").RuleStyle("grey"));
-      AnsiConsole.MarkupLine($"[grey]Hash: {group.Hash[..Math.Min(16, group.Hash.Length)]}... | {group.Files.Count} files | Wasted: {FormatSize(group.WastedBytes)}[/]");
+      AnsiConsole.MarkupLine($"[grey]Hash: {group.Hash[..Math.Min(16, group.Hash.Length)]}... | {group.Files.Count} files | Wasted: {SizeFormatter.Format(group.WastedBytes)}[/]");
       AnsiConsole.WriteLine();
 
       var table = new Table()
@@ -32,7 +34,7 @@ public static class InteractiveResolver
         table.AddRow(
           (j + 1).ToString(CultureInfo.InvariantCulture),
           file.FilePath,
-          FormatSize(file.SizeBytes),
+          SizeFormatter.Format(file.SizeBytes),
           file.CreatedUtc.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
           file.ModifiedUtc.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
       }
@@ -46,9 +48,9 @@ public static class InteractiveResolver
 
       var decision = action switch
       {
-        "Keep oldest, delete rest" => CreateDecision(group, 0),
-        "Keep newest, delete rest" => CreateDecision(group, group.Files.Count - 1),
-        "Choose which to keep" => CreateManualDecision(group),
+        "Keep oldest, delete rest" => resolutionService.CreateDecision(group, 0),
+        "Keep newest, delete rest" => resolutionService.CreateDecision(group, group.Files.Count - 1),
+        "Choose which to keep" => CreateManualDecision(group, resolutionService),
         _ => null
       };
 
@@ -59,28 +61,7 @@ public static class InteractiveResolver
     return decisions;
   }
 
-  public static List<ResolutionDecision> AutoResolve(IReadOnlyList<DuplicateGroup> groups)
-  {
-    return groups.Select(g => CreateDecision(g, 0)).ToList();
-  }
-
-  private static ResolutionDecision CreateDecision(DuplicateGroup group, int keepIndex)
-  {
-    var actions = group.Files.Select((file, index) => new FileAction
-    {
-      FilePath = file.FilePath,
-      Action = index == keepIndex ? ResolveAction.Keep : ResolveAction.Delete
-    }).ToList();
-
-    return new ResolutionDecision
-    {
-      Group = group,
-      KeptFilePath = group.Files[keepIndex].FilePath,
-      Actions = actions
-    };
-  }
-
-  private static ResolutionDecision CreateManualDecision(DuplicateGroup group)
+  private static ResolutionDecision CreateManualDecision(DuplicateGroup group, IResolutionService resolutionService)
   {
     var choices = group.Files.Select((f, i) => $"{i + 1}: {f.FilePath}").ToList();
     var selected = AnsiConsole.Prompt(
@@ -89,19 +70,6 @@ public static class InteractiveResolver
         .AddChoices(choices));
 
     var keepIndex = int.Parse(selected.Split(':')[0], CultureInfo.InvariantCulture) - 1;
-    return CreateDecision(group, keepIndex);
-  }
-
-  private static string FormatSize(long bytes)
-  {
-    string[] suffixes = ["B", "KB", "MB", "GB", "TB"];
-    var index = 0;
-    var size = (double)bytes;
-    while (size >= 1024 && index < suffixes.Length - 1)
-    {
-      size /= 1024;
-      index++;
-    }
-    return $"{size:F2} {suffixes[index]}";
+    return resolutionService.CreateDecision(group, keepIndex);
   }
 }

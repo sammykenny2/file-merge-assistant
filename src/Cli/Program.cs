@@ -1,8 +1,11 @@
 using System.CommandLine;
-using FileMergeAssistant.Commands;
+using FileMergeAssistant.Cli.Commands;
+using FileMergeAssistant.Cli.Reporting;
 using FileMergeAssistant.Infrastructure;
+using FileMergeAssistant.Reporting;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace FileMergeAssistant;
+namespace FileMergeAssistant.Cli;
 
 static class Program
 {
@@ -12,7 +15,10 @@ static class Program
 
     try
     {
-      var services = ServiceRegistration.BuildServiceProvider(logger);
+      var services = new ServiceCollection()
+        .RegisterCoreServices(logger)
+        .AddSingleton<IReportGenerator, ConsoleReportGenerator>()
+        .BuildServiceProvider();
 
       var rootCommand = new RootCommand("File Merge Assistant - Deduplicate and organize files");
       rootCommand.AddCommand(ScanCommand.Create(services));

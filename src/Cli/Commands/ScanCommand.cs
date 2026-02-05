@@ -1,13 +1,13 @@
 using System.CommandLine;
+using FileMergeAssistant.Cli.UI;
 using FileMergeAssistant.Models;
 using FileMergeAssistant.Reporting;
 using FileMergeAssistant.Services;
-using FileMergeAssistant.UI;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Spectre.Console;
 
-namespace FileMergeAssistant.Commands;
+namespace FileMergeAssistant.Cli.Commands;
 
 public static class ScanCommand
 {

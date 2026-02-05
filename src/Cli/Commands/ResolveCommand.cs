@@ -1,12 +1,14 @@
 using System.CommandLine;
+using FileMergeAssistant.Cli.UI;
 using FileMergeAssistant.Models;
+using FileMergeAssistant.Resolution;
 using FileMergeAssistant.Services;
-using FileMergeAssistant.UI;
+using FileMergeAssistant.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Spectre.Console;
 
-namespace FileMergeAssistant.Commands;
+namespace FileMergeAssistant.Cli.Commands;
 
 public static class ResolveCommand
 {
@@ -39,6 +41,8 @@ public static class ResolveCommand
     var logger = services.GetRequiredService<ILogger>();
     var store = services.GetRequiredService<IScanResultStore>();
     var fileOps = services.GetRequiredService<IFileOperationService>();
+    var resolutionService = services.GetRequiredService<IResolutionService>();
+
     if (!resultPath.Exists)
     {
       AnsiConsole.MarkupLine($"[red]Error: File not found: {resultPath.FullName}[/]");
@@ -62,8 +66,8 @@ public static class ResolveCommand
     AnsiConsole.WriteLine();
 
     var decisions = auto
-      ? InteractiveResolver.AutoResolve(scanResult.DuplicateGroups)
-      : InteractiveResolver.Resolve(scanResult.DuplicateGroups);
+      ? resolutionService.AutoResolveKeepOldest(scanResult.DuplicateGroups)
+      : InteractiveResolver.Resolve(scanResult.DuplicateGroups, resolutionService);
 
     var deletedCount = 0;
     var movedCount = 0;
@@ -111,25 +115,12 @@ public static class ResolveCommand
     AnsiConsole.Write(new Rule("[bold]Resolution Summary[/]").RuleStyle("grey"));
     AnsiConsole.MarkupLine($"  Files deleted: [bold]{deletedCount}[/]");
     AnsiConsole.MarkupLine($"  Files moved: [bold]{movedCount}[/]");
-    AnsiConsole.MarkupLine($"  Space freed: [bold]{FormatSize(freedBytes)}[/]");
+    AnsiConsole.MarkupLine($"  Space freed: [bold]{SizeFormatter.Format(freedBytes)}[/]");
 
     if (dryRun)
       AnsiConsole.MarkupLine("[yellow]  (DRY RUN - no changes were made)[/]");
 
     logger.Information("Resolution complete: {Deleted} deleted, {Moved} moved, {Freed} bytes freed (dry-run: {DryRun})",
       deletedCount, movedCount, freedBytes, dryRun);
-  }
-
-  private static string FormatSize(long bytes)
-  {
-    string[] suffixes = ["B", "KB", "MB", "GB", "TB"];
-    var index = 0;
-    var size = (double)bytes;
-    while (size >= 1024 && index < suffixes.Length - 1)
-    {
-      size /= 1024;
-      index++;
-    }
-    return $"{size:F2} {suffixes[index]}";
   }
 }

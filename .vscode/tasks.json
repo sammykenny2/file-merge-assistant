@@ -18,29 +18,28 @@
       }
     },
     {
-      "label": "publish",
+      "label": "publish-cli",
       "command": "dotnet",
       "type": "process",
       "args": [
         "publish",
-        "${workspaceFolder}/src/App/App.csproj",
+        "${workspaceFolder}/src/Cli/Cli.csproj",
         "/property:GenerateFullPaths=true",
         "/consoleloggerparameters:NoSummary;ForceNoAlign"
       ],
       "problemMatcher": "$msCompile"
     },
     {
-      "label": "watch",
+      "label": "publish-gui",
       "command": "dotnet",
       "type": "process",
       "args": [
-        "watch",
-        "run",
-        "--project",
-        "${workspaceFolder}/src/App/App.csproj"
+        "publish",
+        "${workspaceFolder}/src/Gui/Gui.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary;ForceNoAlign"
       ],
-      "problemMatcher": "$msCompile",
-      "isBackground": true
+      "problemMatcher": "$msCompile"
     },
     {
       "label": "test",
@@ -48,7 +47,7 @@
       "type": "process",
       "args": [
         "test",
-        "${workspaceFolder}/tests/App.Tests/App.Tests.csproj"
+        "${workspaceFolder}/tests/Core.Tests/Core.Tests.csproj"
       ],
       "problemMatcher": "$msCompile",
       "group": {

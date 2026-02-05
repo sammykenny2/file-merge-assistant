@@ -1,4 +1,5 @@
 using FileMergeAssistant.Reporting;
+using FileMergeAssistant.Resolution;
 using FileMergeAssistant.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
@@ -7,10 +8,8 @@ namespace FileMergeAssistant.Infrastructure;
 
 public static class ServiceRegistration
 {
-  public static IServiceProvider BuildServiceProvider(ILogger logger)
+  public static IServiceCollection RegisterCoreServices(this IServiceCollection services, ILogger logger)
   {
-    var services = new ServiceCollection();
-
     services.AddSingleton(logger);
 
     services.AddSingleton<IFileScanner, FileScanner>();
@@ -18,11 +17,11 @@ public static class ServiceRegistration
     services.AddSingleton<IMetadataExtractor, ExifMetadataExtractor>();
     services.AddSingleton<IScanResultStore, JsonScanResultStore>();
     services.AddSingleton<IFileOperationService, FileOperationService>();
+    services.AddSingleton<IResolutionService, ResolutionService>();
 
-    services.AddSingleton<IReportGenerator, ConsoleReportGenerator>();
     services.AddSingleton<IReportGenerator, JsonReportGenerator>();
     services.AddSingleton<IReportGenerator, CsvReportGenerator>();
 
-    return services.BuildServiceProvider();
+    return services;
   }
 }

@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <RootNamespace>FileMergeAssistant</RootNamespace>
-    <AssemblyName>FileMergeAssistant</AssemblyName>
+    <AssemblyName>FileMergeAssistant.Core</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,20 +16,13 @@
     <!-- Photo/video metadata extraction (EXIF, etc.) -->
     <PackageReference Include="MetadataExtractor" Version="2.8.1" />
 
-    <!-- CLI framework -->
-    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-
     <!-- Dependency Injection -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 
     <!-- Logging -->
     <PackageReference Include="Serilog" Version="4.0.2" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
-
-    <!-- Progress reporting -->
-    <PackageReference Include="Spectre.Console" Version="0.49.1" />
   </ItemGroup>
 
 </Project>

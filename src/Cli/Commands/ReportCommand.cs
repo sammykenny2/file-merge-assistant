@@ -4,7 +4,7 @@ using FileMergeAssistant.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
 
-namespace FileMergeAssistant.Commands;
+namespace FileMergeAssistant.Cli.Commands;
 
 public static class ReportCommand
 {

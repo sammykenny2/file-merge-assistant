@@ -2,11 +2,22 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch FileMergeAssistant",
+      "name": "Launch CLI",
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build",
-      "program": "${workspaceFolder}/src/App/bin/Debug/net8.0-windows/FileMergeAssistant.dll",
+      "program": "${workspaceFolder}/src/Cli/bin/Debug/net8.0-windows/fma.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "stopAtEntry": false
+    },
+    {
+      "name": "Launch GUI",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/Gui/bin/Debug/net8.0-windows/FileMergeAssistant.dll",
       "args": [],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
@@ -17,7 +28,7 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build",
-      "program": "${workspaceFolder}/src/App/bin/Debug/net8.0-windows/FileMergeAssistant.dll",
+      "program": "${workspaceFolder}/src/Cli/bin/Debug/net8.0-windows/fma.dll",
       "args": ["scan", "--path", "${workspaceFolder}"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
