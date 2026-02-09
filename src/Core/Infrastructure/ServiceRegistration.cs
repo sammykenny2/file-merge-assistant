@@ -18,9 +18,15 @@ public static class ServiceRegistration
     services.AddSingleton<IScanResultStore, JsonScanResultStore>();
     services.AddSingleton<IFileOperationService, FileOperationService>();
     services.AddSingleton<IResolutionService, ResolutionService>();
+    services.AddSingleton<IRecycleBinService>(sp => new RecycleBinService(logger));
+    services.AddSingleton<IScanCacheService>(sp => new ScanCacheService(logger));
+    services.AddSingleton<ISmartMergeService, SmartMergeService>();
+    services.AddSingleton<IWatchService, WatchService>();
+    services.AddSingleton<ISpaceSavingsAnalyzer, SpaceSavingsAnalyzer>();
 
     services.AddSingleton<IReportGenerator, JsonReportGenerator>();
     services.AddSingleton<IReportGenerator, CsvReportGenerator>();
+    services.AddSingleton<IReportGenerator, PowerShellScriptGenerator>();
 
     return services;
   }

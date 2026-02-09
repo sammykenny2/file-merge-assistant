@@ -5,5 +5,7 @@ public enum ResolveAction
   Keep,
   Delete,
   Move,
-  Skip
+  Skip,
+  Hardlink,
+  Symlink
 }

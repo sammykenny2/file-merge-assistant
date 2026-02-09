@@ -18,6 +18,7 @@
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
@@ -26,7 +27,7 @@
     <TextBlock Grid.Row="0" Text="Scan Results" FontSize="20" FontWeight="Bold" Margin="0,0,0,16" />
 
     <!-- Stats Cards -->
-    <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,16">
+    <UniformGrid Grid.Row="1" Columns="5" Margin="0,0,0,16">
       <Border Style="{StaticResource StatCardStyle}">
         <StackPanel>
           <TextBlock Text="Total Files" Foreground="Gray" FontSize="11" />
@@ -51,83 +52,131 @@
           <TextBlock Text="{Binding WastedSpaceFormatted}" FontSize="22" FontWeight="Bold" Foreground="#D9534F" />
         </StackPanel>
       </Border>
+      <Border Style="{StaticResource StatCardStyle}">
+        <StackPanel>
+          <TextBlock Text="Wasted %" Foreground="Gray" FontSize="11" />
+          <TextBlock Text="{Binding WastedPercentage}" FontSize="22" FontWeight="Bold" Foreground="#D9534F" />
+        </StackPanel>
+      </Border>
     </UniformGrid>
 
+    <!-- Space Savings by Extension -->
+    <Expander Grid.Row="2" Header="Space Savings by Extension" Margin="0,0,0,12">
+      <ListView ItemsSource="{Binding ExtensionBreakdowns}" MaxHeight="150">
+        <ListView.View>
+          <GridView>
+            <GridViewColumn Header="Extension" Width="100" DisplayMemberBinding="{Binding Extension}" />
+            <GridViewColumn Header="Files" Width="80" DisplayMemberBinding="{Binding FileCount}" />
+            <GridViewColumn Header="Wasted" Width="100" DisplayMemberBinding="{Binding WastedSpace}" />
+            <GridViewColumn Header="Groups" Width="80" DisplayMemberBinding="{Binding GroupCount}" />
+          </GridView>
+        </ListView.View>
+      </ListView>
+    </Expander>
+
     <!-- Action Bar -->
-    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12">
+    <WrapPanel Grid.Row="3" Margin="0,0,0,12">
       <Button Content="Keep Oldest"
               Style="{StaticResource SecondaryButtonStyle}"
               Command="{Binding AutoResolveKeepOldestCommand}"
-              Margin="0,0,8,0" />
+              Margin="0,0,8,4" />
       <Button Content="Keep Newest"
               Style="{StaticResource SecondaryButtonStyle}"
               Command="{Binding AutoResolveKeepNewestCommand}"
-              Margin="0,0,8,0" />
+              Margin="0,0,8,4" />
+      <Button Content="Smart (Metadata)"
+              Style="{StaticResource SecondaryButtonStyle}"
+              Command="{Binding AutoResolveByMetadataCommand}"
+              Margin="0,0,8,4"
+              ToolTip="Keep files with best metadata (EXIF, resolution, earliest date)" />
+      <Button Content="Resolve Selected"
+              Style="{StaticResource PrimaryButtonStyle}"
+              Command="{Binding ResolveCommand}"
+              Margin="0,0,8,4" />
+      <Button Content="Undo (Restore All)"
+              Style="{StaticResource SecondaryButtonStyle}"
+              Command="{Binding UndoLastResolveCommand}"
+              Margin="0,0,16,4"
+              ToolTip="Restore all files from recycle bin" />
       <CheckBox Content="Dry Run"
                 IsChecked="{Binding IsDryRun}"
                 VerticalAlignment="Center"
-                Margin="8,0,8,0" />
-      <Button Content="Resolve Selected"
-              Style="{StaticResource PrimaryButtonStyle}"
-              Command="{Binding ResolveCommand}" />
-    </StackPanel>
+                Margin="0,0,8,4" />
+      <CheckBox Content="Use Recycle Bin"
+                IsChecked="{Binding UseRecycleBin}"
+                VerticalAlignment="Center"
+                Margin="0,0,8,4"
+                ToolTip="Move files to recycle bin instead of permanent delete (enables undo)" />
+    </WrapPanel>
 
     <!-- Duplicate Groups List -->
-    <ListView Grid.Row="3"
+    <ListView Grid.Row="4"
               ItemsSource="{Binding DuplicateGroups}"
               BorderThickness="1"
               BorderBrush="#E0E0E0">
       <ListView.ItemTemplate>
         <DataTemplate DataType="{x:Type vm:DuplicateGroupViewModel}">
-          <Expander IsExpanded="{Binding IsExpanded}" Margin="0,4">
-            <Expander.Header>
-              <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{Binding Hash}" FontWeight="SemiBold" Margin="0,0,12,0" />
-                <TextBlock Foreground="Gray">
-                  <TextBlock.Text>
-                    <MultiBinding StringFormat="{}{0} files | Wasted: {1}">
-                      <Binding Path="FileCount" />
-                      <Binding Path="WastedBytes" Converter="{StaticResource BytesToStr}" />
-                    </MultiBinding>
-                  </TextBlock.Text>
-                </TextBlock>
-              </StackPanel>
-            </Expander.Header>
-            <ItemsControl ItemsSource="{Binding Files}" Margin="20,4,0,4">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="{x:Type vm:ScannedFileViewModel}">
-                  <DockPanel Margin="0,2">
-                    <CheckBox IsChecked="{Binding IsSelectedToKeep}"
-                              DockPanel.Dock="Left"
-                              VerticalAlignment="Center"
-                              Margin="0,0,8,0"
-                              ToolTip="Keep this file" />
-                    <TextBlock DockPanel.Dock="Right"
-                               Text="{Binding SizeBytes, Converter={StaticResource BytesToStr}}"
-                               Foreground="Gray"
-                               Margin="8,0,0,0"
-                               VerticalAlignment="Center" />
-                    <TextBlock DockPanel.Dock="Right"
-                               Text="{Binding ModifiedUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
-                               Foreground="Gray"
-                               Margin="8,0,0,0"
-                               VerticalAlignment="Center"
-                               Width="120" />
-                    <StackPanel>
-                      <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding DirectoryName}" Foreground="Gray" FontSize="11" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                  </DockPanel>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </Expander>
+          <Border Margin="0,4" Padding="4">
+            <DockPanel>
+              <CheckBox DockPanel.Dock="Right"
+                        Content="Skip"
+                        IsChecked="{Binding IsSkipped}"
+                        VerticalAlignment="Top"
+                        Margin="8,4,0,0"
+                        ToolTip="Skip this group during resolution" />
+              <Expander IsExpanded="{Binding IsExpanded}">
+                <Expander.Header>
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding Hash}" FontWeight="SemiBold" Margin="0,0,12,0" />
+                    <TextBlock Foreground="Gray">
+                      <TextBlock.Text>
+                        <MultiBinding StringFormat="{}{0} files | Wasted: {1}">
+                          <Binding Path="FileCount" />
+                          <Binding Path="WastedBytes" Converter="{StaticResource BytesToStr}" />
+                        </MultiBinding>
+                      </TextBlock.Text>
+                    </TextBlock>
+                  </StackPanel>
+                </Expander.Header>
+                <ItemsControl ItemsSource="{Binding Files}" Margin="20,4,0,4">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:ScannedFileViewModel}">
+                      <DockPanel Margin="0,2">
+                        <CheckBox IsChecked="{Binding IsSelectedToKeep}"
+                                  DockPanel.Dock="Left"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,8,0"
+                                  ToolTip="Keep this file" />
+                        <TextBlock DockPanel.Dock="Right"
+                                   Text="{Binding SizeBytes, Converter={StaticResource BytesToStr}}"
+                                   Foreground="Gray"
+                                   Margin="8,0,0,0"
+                                   VerticalAlignment="Center" />
+                        <TextBlock DockPanel.Dock="Right"
+                                   Text="{Binding ModifiedUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                   Foreground="Gray"
+                                   Margin="8,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Width="120" />
+                        <StackPanel>
+                          <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding DirectoryName}" Foreground="Gray" FontSize="11" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding MetadataSummary}" Foreground="#5B9BD5" FontSize="11"
+                                     Visibility="{Binding HasMetadata, Converter={StaticResource BoolToVis}}" />
+                        </StackPanel>
+                      </DockPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Expander>
+            </DockPanel>
+          </Border>
         </DataTemplate>
       </ListView.ItemTemplate>
     </ListView>
 
     <!-- Resolution Status -->
-    <TextBlock Grid.Row="4"
+    <TextBlock Grid.Row="5"
                Text="{Binding ResolveStatusText}"
                Margin="0,8,0,0"
                Foreground="Gray" />

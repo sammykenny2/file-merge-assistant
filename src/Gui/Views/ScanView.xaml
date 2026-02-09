@@ -50,8 +50,25 @@
       <TextBox Text="{Binding MinSizeBytes, UpdateSourceTrigger=PropertyChanged}"
                IsEnabled="{Binding IsScanning, Converter={StaticResource InverseBool}}"
                Padding="6,4"
-               Margin="0,0,0,20"
+               Margin="0,0,0,12"
                Width="200"
+               HorizontalAlignment="Left" />
+
+      <!-- Exclusion Patterns -->
+      <TextBlock Text="Exclude Extensions (comma-separated, e.g., .tmp,.sys,.log)" FontWeight="SemiBold" Margin="0,0,0,4" />
+      <TextBox Text="{Binding ExcludeExtensionsText, UpdateSourceTrigger=PropertyChanged}"
+               IsEnabled="{Binding IsScanning, Converter={StaticResource InverseBool}}"
+               Padding="6,4"
+               Margin="0,0,0,12"
+               Width="400"
+               HorizontalAlignment="Left" />
+
+      <TextBlock Text="Exclude Folder Patterns (comma-separated, e.g., node_modules,.git)" FontWeight="SemiBold" Margin="0,0,0,4" />
+      <TextBox Text="{Binding ExcludePatternsText, UpdateSourceTrigger=PropertyChanged}"
+               IsEnabled="{Binding IsScanning, Converter={StaticResource InverseBool}}"
+               Padding="6,4"
+               Margin="0,0,0,20"
+               Width="400"
                HorizontalAlignment="Left" />
 
       <!-- Scan Button -->
