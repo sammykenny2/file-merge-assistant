@@ -54,4 +54,56 @@ public class FileOperationService : IFileOperationService
     }
     return Task.CompletedTask;
   }
+
+  public Task CreateHardlinkAsync(string sourcePath, string linkPath, bool dryRun, CancellationToken cancellationToken = default)
+  {
+    if (dryRun)
+    {
+      _logger.Information("[DRY RUN] Would create hardlink: {Link} -> {Source}", linkPath, sourcePath);
+      return Task.CompletedTask;
+    }
+
+    var destDir = Path.GetDirectoryName(linkPath);
+    if (!string.IsNullOrEmpty(destDir))
+      Directory.CreateDirectory(destDir);
+
+    try
+    {
+      _logger.Information("Creating hardlink: {Link} -> {Source}", linkPath, sourcePath);
+      if (File.Exists(linkPath))
+        File.Delete(linkPath);
+      File.CreateSymbolicLink(linkPath, sourcePath);
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+    {
+      _logger.Warning(ex, "Failed to create hardlink: {Link} -> {Source}", linkPath, sourcePath);
+    }
+    return Task.CompletedTask;
+  }
+
+  public Task CreateSymlinkAsync(string targetPath, string linkPath, bool dryRun, CancellationToken cancellationToken = default)
+  {
+    if (dryRun)
+    {
+      _logger.Information("[DRY RUN] Would create symlink: {Link} -> {Target}", linkPath, targetPath);
+      return Task.CompletedTask;
+    }
+
+    var destDir = Path.GetDirectoryName(linkPath);
+    if (!string.IsNullOrEmpty(destDir))
+      Directory.CreateDirectory(destDir);
+
+    try
+    {
+      _logger.Information("Creating symlink: {Link} -> {Target}", linkPath, targetPath);
+      if (File.Exists(linkPath))
+        File.Delete(linkPath);
+      File.CreateSymbolicLink(linkPath, targetPath);
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+    {
+      _logger.Warning(ex, "Failed to create symlink: {Link} -> {Target}", linkPath, targetPath);
+    }
+    return Task.CompletedTask;
+  }
 }

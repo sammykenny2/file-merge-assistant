@@ -24,7 +24,7 @@ public partial class ReportsViewModel : ObservableObject
   [ObservableProperty]
   private string _statusText = string.Empty;
 
-  public ObservableCollection<string> Formats { get; } = ["Json", "Csv"];
+  public ObservableCollection<string> Formats { get; } = ["Json", "Csv", "PowerShell"];
 
   public ReportsViewModel(IEnumerable<IReportGenerator> reportGenerators)
   {
@@ -41,12 +41,19 @@ public partial class ReportsViewModel : ObservableObject
     if (!Enum.TryParse<ReportFormat>(SelectedFormat, ignoreCase: true, out var format))
       return;
 
-    var extension = format == ReportFormat.Json ? "json" : "csv";
+    var extension = format switch
+    {
+      ReportFormat.Json => "json",
+      ReportFormat.Csv => "csv",
+      ReportFormat.PowerShell => "ps1",
+      _ => "json"
+    };
+
     var dialog = new SaveFileDialog
     {
       Title = "Export Report",
       Filter = $"{SelectedFormat} files (*.{extension})|*.{extension}|All files (*.*)|*.*",
-      FileName = $"scan-report.{extension}"
+      FileName = format == ReportFormat.PowerShell ? "resolve-duplicates.ps1" : $"scan-report.{extension}"
     };
 
     if (dialog.ShowDialog() != true)

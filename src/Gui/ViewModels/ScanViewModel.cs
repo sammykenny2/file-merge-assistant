@@ -44,7 +44,13 @@ public partial class ScanViewModel : ObservableObject, IDisposable
   [ObservableProperty]
   private string _statusText = string.Empty;
 
-  public ObservableCollection<string> Algorithms { get; } = ["sha256", "xxhash", "perceptual"];
+  [ObservableProperty]
+  private string _excludeExtensionsText = string.Empty;
+
+  [ObservableProperty]
+  private string _excludePatternsText = string.Empty;
+
+  public ObservableCollection<string> Algorithms { get; } = ["sha256", "xxhash", "perceptual", "video-perceptual"];
 
   public event EventHandler<ScanResult>? ScanCompleted;
 
@@ -83,12 +89,17 @@ public partial class ScanViewModel : ObservableObject, IDisposable
 
     try
     {
+      var excludeExtensions = ParseCommaSeparated(ExcludeExtensionsText);
+      var excludePatterns = ParseCommaSeparated(ExcludePatternsText);
+
       var options = new ScanOptions
       {
         Path = SelectedPath,
         Recursive = IsRecursive,
         Algorithm = SelectedAlgorithm,
-        MinSizeBytes = MinSizeBytes
+        MinSizeBytes = MinSizeBytes,
+        ExcludeExtensions = excludeExtensions,
+        ExcludePatterns = excludePatterns
       };
 
       TotalFiles = _fileScanner.CountFiles(SelectedPath, IsRecursive, MinSizeBytes);
@@ -136,6 +147,16 @@ public partial class ScanViewModel : ObservableObject, IDisposable
       _cts?.Dispose();
       _cts = null;
     }
+  }
+
+  private static List<string> ParseCommaSeparated(string text)
+  {
+    if (string.IsNullOrWhiteSpace(text))
+      return [];
+
+    return text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+      .Where(s => !string.IsNullOrEmpty(s))
+      .ToList();
   }
 
   public void Dispose()

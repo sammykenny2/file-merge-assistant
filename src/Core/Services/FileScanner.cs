@@ -63,6 +63,9 @@ public class FileScanner : IFileScanner
         continue;
       }
 
+      if (IsExcluded(filePath, options))
+        continue;
+
       string? hash = null;
       try
       {
@@ -95,5 +98,29 @@ public class FileScanner : IFileScanner
         Metadata = metadata
       };
     }
+  }
+
+  private static bool IsExcluded(string filePath, ScanOptions options)
+  {
+    if (options.ExcludeExtensions.Count > 0)
+    {
+      var ext = Path.GetExtension(filePath);
+      if (options.ExcludeExtensions.Any(e =>
+        string.Equals(e.StartsWith('.') ? e : "." + e, ext, StringComparison.OrdinalIgnoreCase)))
+        return true;
+    }
+
+    if (options.ExcludePatterns.Count > 0)
+    {
+      var normalizedPath = filePath.Replace('\\', '/');
+      foreach (var pattern in options.ExcludePatterns)
+      {
+        var normalizedPattern = pattern.Replace('\\', '/');
+        if (normalizedPath.Contains(normalizedPattern, StringComparison.OrdinalIgnoreCase))
+          return true;
+      }
+    }
+
+    return false;
   }
 }

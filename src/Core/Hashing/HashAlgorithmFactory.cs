@@ -9,7 +9,8 @@ public static class HashAlgorithmFactory
       "sha256" => new Sha256HashAlgorithm(),
       "xxhash" => new XxHashAlgorithm(),
       "perceptual" => new PerceptualHashAlgorithm(),
-      _ => throw new ArgumentException($"Unknown hash algorithm: {algorithmName}. Supported: sha256, xxhash, perceptual")
+      "video-perceptual" => new VideoFrameHashAlgorithm(),
+      _ => throw new ArgumentException($"Unknown hash algorithm: {algorithmName}. Supported: sha256, xxhash, perceptual, video-perceptual")
     };
   }
 }

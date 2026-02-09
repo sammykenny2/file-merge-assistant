@@ -11,6 +11,9 @@ public partial class DuplicateGroupViewModel : ObservableObject
   [ObservableProperty]
   private bool _isExpanded;
 
+  [ObservableProperty]
+  private bool _isSkipped;
+
   public ObservableCollection<ScannedFileViewModel> Files { get; }
 
   public string Hash => Group.Hash[..Math.Min(16, Group.Hash.Length)] + "...";
@@ -26,6 +29,8 @@ public partial class DuplicateGroupViewModel : ObservableObject
 
   public ResolutionDecision? CreateResolutionDecision()
   {
+    if (IsSkipped) return null;
+
     var keptFile = Files.FirstOrDefault(f => f.IsSelectedToKeep);
     if (keptFile == null)
       return null;

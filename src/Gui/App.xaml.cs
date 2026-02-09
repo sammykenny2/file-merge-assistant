@@ -1,8 +1,6 @@
 using System.Windows;
 using FileMergeAssistant.Gui.ViewModels;
 using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Reporting;
-using FileMergeAssistant.Resolution;
 using FileMergeAssistant.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

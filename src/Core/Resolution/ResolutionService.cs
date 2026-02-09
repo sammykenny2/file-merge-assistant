@@ -14,6 +14,26 @@ public class ResolutionService : IResolutionService
     return groups.Select(g => CreateDecision(g, g.Files.Count - 1)).ToList();
   }
 
+  public List<ResolutionDecision> AutoResolveByMetadata(IReadOnlyList<DuplicateGroup> groups)
+  {
+    return groups.Select(g =>
+    {
+      var bestIndex = FindBestFileByMetadata(g);
+      return CreateDecision(g, bestIndex);
+    }).ToList();
+  }
+
+  public List<ResolutionDecision> AutoResolveByFolderPriority(
+    IReadOnlyList<DuplicateGroup> groups,
+    IReadOnlyList<FolderPriority> folderPriorities)
+  {
+    return groups.Select(g =>
+    {
+      var bestIndex = FindBestFileByFolderPriority(g, folderPriorities);
+      return CreateDecision(g, bestIndex);
+    }).ToList();
+  }
+
   public ResolutionDecision CreateDecision(DuplicateGroup group, int keepIndex)
   {
     var actions = group.Files.Select((file, index) => new FileAction
@@ -28,5 +48,77 @@ public class ResolutionService : IResolutionService
       KeptFilePath = group.Files[keepIndex].FilePath,
       Actions = actions
     };
+  }
+
+  private static int FindBestFileByMetadata(DuplicateGroup group)
+  {
+    var bestIndex = 0;
+    var bestScore = 0;
+
+    for (var i = 0; i < group.Files.Count; i++)
+    {
+      var file = group.Files[i];
+      var score = 0;
+
+      if (file.Metadata != null)
+      {
+        score += 10;
+
+        if (!string.IsNullOrEmpty(file.Metadata.CameraModel))
+          score += 5;
+
+        if (file.Metadata.Width.HasValue && file.Metadata.Height.HasValue)
+          score += (file.Metadata.Width.Value * file.Metadata.Height.Value) > 0 ? 3 : 0;
+
+        if (file.Metadata.DateTaken.HasValue)
+          score += 5;
+      }
+
+      if (file.SizeBytes >= group.Files.Max(f => f.SizeBytes))
+        score += 2;
+
+      if (file.CreatedUtc <= group.Files.Min(f => f.CreatedUtc))
+        score += 3;
+
+      if (score > bestScore)
+      {
+        bestScore = score;
+        bestIndex = i;
+      }
+    }
+
+    return bestIndex;
+  }
+
+  private static int FindBestFileByFolderPriority(
+    DuplicateGroup group,
+    IReadOnlyList<FolderPriority> folderPriorities)
+  {
+    var bestIndex = 0;
+    var bestPriority = int.MinValue;
+
+    for (var i = 0; i < group.Files.Count; i++)
+    {
+      var filePath = group.Files[i].FilePath.Replace('\\', '/');
+      var priority = 0;
+
+      foreach (var fp in folderPriorities)
+      {
+        var normalizedFolder = fp.FolderPath.Replace('\\', '/');
+        if (filePath.StartsWith(normalizedFolder, StringComparison.OrdinalIgnoreCase))
+        {
+          priority = fp.Priority;
+          break;
+        }
+      }
+
+      if (priority > bestPriority)
+      {
+        bestPriority = priority;
+        bestIndex = i;
+      }
+    }
+
+    return bestIndex;
   }
 }
