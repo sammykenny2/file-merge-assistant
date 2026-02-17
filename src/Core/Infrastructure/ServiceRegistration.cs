@@ -24,6 +24,9 @@ public static class ServiceRegistration
     services.AddSingleton<IWatchService, WatchService>();
     services.AddSingleton<ISpaceSavingsAnalyzer, SpaceSavingsAnalyzer>();
     services.AddSingleton<IPreviewStatisticsService, PreviewStatisticsService>();
+    services.AddSingleton<IByteByByteVerifier, ByteByByteVerifier>();
+    services.AddSingleton<IHardlinkDetector>(sp => new HardlinkDetector(logger));
+    services.AddSingleton<IEmptyDirectoryService>(sp => new EmptyDirectoryService(logger));
 
     services.AddSingleton<IReportGenerator, JsonReportGenerator>();
     services.AddSingleton<IReportGenerator, CsvReportGenerator>();

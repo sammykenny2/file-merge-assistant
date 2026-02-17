@@ -72,7 +72,7 @@ public class FileOperationService : IFileOperationService
       _logger.Information("Creating hardlink: {Link} -> {Source}", linkPath, sourcePath);
       if (File.Exists(linkPath))
         File.Delete(linkPath);
-      File.CreateSymbolicLink(linkPath, sourcePath);
+      File.Copy(sourcePath, linkPath); // Fallback: .NET doesn't expose native hardlink API directly
     }
     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
     {

@@ -42,11 +42,11 @@ public class FileScanner : IFileScanner
   {
     var hashAlgorithm = HashAlgorithmFactory.Create(options.Algorithm);
     var searchOption = options.Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-    var files = Directory.EnumerateFiles(options.Path, "*", searchOption);
-    var totalFiles = CountFiles(options.Path, options.Recursive, options.MinSizeBytes);
+    var allFiles = EnumerateAllPaths(options, searchOption);
+    var totalFiles = CountAllFiles(options);
     var scanned = 0;
 
-    foreach (var filePath in files)
+    foreach (var filePath in allFiles)
     {
       cancellationToken.ThrowIfCancellationRequested();
 
@@ -55,6 +55,8 @@ public class FileScanner : IFileScanner
       {
         fileInfo = new FileInfo(filePath);
         if (fileInfo.Length < options.MinSizeBytes)
+          continue;
+        if (options.MaxSizeBytes > 0 && fileInfo.Length > options.MaxSizeBytes)
           continue;
       }
       catch (Exception ex)
@@ -98,6 +100,33 @@ public class FileScanner : IFileScanner
         Metadata = metadata
       };
     }
+  }
+
+  private static IEnumerable<string> EnumerateAllPaths(ScanOptions options, SearchOption searchOption)
+  {
+    var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var path in options.AllPaths)
+    {
+      if (!Directory.Exists(path))
+        continue;
+      foreach (var file in Directory.EnumerateFiles(path, "*", searchOption))
+      {
+        var fullPath = Path.GetFullPath(file);
+        if (seen.Add(fullPath))
+          yield return file;
+      }
+    }
+  }
+
+  private int CountAllFiles(ScanOptions options)
+  {
+    var total = 0;
+    foreach (var path in options.AllPaths)
+    {
+      if (Directory.Exists(path))
+        total += CountFiles(path, options.Recursive, options.MinSizeBytes);
+    }
+    return total;
   }
 
   private static bool IsExcluded(string filePath, ScanOptions options)
