@@ -24,6 +24,7 @@ static class Program
       rootCommand.AddCommand(ScanCommand.Create(services));
       rootCommand.AddCommand(ResolveCommand.Create(services));
       rootCommand.AddCommand(ReportCommand.Create(services));
+      rootCommand.AddCommand(PreviewCommand.Create(services));
 
       return await rootCommand.InvokeAsync(args);
     }

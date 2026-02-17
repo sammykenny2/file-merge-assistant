@@ -23,6 +23,7 @@ public static class ServiceRegistration
     services.AddSingleton<ISmartMergeService, SmartMergeService>();
     services.AddSingleton<IWatchService, WatchService>();
     services.AddSingleton<ISpaceSavingsAnalyzer, SpaceSavingsAnalyzer>();
+    services.AddSingleton<IPreviewStatisticsService, PreviewStatisticsService>();
 
     services.AddSingleton<IReportGenerator, JsonReportGenerator>();
     services.AddSingleton<IReportGenerator, CsvReportGenerator>();
