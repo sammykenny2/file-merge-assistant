@@ -3,6 +3,7 @@ using FileMergeAssistant.Cli.UI;
 using FileMergeAssistant.Models;
 using FileMergeAssistant.Reporting;
 using FileMergeAssistant.Services;
+using FileMergeAssistant.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Spectre.Console;
@@ -21,6 +22,13 @@ public static class ScanCommand
     var outputOption = new Option<string>(["--output", "-o"], () => "./fma-results/", "Output directory for results");
     var formatOption = new Option<string>(["--format", "-f"], () => "all", "Report format: console, json, csv, all");
     var minSizeOption = new Option<long>("--min-size", () => 0, "Minimum file size in bytes");
+    var maxSizeOption = new Option<long>("--max-size", () => 0, "Maximum file size in bytes (0 = no limit)");
+    var matchModeOption = new Option<string>("--match-mode", () => "content", "Match mode: content, name, name-size");
+    var additionalPathsOption = new Option<string[]>("--also", "Additional directories to scan") { AllowMultipleArgumentsPerToken = true };
+    var protectedPathsOption = new Option<string[]>("--protect", "Protected directories (files here will not be deleted)") { AllowMultipleArgumentsPerToken = true };
+    var skipHardlinksOption = new Option<bool>("--skip-hardlinks", () => false, "Skip files that are hardlinked to each other");
+    var verifyOption = new Option<bool>("--verify", () => false, "Byte-by-byte verification after hash match (paranoid mode)");
+    var cleanupEmptyOption = new Option<bool>("--cleanup-empty", () => false, "Remove empty directories after scan");
 
     command.AddArgument(pathArgument);
     command.AddOption(recursiveOption);
@@ -28,11 +36,34 @@ public static class ScanCommand
     command.AddOption(outputOption);
     command.AddOption(formatOption);
     command.AddOption(minSizeOption);
+    command.AddOption(maxSizeOption);
+    command.AddOption(matchModeOption);
+    command.AddOption(additionalPathsOption);
+    command.AddOption(protectedPathsOption);
+    command.AddOption(skipHardlinksOption);
+    command.AddOption(verifyOption);
+    command.AddOption(cleanupEmptyOption);
 
-    command.SetHandler(async (path, recursive, algorithm, output, format, minSize) =>
+    command.SetHandler(async context =>
     {
-      await ExecuteAsync(services, path, recursive, algorithm, output, format, minSize);
-    }, pathArgument, recursiveOption, algorithmOption, outputOption, formatOption, minSizeOption);
+      var path = context.ParseResult.GetValueForArgument(pathArgument);
+      var recursive = context.ParseResult.GetValueForOption(recursiveOption);
+      var algorithm = context.ParseResult.GetValueForOption(algorithmOption)!;
+      var output = context.ParseResult.GetValueForOption(outputOption)!;
+      var format = context.ParseResult.GetValueForOption(formatOption)!;
+      var minSize = context.ParseResult.GetValueForOption(minSizeOption);
+      var maxSize = context.ParseResult.GetValueForOption(maxSizeOption);
+      var matchMode = context.ParseResult.GetValueForOption(matchModeOption)!;
+      var additionalPaths = context.ParseResult.GetValueForOption(additionalPathsOption) ?? [];
+      var protectedPaths = context.ParseResult.GetValueForOption(protectedPathsOption) ?? [];
+      var skipHardlinks = context.ParseResult.GetValueForOption(skipHardlinksOption);
+      var verify = context.ParseResult.GetValueForOption(verifyOption);
+      var cleanupEmpty = context.ParseResult.GetValueForOption(cleanupEmptyOption);
+
+      await ExecuteAsync(services, path!, recursive, algorithm, output, format,
+        minSize, maxSize, matchMode, additionalPaths, protectedPaths,
+        skipHardlinks, verify, cleanupEmpty);
+    });
 
     return command;
   }
@@ -44,7 +75,14 @@ public static class ScanCommand
     string algorithm,
     string output,
     string format,
-    long minSize)
+    long minSize,
+    long maxSize,
+    string matchMode,
+    string[] additionalPaths,
+    string[] protectedPaths,
+    bool skipHardlinks,
+    bool verify,
+    bool cleanupEmpty)
   {
     var logger = services.GetRequiredService<ILogger>();
     var scanner = services.GetRequiredService<IFileScanner>();
@@ -61,17 +99,34 @@ public static class ScanCommand
     var options = new ScanOptions
     {
       Path = path.FullName,
+      AdditionalPaths = additionalPaths.ToList(),
       Recursive = recursive,
       Algorithm = algorithm,
+      MatchMode = matchMode,
       OutputDirectory = output,
-      MinSizeBytes = minSize
+      MinSizeBytes = minSize,
+      MaxSizeBytes = maxSize,
+      ProtectedPaths = protectedPaths.ToList(),
+      SkipHardlinks = skipHardlinks,
+      ByteByByteVerification = verify,
+      CleanupEmptyDirectories = cleanupEmpty
     };
 
     AnsiConsole.MarkupLine($"[bold]Scanning:[/] {path.FullName}");
-    AnsiConsole.MarkupLine($"[grey]Algorithm: {algorithm} | Recursive: {recursive} | Min size: {minSize} bytes[/]");
+    if (additionalPaths.Length > 0)
+      AnsiConsole.MarkupLine($"[bold]Also scanning:[/] {string.Join(", ", additionalPaths)}");
+    AnsiConsole.MarkupLine($"[grey]Algorithm: {algorithm} | Mode: {matchMode} | Recursive: {recursive}[/]");
+    if (minSize > 0 || maxSize > 0)
+      AnsiConsole.MarkupLine($"[grey]Size filter: {SizeFormatter.Format(minSize)} - {(maxSize > 0 ? SizeFormatter.Format(maxSize) : "no limit")}[/]");
+    if (verify)
+      AnsiConsole.MarkupLine("[grey]Byte-by-byte verification enabled (paranoid mode)[/]");
+    if (skipHardlinks)
+      AnsiConsole.MarkupLine("[grey]Hardlink detection enabled[/]");
+    if (protectedPaths.Length > 0)
+      AnsiConsole.MarkupLine($"[grey]Protected paths: {string.Join(", ", protectedPaths)}[/]");
     AnsiConsole.WriteLine();
 
-    logger.Information("Starting scan of {Path} with algorithm {Algorithm}", path.FullName, algorithm);
+    logger.Information("Starting scan of {Path} with algorithm {Algorithm}, mode {MatchMode}", path.FullName, algorithm, matchMode);
 
     var totalFiles = scanner.CountFiles(path.FullName, recursive, minSize);
     AnsiConsole.MarkupLine($"[grey]Found {totalFiles:N0} files to scan[/]");
@@ -82,7 +137,33 @@ public static class ScanCommand
       totalFiles,
       f => Path.GetFileName(f.FilePath));
 
-    var duplicates = detector.FindDuplicates(scannedFiles);
+    IReadOnlyList<DuplicateGroup> duplicates = matchMode.ToLowerInvariant() switch
+    {
+      "name" => detector.FindDuplicatesByName(scannedFiles),
+      "name-size" => detector.FindDuplicatesByNameAndSize(scannedFiles),
+      _ => detector.FindDuplicatesBySize(scannedFiles)
+    };
+
+    if (skipHardlinks && duplicates.Count > 0)
+    {
+      var hardlinkDetector = services.GetRequiredService<IHardlinkDetector>();
+      var before = duplicates.Count;
+      duplicates = detector.FilterHardlinks(duplicates, hardlinkDetector);
+      var filtered = before - duplicates.Count;
+      if (filtered > 0)
+        AnsiConsole.MarkupLine($"[grey]Filtered {filtered} hardlinked group(s)[/]");
+    }
+
+    if (verify && duplicates.Count > 0)
+    {
+      AnsiConsole.MarkupLine("[grey]Verifying duplicates byte-by-byte...[/]");
+      var verifier = services.GetRequiredService<IByteByByteVerifier>();
+      var before = duplicates.Sum(g => g.Files.Count);
+      duplicates = await detector.VerifyGroupsByteByByteAsync(duplicates, verifier);
+      var after = duplicates.Sum(g => g.Files.Count);
+      if (before != after)
+        AnsiConsole.MarkupLine($"[grey]Verification removed {before - after} false positive(s)[/]");
+    }
 
     var scanResult = new ScanResult
     {
@@ -109,6 +190,14 @@ public static class ScanCommand
       {
         await generator.GenerateAsync(scanResult, output);
       }
+    }
+
+    if (cleanupEmpty)
+    {
+      var emptyDirService = services.GetRequiredService<IEmptyDirectoryService>();
+      var removed = emptyDirService.Cleanup(path.FullName);
+      if (removed > 0)
+        AnsiConsole.MarkupLine($"[grey]Cleaned up {removed} empty director(ies)[/]");
     }
 
     AnsiConsole.WriteLine();

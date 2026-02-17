@@ -14,6 +14,28 @@ public class ResolutionService : IResolutionService
     return groups.Select(g => CreateDecision(g, g.Files.Count - 1)).ToList();
   }
 
+  public List<ResolutionDecision> AutoResolveKeepLargest(IReadOnlyList<DuplicateGroup> groups)
+  {
+    return groups.Select(g =>
+    {
+      var maxSize = g.Files.Max(f => f.SizeBytes);
+      var bestIndex = g.Files.Select((f, i) => (f, i))
+        .First(x => x.f.SizeBytes == maxSize).i;
+      return CreateDecision(g, bestIndex);
+    }).ToList();
+  }
+
+  public List<ResolutionDecision> AutoResolveKeepSmallest(IReadOnlyList<DuplicateGroup> groups)
+  {
+    return groups.Select(g =>
+    {
+      var minSize = g.Files.Min(f => f.SizeBytes);
+      var bestIndex = g.Files.Select((f, i) => (f, i))
+        .First(x => x.f.SizeBytes == minSize).i;
+      return CreateDecision(g, bestIndex);
+    }).ToList();
+  }
+
   public List<ResolutionDecision> AutoResolveByMetadata(IReadOnlyList<DuplicateGroup> groups)
   {
     return groups.Select(g =>
@@ -48,6 +70,41 @@ public class ResolutionService : IResolutionService
       KeptFilePath = group.Files[keepIndex].FilePath,
       Actions = actions
     };
+  }
+
+  public List<ResolutionDecision> ApplyProtectedPaths(
+    List<ResolutionDecision> decisions,
+    IReadOnlyList<string> protectedPaths)
+  {
+    if (protectedPaths.Count == 0)
+      return decisions;
+
+    return decisions.Select(d =>
+    {
+      var newActions = d.Actions.Select(a =>
+      {
+        if (a.Action == ResolveAction.Delete && IsProtected(a.FilePath, protectedPaths))
+          return a with { Action = ResolveAction.Skip };
+        return a;
+      }).ToList();
+
+      return new ResolutionDecision
+      {
+        Group = d.Group,
+        KeptFilePath = d.KeptFilePath,
+        Actions = newActions
+      };
+    }).ToList();
+  }
+
+  private static bool IsProtected(string filePath, IReadOnlyList<string> protectedPaths)
+  {
+    var normalizedFile = Path.GetFullPath(filePath).Replace('\\', '/');
+    return protectedPaths.Any(pp =>
+    {
+      var normalizedProtected = Path.GetFullPath(pp).Replace('\\', '/');
+      return normalizedFile.StartsWith(normalizedProtected, StringComparison.OrdinalIgnoreCase);
+    });
   }
 
   private static int FindBestFileByMetadata(DuplicateGroup group)
