@@ -34,7 +34,7 @@ that proposal awaits product review.
 | [SPEC-001](./specs/SPEC-001-persistent-scan-workbench.md) | Draft | Multi-source scanning, persistent indexing, task states, operation review, and acceptance scenarios |
 | [GUI flow mock](./gui-flow-mock.md) | Draft | Link to the clickable prototype, its stack-by-stack review proposal, assumptions, and open product questions |
 | [PLAN-001](./plans/PLAN-001-batch-consolidation-workbench.md) | Draft | Phased implementation plan with decision gates per ADR, task list, testing strategy, and FR/AC traceability |
-| [ADR-001 to ADR-013](./decisions/README.md) | Mixed | Decision records: the mock's open questions (001–007), requirements D-01, D-03, D-05, D-06 (008–012, mostly proposed; 012 partly accepted), and in-app updates (013, accepted) |
+| [ADR-001 to ADR-013](./decisions/README.md) | Mixed | Decision records: the mock's open questions (001–007), requirements D-01, D-03, D-05, D-06 (008–012), and in-app updates (013). Accepted: 001, 004, 005, 006, 009, 013; 012 partly accepted; the rest proposed |
 
 ## Development Guides
 

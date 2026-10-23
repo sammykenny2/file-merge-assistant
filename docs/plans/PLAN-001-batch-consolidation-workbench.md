@@ -4,7 +4,7 @@
 
 | 欄位 | 值 |
 |------|----|
-| Status | Draft：Phase 0 只剩 Task 0.5（ImageSharp 授權金鑰）；其他階段等相關 ADR 決定後才開始 |
+| Status | In progress：新介面實作中（見 Progress Log 2026-10-23）；Phase 0 只剩 Task 0.5（ImageSharp 授權金鑰） |
 | Owner | 待指定（建議在 Phase 1 前指派 Conductor，負責任務分派與 README 的 Current Status） |
 | Assigned To | 待指定 |
 | Reviewer | 產品負責人審閱計畫；各階段程式碼由非作者的 agent 或人審閱 |
@@ -13,7 +13,7 @@
 ## Related Spec
 
 - [SPEC-001：多來源掃描與持續索引工作流程](../specs/SPEC-001-persistent-scan-workbench.md)（Draft）
-- [ADR-001 至 ADR-012](../decisions/README.md)（皆為 Proposed）
+- [ADR-001 至 ADR-013](../decisions/README.md)（001、004、005、006、009、013 已接受，012 部分接受，其餘 Proposed）
 - [產品需求](../requirements.md)與 [GUI 流程 mock](../gui-flow-mock.md)
 
 [plans 目錄的說明](./README.md)寫明：計畫應在規格核准後建立。目前 SPEC-001 是 Draft，12 份 ADR 都是 Proposed，所以這份計畫是草稿。每個階段開始前，都要先通過下面的決策閘門。
@@ -269,6 +269,7 @@
 | 2026-10-23 | 完成 Task 0.1 至 0.3：solution 建置通過，測試全部通過；新增 Task 0.5（ImageSharp 授權金鑰）。依獨立審閱修正 junction 問題後，測試增為 149 個 |
 | 2026-10-23 | 產品負責人指示升級 .NET 10；完成 Task 0.4：`net10.0-windows` 上建置與 149 個測試通過，沒有已知漏洞的套件 |
 | 2026-10-23 | 產品負責人要求 NSIS 安裝檔、release workflow 與檢查更新：提前完成 Task 2.1，完成 Task 7.1、7.4、7.5、7.6；0.1.0 先以 Debug 設定打包 |
+| 2026-10-23 | 產品負責人要求依 GUI 流程 mock 實作新介面。ADR-001、004、005、006、009 改為 Accepted；ADR-002、003、007、008、010 在會用到它們的 PR 前再確認。順序改為先做畫面：新外殼與 7 個畫面先接上 `IWorkbenchStore` 的示範資料，接著以真實的分段掃描、索引與疊偵測取代示範資料，最後才是會改動檔案的執行與還原 |
 
 ---
 

@@ -39,15 +39,15 @@ Use [000-template.md](./000-template.md) as the starting point for new ADRs.
 | ADR | Title | Status | Date |
 |-----|-------|--------|------|
 | [000-template](./000-template.md) | Template | - | - |
-| [ADR-001](./ADR-001-review-unit-stacks.md) | 以「疊」作為審閱與整理單位 | Proposed | 2026-10-23 |
+| [ADR-001](./ADR-001-review-unit-stacks.md) | 以「疊」作為審閱與整理單位 | Accepted | 2026-10-23 |
 | [ADR-002](./ADR-002-merge-into-keeper.md) | 第一階段加入「合併到正本」 | Proposed | 2026-10-23 |
 | [ADR-003](./ADR-003-protected-source-writes.md) | 受保護來源在合併時的寫入規則 | Proposed | 2026-10-23 |
-| [ADR-004](./ADR-004-candidate-first-scanning.md) | 掃描策略：先記錄結構，只對候選計算內容指紋 | Proposed | 2026-10-23 |
-| [ADR-005](./ADR-005-code-project-awareness.md) | 程式碼專案的特別處理：可重建資料夾與 git 狀態 | Proposed | 2026-10-23 |
-| [ADR-006](./ADR-006-stack-reopen-and-membership.md) | 疊的重新開啟與成員記憶 | Proposed | 2026-10-23 |
+| [ADR-004](./ADR-004-candidate-first-scanning.md) | 掃描策略：先記錄結構，只對候選計算內容指紋 | Accepted | 2026-10-23 |
+| [ADR-005](./ADR-005-code-project-awareness.md) | 程式碼專案的特別處理：可重建資料夾與 git 狀態 | Accepted | 2026-10-23 |
+| [ADR-006](./ADR-006-stack-reopen-and-membership.md) | 疊的重新開啟與成員記憶 | Accepted | 2026-10-23 |
 | [ADR-007](./ADR-007-recycle-area-policy.md) | 回收區的位置、保存期限與清理（D-04） | Proposed | 2026-10-23 |
 | [ADR-008](./ADR-008-sqlite-local-index.md) | 本機索引採用 SQLite（D-01） | Proposed | 2026-10-23 |
-| [ADR-009](./ADR-009-ui-technology.md) | 正式版的 UI 技術（D-03） | Proposed | 2026-10-23 |
+| [ADR-009](./ADR-009-ui-technology.md) | 正式版的 UI 技術（D-03） | Accepted | 2026-10-23 |
 | [ADR-010](./ADR-010-source-identity.md) | 來源身份與重新連接（D-05） | Proposed | 2026-10-23 |
 | [ADR-011](./ADR-011-acceptance-dataset-and-measurement.md) | 驗收資料集與效能量測（D-06 之一） | Proposed | 2026-10-23 |
 | [ADR-012](./ADR-012-release-packaging.md) | 發佈格式與資料位置（D-06 之二） | Partly accepted | 2026-10-23 |
