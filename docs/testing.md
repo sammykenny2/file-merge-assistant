@@ -46,7 +46,7 @@ default:
 
 - `dotnet build file-merge-assistant.sln` succeeds for the Debug configuration.
 - `dotnet test tests/Core.Tests/Core.Tests.csproj` passes all 149 tests; VSTest
-  reports about 1 second of test time.
+  reports under about a second of test time.
 - `dotnet list file-merge-assistant.sln package --vulnerable --include-transitive`
   reports no vulnerable packages.
 - Smoke check: `fma --help` and `fma scan` on a small folder succeed, and the
@@ -54,6 +54,11 @@ default:
 
 The same build and tests also passed on SDK 8.0.426 with `net8.0-windows`
 immediately before the upgrade.
+
+With this SDK, NuGet audit also checks transitive packages, not only direct ones.
+Because `TreatWarningsAsErrors` is on, a new advisory against any transitive
+package fails restore and therefore the build. Fix it by updating or pinning the
+package; record any deliberate suppression here.
 
 To guard against future hangs, add a bounded timeout when diagnosing:
 
@@ -89,10 +94,12 @@ When a test hangs, VSTest writes a sequence attachment under
   the 10.0 SDK. Microsoft.Extensions.DependencyInjection, Microsoft.Extensions.Hosting
   and System.IO.Hashing moved to 10.0.13, Serilog.Extensions.Logging to 10.0.0,
   and Serilog to 4.2.0, the minimum that Serilog.Extensions.Logging 10.0.0 needs.
-  The upgrade also removed the transitive vulnerable packages that the .NET 8 build
-  pulled in (System.Text.Json 8.0.0 in Gui; System.Net.Http and
-  System.Text.RegularExpressions 4.3.0 in Core.Tests): the .NET 10 SDK prunes
-  packages that the shared framework already provides.
+  The upgrade also removed the transitive vulnerable packages that the .NET 8
+  build pulled in. System.Text.Json 8.0.0 left Gui with the
+  Microsoft.Extensions.Hosting 10.0.13 update. System.Net.Http and
+  System.Text.RegularExpressions 4.3.0 left Core.Tests because the .NET 10 SDK
+  prunes packages that the shared framework already provides; restoring with
+  `-p:RestoreEnablePackagePruning=false` brings them back as NU1903 errors.
 
 ### Known Remaining Issues
 

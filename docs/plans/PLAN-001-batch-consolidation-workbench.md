@@ -60,7 +60,7 @@
 - [x] Task 0.1：修正 [testing.md](../testing.md) 記錄的 CA1716（`IWatchService.Stop()`）與 CA1859（`PreviewStatisticsService.BuildDirectoryBreakdown()`），讓 `TreatWarningsAsErrors` 下也能建置。實作時另外發現並修正：GUI 的 CA1305，以及 ImageSharp 2.1.13 的 NuGet 稽核錯誤（升級到 4.1.3）。
 - [x] Task 0.2：找出並修正 `EmptyDirectoryServiceTests.Cleanup_DryRun_Does_Not_Delete` 卡住的原因：dry run 時目錄不會被刪掉，迴圈永遠不會結束。這是產品程式的錯誤，不只是測試的問題。獨立審閱另外發現清理會跟著 junction 走到 root 之外刪除空目錄（改動前就存在），一併修正。
 - [x] Task 0.3：在 testing.md 記錄全部通過的基準：SDK 版本、測試數與耗時。
-- [x] Task 0.4：把所有專案的 `TargetFramework` 升級到 `net10.0-windows`，更新套件，重新跑完整測試。一併處理 testing.md 列出的間接相依漏洞（System.Text.Json、System.Net.Http、System.Text.RegularExpressions）：.NET 10 SDK 會略過框架已提供的套件，這三個不再被引用。
+- [x] Task 0.4：把所有專案的 `TargetFramework` 升級到 `net10.0-windows`，更新套件，重新跑完整測試。一併處理 testing.md 列出的間接相依漏洞（System.Text.Json、System.Net.Http、System.Text.RegularExpressions）：System.Text.Json 隨 Microsoft.Extensions.Hosting 升到 10.0.13 而移除；另外兩個是 .NET 10 SDK 略過框架已提供的套件，所以不再被引用。
 - [ ] Task 0.5：向 Six Labors 申請 ImageSharp 授權金鑰，放在 repo 之外（環境變數或 `SixLaborsLicenseFile`）。沒有金鑰時 Release 建置會失敗；這是 Phase 7 的前置條件。
 
 **Deliverables**：在 .NET 10 上全部通過的測試套件，並記錄在 testing.md。
