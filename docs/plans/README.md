@@ -48,6 +48,7 @@ Use [000-template.md](./000-template.md) as the starting point for new plans.
 |------|-------|--------|--------------|
 | [000-template](./000-template.md) | Template | - | - |
 | [PLAN-001](./PLAN-001-batch-consolidation-workbench.md) | 分批收斂工作台第一階段 | Draft | [SPEC-001](../specs/SPEC-001-persistent-scan-workbench.md) |
+| [PLAN-002](./PLAN-002-pluggable-analysis-engines.md) | 雙分析引擎與 Rust 核心介接 | Draft；尚未開始實作 | [SPEC-002](../specs/SPEC-002-pluggable-analysis-engines.md) |
 <!-- Add new plans above this line -->
 
 ## For AI Agents
@@ -59,3 +60,5 @@ Use [000-template.md](./000-template.md) as the starting point for new plans.
 ---
 
 *See also: [specs/](../specs/) for feature specifications*
+
+Last updated: 2026-10-24.

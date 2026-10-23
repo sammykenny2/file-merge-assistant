@@ -15,6 +15,7 @@
 - [SPEC-001：多來源掃描與持續索引工作流程](../specs/SPEC-001-persistent-scan-workbench.md)（Draft）
 - [ADR-001 至 ADR-013](../decisions/README.md)（001、004、005、006、008、009、010、013 已接受，012 部分接受，其餘 Proposed）
 - [產品需求](../requirements.md)與 [GUI 流程 mock](../gui-flow-mock.md)
+- 2026-10-24 補充：[PLAN-002](./PLAN-002-pluggable-analysis-engines.md) 處理後續雙分析引擎、Rust 包裝及索引相容；其階段尚未開始，不代表本計畫的既有工作需要全面改寫。
 
 [plans 目錄的說明](./README.md)寫明：計畫應在規格核准後建立。目前 SPEC-001 是 Draft，12 份 ADR 都是 Proposed，所以這份計畫是草稿。每個階段開始前，都要先通過下面的決策閘門。
 

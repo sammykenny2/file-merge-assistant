@@ -75,6 +75,7 @@ See [docs/](./docs/) for detailed documentation:
 - [GUI Design Brief](./docs/ux-design-brief.md) — user tasks and handoff for the next layout design
 - [Product Requirements](./docs/requirements.md) — current gaps and proposed scope
 - [GUI Workflow Specification](./docs/specs/SPEC-001-persistent-scan-workbench.md) — draft workflow and acceptance scenarios
+- [Analysis Engine Architecture](./docs/decisions/ADR-015-pluggable-analysis-engines.md) — accepted C# / Czkawka direction, with a [draft spec](./docs/specs/SPEC-002-pluggable-analysis-engines.md) and [implementation plan](./docs/plans/PLAN-002-pluggable-analysis-engines.md); integration has not started
 - [GUI Flow Mock](./docs/gui-flow-mock.md) — clickable prototype link, stack-by-stack review proposal, and open questions
 - [Deployment](./docs/deployment.md) — build the Windows setup program, in-app updates, and the release workflow
 - [Release Notes](./docs/release-notes.md) — changes per version

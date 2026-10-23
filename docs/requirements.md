@@ -1,10 +1,10 @@
 # File Merge Assistant 產品需求
 
-狀態：Draft。最後更新：2026-10-23。
+狀態：Draft。最後更新：2026-10-24。
 
 File Merge Assistant 的目標是讓使用者透過 Windows GUI，持續整理分散在不同資料夾與硬碟的檔案。使用者可以分次加入來源、累積檔案索引，並在看懂差異與影響後，決定保留哪些版本及處理哪些副本。
 
-本階段建立需求與設計依據。畫面 layout 由後續設計人員規劃；本文件不代表功能已交付，也不代表資料庫、去重引擎或安裝格式已選定。
+本文件建立需求與設計依據。畫面 layout 由後續設計人員規劃；本文件不代表功能已交付。技術選型的目前狀態以 [ADR 索引](decisions/README.md) 為準。
 
 ## 已確認的方向
 
@@ -13,6 +13,8 @@ File Merge Assistant 的目標是讓使用者透過 Windows GUI，持續整理�
 - 之後加入新資料夾或重新連接硬碟時，可以與已建立的索引比對。
 - 使用者需要理解保留與處理的依據，並在執行前審閱變更。
 - 目前先完成文件；layout、技術選型與實作分開處理。
+- 2026-10-24：分析引擎採可切換的 C# 與 Rust／`czkawka_core` 實作，產品流程保留在 C# Core；方向見 [ADR-015](decisions/ADR-015-pluggable-analysis-engines.md)，契約與實作順序見 [SPEC-002](specs/SPEC-002-pluggable-analysis-engines.md)、[PLAN-002](plans/PLAN-002-pluggable-analysis-engines.md)。目前尚未實作介接。
+- Windows 仍為主要使用與大量驗證平台；macOS／Linux 為後續方向，需分別驗證後才宣告支援。現有 WPF 不因引擎選型自動更換，UI 技術另行評估。
 
 ## 使用情境
 
@@ -42,7 +44,7 @@ File Merge Assistant 的目標是讓使用者透過 Windows GUI，持續整理�
 | 執行整理 | GUI 自動保留按鈕會直接呼叫執行；Dry Run 預設未勾選 | 保留建議先形成待審閱計畫，再確認執行 |
 | 還原 | GUI 提供專用回收區與全部還原 | 按操作批次追蹤結果，清楚標示可還原範圍 |
 
-現行實作依據：[GUI 掃描](../src/Gui/ViewModels/ScanViewModel.cs)、[CLI 掃描](../src/Cli/Commands/ScanCommand.cs)、[JSON 儲存](../src/Core/Services/JsonScanResultStore.cs)、[重複判定](../src/Core/Services/DuplicateDetector.cs)、[GUI 整理](../src/Gui/ViewModels/ResultsViewModel.cs)。建置與測試限制另見 [testing.md](testing.md)。
+當時實作依據（固定於 `0754699`）：[GUI 掃描](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Gui/ViewModels/ScanViewModel.cs)、[CLI 掃描](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Cli/Commands/ScanCommand.cs)、[JSON 儲存](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Core/Services/JsonScanResultStore.cs)、[重複判定](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Core/Services/DuplicateDetector.cs)、[GUI 整理](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Gui/ViewModels/ResultsViewModel.cs)。目前建置與測試狀態另見 [testing.md](testing.md)。
 
 ## 第一階段需求草案
 
@@ -91,13 +93,13 @@ P0 表示第一個完整工作流程必須具備；P1 表示後續擴充。以�
 
 雲端同步、多使用者協作、自動合併檔案內容，以及無人審閱的相似檔刪除，不在第一階段範圍。檔案索引與資料庫的備份、來源資料的備份及回收區，須作為不同概念處理。
 
-## 待決策項目
+## 技術決策與後續評估
 
 | 編號 | 問題 | 後續決策依據 |
 |------|------|--------------|
 | D-01 | 本機索引是否採 SQLite | 交易、查詢、恢復、遷移與備份需求；SQLite 是候選，提議見 [ADR-008 草稿](decisions/ADR-008-sqlite-local-index.md)。 |
-| D-02 | 保留現有引擎或整合 `czkawka_core` | 演算法、取消／進度介面、索引整合、維護成本與相依套件授權；掃描分段需求見 [ADR-004 草稿](decisions/ADR-004-candidate-first-scanning.md)。 |
-| D-03 | 正式發佈保留 WPF 或調整 UI 技術 | layout 設計、Windows 整合、可測試性與開發成本；現有預覽版為 WPF，提議見 [ADR-009 草稿](decisions/ADR-009-ui-technology.md)。 |
+| D-02 | 已決定雙分析引擎方向，介接尚未實作 | [ADR-015](decisions/ADR-015-pluggable-analysis-engines.md) Accepted：共用抽象搭配有限 C# 實作與 Rust 核心包裝；能力、索引相容及預設值切換依 SPEC-002／PLAN-002 驗證。 |
+| D-03 | 現有 WPF 維持，後續跨平台 UI 重評 | [ADR-009](decisions/ADR-009-ui-technology.md) 補充新的平台方向；Avalonia 僅為技術驗證候選，尚未決定或開始移植。 |
 | D-04 | 回收區位置、容量、保留期間與清理政策 | 跨磁碟行為、可用空間、還原能力及使用者預期；提議見 [ADR-007 草稿](decisions/ADR-007-recycle-area-policy.md)。 |
 | D-05 | 來源身份與重新連接方式 | 磁碟代號變更、同名資料夾、離線硬碟及路徑重新指定；提議見 [ADR-010 草稿](decisions/ADR-010-source-identity.md)。 |
 | D-06 | 驗收資料規模及部署格式 | 真實檔案量與類型、目標硬體、免安裝／NSIS／MSIX 發佈需求；提議分成 [ADR-011 驗收資料集](decisions/ADR-011-acceptance-dataset-and-measurement.md) 與 [ADR-012 發佈格式](decisions/ADR-012-release-packaging.md) 兩份草稿。 |

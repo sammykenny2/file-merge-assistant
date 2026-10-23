@@ -50,6 +50,7 @@ Use [000-template.md](./000-template.md) as the starting point for new specs.
 |------|-------|--------|--------------|
 | [000-template](./000-template.md) | Template | - | - |
 | [SPEC-001](./SPEC-001-persistent-scan-workbench.md) | 多來源掃描與持續索引工作流程 | Draft | [PLAN-001](../plans/PLAN-001-batch-consolidation-workbench.md) (Draft; starts after the related ADRs are decided) |
+| [SPEC-002](./SPEC-002-pluggable-analysis-engines.md) | 可切換的檔案分析引擎 | Draft；方向依 ADR-015 | [PLAN-002](../plans/PLAN-002-pluggable-analysis-engines.md) (Draft; implementation has not started) |
 <!-- Add new specs above this line -->
 
 ## For AI Agents
@@ -62,4 +63,4 @@ Use [000-template.md](./000-template.md) as the starting point for new specs.
 
 *See also: [plans/](../plans/) for implementation plans*
 
-Last updated: 2026-10-23.
+Last updated: 2026-10-24.

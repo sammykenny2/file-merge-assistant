@@ -4,6 +4,8 @@
 
 Accepted（2026-10-23：產品負責人要求依 GUI 流程 mock 實作新介面，採用這份提議）
 
+2026-10-24 補充：D-02 的引擎策略已由 [ADR-015](./ADR-015-pluggable-analysis-engines.md) 決定為可切換的 C#／Czkawka 實作；本 ADR 的完整探索、候選優先與版本化指紋要求繼續適用，介接尚未實作。
+
 ## 背景
 
 - 現行 [`FileScanner.ScanAsync`](../../src/Core/Services/FileScanner.cs) 對每個沒被排除的檔計算 hash（預設 SHA-256）並擷取 metadata，之後才回報該檔的進度。數萬個檔或大型媒體時，第一批結果要等很久。

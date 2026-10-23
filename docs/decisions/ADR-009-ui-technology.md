@@ -4,10 +4,14 @@
 
 Accepted（2026-10-23：產品負責人要求依 GUI 流程 mock 實作新介面，採用這份提議）
 
+### 2026-10-24：跨平台方向補充
+
+產品負責人希望未來也能提供 macOS／Linux 版本，但主要資料與大量驗證仍在 Windows。[ADR-015](./ADR-015-pluggable-analysis-engines.md) 接受保留 C# 工作流程、分析引擎可切換的方向，不全面改寫為 Rust。原本「沒有跨平台需求」的選型前提需重評；現有 WPF 繼續使用，Avalonia 是後續技術驗證候選，尚未決定取代 WPF。本次沒有授權或開始 GUI 移植。
+
 ## 背景
 
 - 現行 GUI 使用 WPF（撰寫時為 `net8.0-windows`，2026-10-23 已升級到 `net10.0-windows`），搭配 CommunityToolkit.Mvvm 與 Microsoft.Extensions.Hosting。畫面分成 Scan、Results、Reports 三個 View。核心邏輯在共用的 `src/Core` 類別庫，CLI 也使用同一套。
-- 產品定位是 Windows 原生工具，沒有跨平台需求。
+- 2026-10-23 決策時定位為 Windows 原生工具，當時沒有跨平台需求；後續方向見上方補充。
 - [GUI 流程 mock](../gui-flow-mock.md) 需要的介面能力：
   - 數千個疊、數千列對照表的清單虛擬化與捲動。
   - 背景掃描時，介面仍保持回應。

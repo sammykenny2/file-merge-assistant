@@ -8,12 +8,15 @@
 | Status | Draft |
 | Owner | 待指定 |
 | Reviewer | 產品負責人與後續設計人員 |
-| 建立與更新日期 | 2026-10-23 |
+| 建立日期 | 2026-10-23 |
+| 更新日期 | 2026-10-24 |
 | Related Plan | [PLAN-001](../plans/PLAN-001-batch-consolidation-workbench.md)（Draft，待相關 ADR 決定後開始） |
 
 ## 摘要
 
 讓使用者透過 GUI 將多個資料夾分次排入掃描工作，累積持久索引，審閱跨來源的重複項目，再以可確認、可追蹤的計畫整理檔案。詳細產品需求以 [requirements.md](../requirements.md) 為準；本規格補充流程、狀態及驗收情境。
+
+2026-10-24 補充：[SPEC-002](./SPEC-002-pluggable-analysis-engines.md) 定義後續可切換的 C#／Czkawka 分析引擎，沿用本規格的完整索引、任務與檔案操作邊界；架構方向依 [ADR-015](../decisions/ADR-015-pluggable-analysis-engines.md)。引擎介接目前尚未實作。
 
 ## 目標
 
@@ -161,7 +164,7 @@ flowchart TD
 
 - [產品需求](../requirements.md)
 - [GUI 設計交接](../ux-design-brief.md)
-- [現有掃描流程](../../src/Gui/ViewModels/ScanViewModel.cs)
-- [現有結果操作](../../src/Gui/ViewModels/ResultsViewModel.cs)
+- [原始基準的掃描流程（0754699）](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Gui/ViewModels/ScanViewModel.cs)
+- [原始基準的結果操作（0754699）](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Gui/ViewModels/ResultsViewModel.cs)
 - [現有 JSON 儲存](../../src/Core/Services/JsonScanResultStore.cs)
 - [測試現況](../testing.md)
