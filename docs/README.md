@@ -33,7 +33,7 @@ that proposal awaits product review.
 | [Product requirements](./requirements.md) | Draft | Product scope, implementation gaps, priorities, and decisions to resolve |
 | [SPEC-001](./specs/SPEC-001-persistent-scan-workbench.md) | Draft | Multi-source scanning, persistent indexing, task states, operation review, and acceptance scenarios |
 | [GUI flow mock](./gui-flow-mock.md) | Draft | Link to the clickable prototype, its stack-by-stack review proposal, assumptions, and open product questions |
-| [ADR-001 to ADR-007](./decisions/README.md) | Proposed | Decision drafts for the mock's open questions: review unit, merge, protected writes, scanning, code projects, stack lifecycle, recycle area |
+| [ADR-001 to ADR-012](./decisions/README.md) | Proposed | Decision drafts for the mock's open questions (001–007) and requirements D-01, D-03, D-05, D-06 (008–012): index storage, UI technology, source identity, acceptance data, release packaging |
 
 ## Development Guides
 

@@ -9,7 +9,7 @@ Proposed（草稿，待產品負責人決定）
 - 現行 [`FileScanner.ScanAsync`](../../src/Core/Services/FileScanner.cs) 對每個沒被排除的檔計算 hash（預設 SHA-256）並擷取 metadata，之後才回報該檔的進度。數萬個檔或大型媒體時，第一批結果要等很久。
 - FR-004 要求沿用有效的指紋，只處理新增、變動或需要重新驗證的項目；[SPEC-001](../specs/SPEC-001-persistent-scan-workbench.md) 要求部分結果必須標示涵蓋範圍。
 - [ADR-001](./ADR-001-review-unit-stacks.md) 的「疊」要在全部掃完之前就出現，使用者才能邊掃邊整理。
-- 引擎選擇（D-02）與索引儲存（D-01）尚未決定。
+- 引擎選擇（D-02）與索引儲存（D-01，提議見 [ADR-008](./ADR-008-sqlite-local-index.md)）尚未決定。
 
 ## 決策（提議）
 
