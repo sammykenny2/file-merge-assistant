@@ -14,9 +14,9 @@ public class WatchService : IWatchService
     _logger = logger;
   }
 
-  public void Start(string path, bool recursive)
+  public void StartWatching(string path, bool recursive)
   {
-    Stop();
+    StopWatching();
 
     _watcher = new FileSystemWatcher(path)
     {
@@ -34,7 +34,7 @@ public class WatchService : IWatchService
     _logger.Information("Watch mode started for {Path} (recursive: {Recursive})", path, recursive);
   }
 
-  public void Stop()
+  public void StopWatching()
   {
     if (_watcher != null)
     {
@@ -57,7 +57,7 @@ public class WatchService : IWatchService
 
   public void Dispose()
   {
-    Stop();
+    StopWatching();
     GC.SuppressFinalize(this);
   }
 }

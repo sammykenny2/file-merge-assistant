@@ -42,7 +42,7 @@ public class PerceptualHashAlgorithmTests : IDisposable
   [Fact]
   public async Task ComputeHashAsync_Returns_Hash_For_Image()
   {
-    var filePath = CreateTestImage(100, 100, Rgba32.ParseHex("FF0000"));
+    var filePath = CreateTestImage(100, 100, Color.ParseHex("FF0000").ToPixel<Rgba32>());
 
     var hash = await _sut.ComputeHashAsync(filePath);
 
@@ -52,8 +52,8 @@ public class PerceptualHashAlgorithmTests : IDisposable
   [Fact]
   public async Task ComputeHashAsync_Identical_Images_Same_Hash()
   {
-    var file1 = CreateTestImage(100, 100, Rgba32.ParseHex("0000FF"));
-    var file2 = CreateTestImage(100, 100, Rgba32.ParseHex("0000FF"));
+    var file1 = CreateTestImage(100, 100, Color.ParseHex("0000FF").ToPixel<Rgba32>());
+    var file2 = CreateTestImage(100, 100, Color.ParseHex("0000FF").ToPixel<Rgba32>());
 
     var hash1 = await _sut.ComputeHashAsync(file1);
     var hash2 = await _sut.ComputeHashAsync(file2);

@@ -37,7 +37,7 @@ public class PreviewStatisticsService : IPreviewStatisticsService
     };
   }
 
-  private static IReadOnlyList<DirectoryBreakdown> BuildDirectoryBreakdown(
+  private static List<DirectoryBreakdown> BuildDirectoryBreakdown(
     ScanResult scanResult, int topCount)
   {
     return scanResult.DuplicateGroups

@@ -3,8 +3,8 @@ namespace FileMergeAssistant.Services;
 public interface IWatchService : IDisposable
 {
   event EventHandler<FileChangeEventArgs> FileChanged;
-  void Start(string path, bool recursive);
-  void Stop();
+  void StartWatching(string path, bool recursive);
+  void StopWatching();
 }
 
 public class FileChangeEventArgs : EventArgs
