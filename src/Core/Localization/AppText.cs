@@ -132,6 +132,14 @@ public static partial class AppText
     });
   }
 
+  /// <summary>
+  /// Text that changes with a count: <c>&lt;key&gt;.one</c> when the count is 1, else <c>&lt;key&gt;.other</c>. Both keys
+  /// exist in every locale, even where the language has one form. The count is not filled in by itself; pass it, usually
+  /// formatted, as a value.
+  /// </summary>
+  public static string Plural(string key, long count, params (string Name, object? Value)[] values) =>
+    Get(key + (count == 1 ? ".one" : ".other"), values);
+
   /// <summary>Whether the key exists in the English table.</summary>
   public static bool Has(string key) => Tables.Value.English.ContainsKey(key);
 
