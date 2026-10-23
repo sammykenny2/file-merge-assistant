@@ -3,6 +3,7 @@ using FileMergeAssistant.Gui.ViewModels;
 using FileMergeAssistant.Infrastructure;
 using FileMergeAssistant.Services;
 using FileMergeAssistant.Updates;
+using FileMergeAssistant.Workbench;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -27,6 +28,11 @@ public partial class App : Application
         services.AddSingleton<Func<ScanViewModel>>(sp => sp.GetRequiredService<ScanViewModel>);
         services.AddSingleton<Func<ResultsViewModel>>(sp => sp.GetRequiredService<ResultsViewModel>);
         services.AddSingleton<Func<ReportsViewModel>>(sp => sp.GetRequiredService<ReportsViewModel>);
+        services.AddTransient<LegacyScanViewModel>();
+        services.AddSingleton<Func<LegacyScanViewModel>>(sp => sp.GetRequiredService<LegacyScanViewModel>);
+
+        // The workbench screens read and change this store. Until the real index lands it holds the mock's demo data.
+        services.AddSingleton<IWorkbenchStore, DemoWorkbenchStore>();
 
         services.AddSingleton<IUpdateService>(_ => UpdateService.CreateDefault());
         services.AddTransient<UpdateViewModel>();

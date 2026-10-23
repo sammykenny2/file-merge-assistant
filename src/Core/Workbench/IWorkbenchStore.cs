@@ -1,0 +1,113 @@
+using FileMergeAssistant.Plans;
+using FileMergeAssistant.Sources;
+using FileMergeAssistant.Stacks;
+
+namespace FileMergeAssistant.Workbench;
+
+/// <summary>Options applied to every source added from the first-run screen.</summary>
+/// <param name="SkipRegenerable">Measure regenerable folders instead of comparing them file by file.</param>
+/// <param name="SkipCloudOnly">Never download cloud-only placeholders for comparison.</param>
+/// <param name="ProtectedPaths">Paths to mark as protected.</param>
+public sealed record SourceOptions(bool SkipRegenerable, bool SkipCloudOnly, IReadOnlyList<string> ProtectedPaths);
+
+/// <summary>
+/// Everything the workbench screens read and change: sources and scan jobs, stacks and decisions, the pending plan,
+/// the history and the recycle areas. Screens only talk to this interface, so the demo data and the real index are
+/// interchangeable.
+/// </summary>
+/// <remarks>Members are called on the UI thread; <see cref="Changed"/> is raised on the thread that made the change.</remarks>
+public interface IWorkbenchStore
+{
+  /// <summary>Raised after any change.</summary>
+  event EventHandler? Changed;
+
+  /// <summary>True when the store holds simulated data; the interface shows 「模擬資料」.</summary>
+  bool IsDemo { get; }
+
+  /// <summary>Current time as the store sees it (fixed in the demo).</summary>
+  DateTimeOffset Now { get; }
+
+  IReadOnlyList<SourceInfo> Sources { get; }
+
+  /// <summary>Running, queued, attention-needing and recently finished jobs, in queue order.</summary>
+  IReadOnlyList<ScanJobInfo> Jobs { get; }
+
+  /// <summary>All known stacks, including pending, converged and kept-all ones.</summary>
+  IReadOnlyList<Stack> Stacks { get; }
+
+  /// <summary>Decided stacks waiting to run, in the order they were added.</summary>
+  IReadOnlyList<PlanEntry> Plan { get; }
+
+  /// <summary>When the plan was last re-checked against the disk.</summary>
+  DateTimeOffset? PlanCheckedAt { get; }
+
+  /// <summary>Runs of the plan, newest first.</summary>
+  IReadOnlyList<ExecutionBatch> History { get; }
+
+  IReadOnlyList<RestoreConflict> RestoreConflicts { get; }
+
+  IReadOnlyList<RecycleArea> RecycleAreas { get; }
+
+  /// <summary>What changed since the user last worked in the app, or null when there is nothing to report.</summary>
+  SinceLastVisit? SinceLastVisit { get; }
+
+  /// <summary>The decision recorded for a stack (pending, kept all, or converged), if any.</summary>
+  StackDecision? DecisionFor(string stackId);
+
+  /// <summary>Folders worth offering on the first-run screen.</summary>
+  IReadOnlyList<SuggestedLocation> SuggestLocations();
+
+  Task AddSourcesAsync(IReadOnlyList<string> paths, SourceOptions options, bool startScan);
+
+  /// <summary>Queues an update of a source, or resumes its interrupted scan.</summary>
+  Task ScanSourceAsync(string sourceId);
+
+  Task PauseJobAsync(string jobId);
+  Task ResumeJobAsync(string jobId);
+  Task CancelJobAsync(string jobId);
+
+  /// <summary>Starts an interrupted job over instead of resuming it.</summary>
+  Task RestartJobAsync(string jobId);
+
+  /// <summary>Moves a queued job up (negative) or down (positive).</summary>
+  void MoveJob(string jobId, int offset);
+
+  /// <summary>Re-queues only the files a finished job could not read.</summary>
+  Task RescanFailedAsync(string jobId);
+
+  /// <summary>Records a decision. File-changing decisions go to the pending plan; nothing on disk changes.</summary>
+  /// <exception cref="InvalidOperationException">The decision is blocked.</exception>
+  void Decide(StackDecision decision);
+
+  /// <summary>Adds the suggested decision of each stack to the plan; returns how many were added.</summary>
+  int DecideSuggested(IReadOnlyList<string> stackIds);
+
+  /// <summary>Takes a stack out of the plan and puts it back in the list.</summary>
+  void Undecide(string stackId);
+
+  void SetPlanItemEnabled(string itemId, bool enabled);
+
+  /// <summary>For an item that changed after the decision: skip it this time instead of stopping.</summary>
+  void SetSkipChanged(string itemId, bool skip);
+
+  /// <summary>Checks every plan item against the disk again.</summary>
+  Task RecheckPlanAsync();
+
+  /// <summary>Runs every item that will run, copies first and recycling after (ADR-002).</summary>
+  Task<ExecutionBatch> ExecutePlanAsync(CancellationToken cancellationToken);
+
+  /// <summary>Retries only the failed items of a batch.</summary>
+  Task RetryFailedAsync(string batchId);
+
+  Task RestoreItemAsync(string batchId, string itemId);
+
+  /// <summary>Restores every item of a batch: recycled items go back, files copied into keepers are recycled.</summary>
+  Task RestoreBatchAsync(string batchId);
+
+  Task ResolveRestoreConflictAsync(string conflictId, RestoreConflictChoice choice, string? folder);
+
+  /// <summary>Permanently deletes what the recycle areas hold; affected batches can no longer be restored.</summary>
+  Task EmptyRecycleAreasAsync();
+
+  void RespondToNotice(string noticeId, NoticeResponse response);
+}

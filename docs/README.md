@@ -21,11 +21,11 @@ These important documents live in the project root:
 
 ## GUI Product and Design
 
-The next GUI is being defined around multiple scan sources, a persistent index,
-reviewable duplicate groups, and explicit file-operation plans. These are draft
-requirements, not delivered features. Layout and technology choices remain open.
-A first clickable mock proposes reviewing copies one small "stack" at a time;
-that proposal awaits product review.
+The next GUI is built around multiple scan sources, a persistent index, copies
+reviewed one small "stack" at a time, and explicit file-operation plans. The
+product owner accepted the clickable mock's direction; the WPF app now has all
+seven of its screens, running on the mock's demo data. The persistent index,
+staged scanning, stack detection and the file-changing steps are still to come.
 
 | Document | Status | Purpose |
 |----------|--------|---------|
