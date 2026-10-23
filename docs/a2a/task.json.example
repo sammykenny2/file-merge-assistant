@@ -1,19 +1,20 @@
 {
-  "task_id": "[task-id]",
-  "title": "[Task title]",
-  "description": "[Task description]",
-  "requested_by": "[agent-id]",
-  "assigned_to": "[agent-id]",
-  "priority": "[low|medium|high]",
-  "inputs": {},
-  "expected_output": "[Expected output]",
-  "status": "[queued|in_progress|done|failed]",
-  "timestamps": {
-    "created_at": "[YYYY-MM-DDTHH:MM:SSZ]",
-    "due_at": "[YYYY-MM-DDTHH:MM:SSZ]"
-  },
-  "metadata": {
-    "correlation_id": "[id]",
-    "trace_id": "[id]"
-  }
+  "deprecated": true,
+  "retiredInProtocolVersion": "1.0",
+  "replacementFiles": [
+    "docs/a2a/agent-card.public.json.example",
+    "docs/a2a/agent-card.authenticated.json.example",
+    "docs/a2a/jsonrpc-send-message.request.json.example",
+    "docs/a2a/jsonrpc-send-message.response.json.example",
+    "docs/a2a/jsonrpc-send-streaming-message.request.json.example",
+    "docs/a2a/jsonrpc-send-streaming-message.response.sse.example",
+    "docs/a2a/jsonrpc-get-task.request.json.example",
+    "docs/a2a/jsonrpc-cancel-task.request.json.example",
+    "docs/a2a/jsonrpc-get-extended-agent-card.request.json.example"
+  ],
+  "notes": [
+    "Legacy generic task examples were removed from the bootstrap A2A v1.0 document set.",
+    "Use the JSON-RPC request and response examples instead of a standalone task payload file.",
+    "Serve the public card at /.well-known/agent-card.json and use agent-card.authenticated.* for GetExtendedAgentCard responses."
+  ]
 }

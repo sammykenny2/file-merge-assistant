@@ -1,98 +1,56 @@
 # Testing Strategy
 
-> Testing approach, standards, and procedures.
-
-## Overview
-
-(Describe the overall testing philosophy for this project)
-
-## Test Types
-
-### Unit Tests
-
-- **Location**: `tests/unit/`
-- **Framework**: (pytest / Jest / etc.)
-- **Coverage Target**: (e.g., 80%)
-
-### Integration Tests
-
-- **Location**: `tests/integration/`
-- **Framework**:
-- **Scope**:
-
-### End-to-End Tests
-
-- **Location**: `tests/e2e/`
-- **Framework**: (Playwright / Cypress / etc.)
-- **Scope**:
+File Merge Assistant uses xUnit for the .NET 8 Windows-targeted core library.
+Tests live in `tests/Core.Tests/`, grouped under `Hashing/`, `Reporting/`,
+`Resolution/`, and `Services/`. NSubstitute supplies test doubles; file-operation
+fixtures create temporary directories and clean them up after each test.
 
 ## Running Tests
 
-### All Tests
+Run from the repository root on Windows with the .NET 8 SDK installed:
 
-```bash
-# Python
-pytest
-
-# Node.js
-npm test
+```powershell
+dotnet test tests/Core.Tests/Core.Tests.csproj --verbosity minimal
 ```
 
-### Specific Test Suite
+After dependencies have already been restored, add `--no-restore`. To collect
+coverage using the existing coverlet collector:
 
-```bash
-# Python
-pytest tests/unit/
-pytest tests/integration/
-
-# Node.js
-npm run test:unit
-npm run test:e2e
+```powershell
+dotnet test tests/Core.Tests/Core.Tests.csproj --collect:"XPlat Code Coverage"
 ```
 
-### With Coverage
+The current GitHub Actions workflow validates required files and YAML; it does
+not run this .NET test suite.
 
-```bash
-# Python
-pytest --cov=src --cov-report=html
+## Known Baseline Issues
 
-# Node.js
-npm run test:coverage
+The bootstrap refresh was checked on 2026-10-23 with SDK 8.0.426. No application
+or test source was changed by that refresh.
+
+- The normal test build stops on existing CA1716 in `IWatchService.Stop()` and
+  CA1859 in `PreviewStatisticsService.BuildDirectoryBreakdown()`, because
+  `Directory.Build.props` enables `TreatWarningsAsErrors`.
+- For diagnosis, building with `-p:TreatWarningsAsErrors=false` leaves those
+  findings as warnings without changing the project configuration.
+- The diagnostic test run passed 141 tests, then aborted after 30 seconds without
+  progress while `EmptyDirectoryServiceTests.Cleanup_DryRun_Does_Not_Delete`
+  was running. The suite is not recorded as passing.
+
+The bounded diagnostic command, after that diagnostic build, was:
+
+```powershell
+dotnet test tests/Core.Tests/Core.Tests.csproj --no-build --no-restore --blame-hang-timeout 30s --blame-hang-dump-type none
 ```
 
-## Test Naming Conventions
+VSTest writes its sequence attachment under `tests/Core.Tests/TestResults/`.
+These existing issues require separate application/test work.
 
-```python
-# Python
-def test_function_name_should_expected_behavior_when_condition():
-    pass
+## Bootstrap Validation
 
-# Example
-def test_calculate_total_should_return_sum_when_valid_items():
-    pass
-```
+For the infrastructure refresh, both new PowerShell scripts parsed without
+errors, the A2A JSON examples parsed successfully, and a second updater run
+created no additional files or review copies. These checks do not establish
+A2A runtime interoperability or exercise branch deletion and skill publication.
 
-```javascript
-// JavaScript/TypeScript
-describe('ComponentName', () => {
-  it('should expected behavior when condition', () => {
-    // ...
-  });
-});
-```
-
-## Mocking Guidelines
-
-- (Describe when and how to use mocks)
-- (List common mocking patterns)
-
-## CI/CD Integration
-
-- Tests run automatically on:
-  - [ ] Pull requests
-  - [ ] Main branch commits
-  - [ ] Scheduled (nightly)
-
----
-
-*Last updated: YYYY-MM-DD*
+Last updated: 2026-10-23.

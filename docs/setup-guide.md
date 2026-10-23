@@ -5,7 +5,7 @@
 ## Prerequisites
 
 - [ ] Prerequisite 1 (e.g., Python 3.10+)
-- [ ] Prerequisite 2 (e.g., Node.js 18+)
+- [ ] Prerequisite 2 (e.g., Node.js 24 LTS)
 - [ ] Prerequisite 3 (e.g., Docker)
 
 ## Installation

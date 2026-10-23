@@ -1,0 +1,122 @@
+{
+  "name": "[Authenticated Agent Name]",
+  "description": "[Extended card returned after successful client authentication.]",
+  "supportedInterfaces": [
+    {
+      "url": "https://agent.example.com/a2a/jsonrpc",
+      "protocolBinding": "JSONRPC",
+      "protocolVersion": "1.0"
+    },
+    {
+      "url": "https://agent.example.com/a2a/http",
+      "protocolBinding": "HTTP+JSON",
+      "protocolVersion": "1.0"
+    }
+  ],
+  "provider": {
+    "organization": "[Organization Name]",
+    "url": "https://example.com"
+  },
+  "version": "0.1.0",
+  "documentationUrl": "https://example.com/docs/a2a/internal",
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": false,
+    "extendedAgentCard": true,
+    "extensions": [
+      {
+        "uri": "https://example.com/extensions/change-review/v1",
+        "description": "Adds authenticated review metadata to change-related tasks.",
+        "required": false,
+        "params": {
+          "approvalMode": "human-in-the-loop"
+        }
+      }
+    ]
+  },
+  "securitySchemes": {
+    "openId": {
+      "openIdConnectSecurityScheme": {
+        "description": "OpenID Connect for interactive clients.",
+        "openIdConnectUrl": "https://auth.example.com/.well-known/openid-configuration"
+      }
+    },
+    "serviceMtls": {
+      "mtlsSecurityScheme": {
+        "description": "Mutual TLS for service-to-service traffic."
+      }
+    }
+  },
+  "defaultInputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "skills": [
+    {
+      "id": "triage",
+      "name": "Triage Requests",
+      "description": "[Explain the primary workflow this agent handles.]",
+      "tags": [
+        "triage",
+        "automation",
+        "support"
+      ],
+      "examples": [
+        "Summarize the incident and propose the next operator action.",
+        "Route this request to the right team and explain why."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "text/plain",
+        "application/json"
+      ]
+    },
+    {
+      "id": "execute-changes",
+      "name": "Execute Approved Changes",
+      "description": "[Document the authenticated-only workflows this agent may perform.]",
+      "tags": [
+        "operations",
+        "change-management",
+        "authenticated"
+      ],
+      "examples": [
+        "Apply the approved configuration patch to staging and report the outcome.",
+        "Rotate the service credential after the maintenance window opens."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "text/plain",
+        "application/json"
+      ]
+    }
+  ],
+  "securityRequirements": [
+    {
+      "schemes": {
+        "openId": {
+          "list": [
+            "openid"
+          ]
+        }
+      }
+    },
+    {
+      "schemes": {
+        "serviceMtls": {
+          "list": []
+        }
+      }
+    }
+  ]
+}

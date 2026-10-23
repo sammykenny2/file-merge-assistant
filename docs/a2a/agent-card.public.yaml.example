@@ -1,0 +1,51 @@
+name: "[Public Agent Name]"
+description: "[Short description of the agent's public purpose.]"
+supportedInterfaces:
+  - url: "https://agent.example.com/a2a/jsonrpc"
+    protocolBinding: "JSONRPC"
+    protocolVersion: "1.0"
+  - url: "https://agent.example.com/a2a/http"
+    protocolBinding: "HTTP+JSON"
+    protocolVersion: "1.0"
+provider:
+  organization: "[Organization Name]"
+  url: "https://example.com"
+version: "0.1.0"
+documentationUrl: "https://example.com/docs/a2a"
+capabilities:
+  streaming: true
+  pushNotifications: false
+  extendedAgentCard: true
+securitySchemes:
+  openId:
+    openIdConnectSecurityScheme:
+      description: "OpenID Connect for authenticated task execution and extended card access."
+      openIdConnectUrl: "https://auth.example.com/.well-known/openid-configuration"
+securityRequirements:
+  - schemes:
+      openId:
+        list:
+          - openid
+defaultInputModes:
+  - "text/plain"
+  - "application/json"
+defaultOutputModes:
+  - "text/plain"
+  - "application/json"
+skills:
+  - id: "triage"
+    name: "Triage Requests"
+    description: "[Explain the primary workflow this agent handles.]"
+    tags:
+      - "triage"
+      - "automation"
+      - "support"
+    examples:
+      - "Summarize the incident and propose the next operator action."
+      - "Route this request to the right team and explain why."
+    inputModes:
+      - "text/plain"
+      - "application/json"
+    outputModes:
+      - "text/plain"
+      - "application/json"

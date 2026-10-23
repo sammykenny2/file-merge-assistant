@@ -64,6 +64,8 @@ See [docs/](./docs/) for detailed documentation:
 - [Setup Guide](./docs/setup-guide.md)
 - [Architecture](./docs/architecture.md)
 - [Contributing](./CONTRIBUTING.md)
+- [Script Standards](./docs/SCRIPT-STANDARDS.md)
+- [Research Log](./docs/research/)
 
 ## Project Structure
 
@@ -123,9 +125,19 @@ Monitor directories for new files in real-time. The `IWatchService` uses `FileSy
 
 ### Updating Agent Rules & Templates
 
-**Windows**
+Run the updater from the separate sibling `project-bootstrap` checkout. The
+updater is not copied into this repository. It adds missing files and stages
+changed templates as `*.bootstrap` review copies; merge each proposal deliberately
+while preserving project-specific content.
+
+**Windows** (starting from this repository's root)
 ```powershell
-.\scripts\windows\Update-Project.ps1
+Push-Location ..\project-bootstrap
+try {
+    .\scripts\windows\Update-Project.ps1 -TargetPath ..\file-merge-assistant
+} finally {
+    Pop-Location
+}
 ```
 
 ## License

@@ -1,0 +1,31 @@
+POST /a2a/jsonrpc HTTP/1.1
+Host: agent.example.com
+A2A-Version: 1.0
+Content-Type: application/json
+Accept: text/event-stream
+Authorization: Bearer [access-token]
+
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "SendStreamingMessage",
+  "params": {
+    "message": {
+      "messageId": "[message-id]",
+      "role": "ROLE_USER",
+      "parts": [
+        {
+          "text": "Investigate the current deployment issue and stream progress updates.",
+          "mediaType": "text/plain"
+        }
+      ]
+    },
+    "configuration": {
+      "acceptedOutputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "historyLength": 5
+    }
+  }
+}

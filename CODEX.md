@@ -1,80 +1,23 @@
 # Codex-Specific Instructions
 
-> **If you are NOT Codex (OpenAI Codex CLI), please ignore this file.**
+Read `AGENTS.md` first and `docs/AGENT-GUIDE.md` next. Only Codex maintains this
+file; other agents should ignore it.
 
-## Prerequisites
+- Prefer `rg` for text search.
+- Preserve user edits and respect `.editorconfig`.
+- Use the project's verified commands in `docs/testing.md` and its manifests.
+- Follow an assigned Conductor. Do not substitute author-run tests for independent
+  code review.
+- For `dyu`, reply exactly “I am Codex, and I understand.” after reading both files.
 
-**MUST** read `AGENTS.md` first for cross-agent guidelines before reading this file.
+## Skills
 
-## Role Awareness
+The canonical source is `skills/`. Codex discovers `.agents/skills/<name>/SKILL.md`.
+After skill changes, run `scripts/windows/Sync-AgentSkills.ps1`; keep referenced
+resources inside the skill directory so sync preserves them. Optional skills and
+scripts are documented in `skills/README.md`; do not assume they are installed.
 
-Check the **Project Roles** table in `AGENTS.md`.
-- If a **Conductor** is assigned (and it is not you), act as a Specialist: prioritize their tasks and strictly follow their architectural plans.
-- If **you** are the Conductor, you are responsible for orchestration, task management, and status tracking.
+## Project Context
 
-## Command Aliases
-
-| Alias | Action |
-|-------|--------|
-| `dyu` | **MUST** confirm you have read `AGENTS.md` and this file. **MUST** respond with exactly: "I am Codex, and I understand." |
-
-## About This File
-
-This file contains Codex-specific configurations and instructions that should not be applied by other AI agents (Claude, Gemini, etc.).
-
-Only Codex should read and maintain this file.
-
----
-
-## Codex-Specific Configurations
-
-### Behavioral Guidelines
-
-- **MUST** read AGENTS.md at the start of every session
-- **MUST** follow the Development Workflow defined in AGENTS.md
-- **MUST NOT** skip testing when code changes are made
-- **MUST NOT** modify other agents' files (CLAUDE.md, GEMINI.md)
-- **SHOULD** ask for clarification when requirements are ambiguous
-- **SHOULD** make minimal, focused edits
-
-### Conductor Responsibilities
-
-If assigned as Conductor in Project Roles table:
-- **MUST** maintain README.md "Current Status" section
-- **MUST** create and assign tasks in `docs/plans/`
-- **MUST** document major decisions in `docs/decisions/`
-- **MUST NOT** make unilateral architectural decisions without documentation
-
-### Code Modification Rules
-
-- **MUST** update tests when modifying code
-- **MUST** update documentation when changing public APIs
-- **MUST** follow coding conventions specified in AGENTS.md
-- **MUST** respect `.editorconfig` settings (LF line endings, final newline, trim rules)
-- **SHOULD** make minimal, focused changes
-- **SHOULD** commit frequently with clear messages
-
-### Search and Navigation Preferences
-
-- **SHOULD** prefer `rg` (ripgrep) for searching text content
-- **SHOULD** use `fd` for finding files by name patterns
-- **MAY** use `grep` or `find` as fallbacks if other tools unavailable
-
-### Preferred Behaviors
-
-- **Precision**: Keep edits minimal and surgical
-- **Testing**: Validate all changes work correctly
-- **Configuration compliance**: Always respect `.editorconfig`
-- **Documentation**: Keep docs synchronized with code
-
-### Project-Specific Context
-
-(Add any project-specific context or conventions that Codex should be aware of)
-
----
-
-## Maintenance
-
-This file is maintained by Codex only. Other agents should not modify this file.
-
-Last updated: <!-- Update this when making changes -->
+<!-- TODO: Add only Codex-specific entrypoints or constraints not already recorded
+in AGENTS.md, docs/AGENT-GUIDE.md, or the relevant skill. -->

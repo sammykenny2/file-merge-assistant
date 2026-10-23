@@ -49,4 +49,4 @@ Use [000-template.md](./000-template.md) as the starting point for new ADRs.
 
 ---
 
-*See also: [AGENTS.md](../../../AGENTS.md) for decision-making protocols*
+*See also: [AGENTS.md](../../AGENTS.md) for decision-making protocols*

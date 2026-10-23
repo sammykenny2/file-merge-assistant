@@ -1,138 +1,102 @@
 # MCP Configuration Guide
 
-> Model Context Protocol (MCP) server configuration for AI agents.
+> Reference checked 2026-09-05. MCP is optional; this project does not require
+> a running MCP server.
 
-## Overview
+## Version and Host Compatibility
 
-MCP (Model Context Protocol) is the AAIF standard for connecting AI agents to external tools and data sources. This document describes how to configure MCP servers for this project.
+The protocol reference is [MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28).
+Its stateless core changes initialization and session handling; consult the
+[release notes](https://blog.modelcontextprotocol.io/posts/2026-07-28/) before
+migrating an existing integration.
 
-## MCP Architecture
+Configuration syntax belongs to the host application, not to the MCP protocol.
+Record the host version, server package/version, transport, and negotiated
+protocol revision when testing. These snippets are configuration examples, not
+evidence of a completed SDK or end-to-end compatibility test.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    MCP Host                              │
-│         (Claude Desktop, Cursor, ChatGPT, etc.)         │
-└────────────────────────┬────────────────────────────────┘
-                         │ JSON-RPC
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│                    MCP Client                            │
-│              (Discovers & invokes servers)               │
-└────────────────────────┬────────────────────────────────┘
-                         │
-         ┌───────────────┼───────────────┐
-         ▼               ▼               ▼
-   ┌──────────┐   ┌──────────┐   ┌──────────┐
-   │MCP Server│   │MCP Server│   │MCP Server│
-   │(Database)│   │  (API)   │   │ (Files)  │
-   └──────────┘   └──────────┘   └──────────┘
-```
+## Local Filesystem Server
 
-## Configuration
-
-### Claude Desktop
-
-Location: `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
+The maintained reference package is `@modelcontextprotocol/server-filesystem`.
+Use absolute allowed-directory paths. The following Claude Desktop example is
+for Windows, where `npx` is launched through `cmd /c`:
 
 ```json
 {
   "mcpServers": {
-    "project-name": {
-      "command": "python",
-      "args": ["-m", "mcp_server"],
-      "cwd": "C:/path/to/project",
-      "env": {
-        "DATABASE_URL": "postgresql://localhost/db"
-      }
+    "filesystem": {
+      "command": "cmd",
+      "args": [
+        "/c", "npx", "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:/Projects/my-project"
+      ]
     }
   }
 }
 ```
 
-### Cursor IDE
+On macOS/Linux, use `"command": "npx"` and omit `"/c", "npx"` from args.
+After selecting and testing a release, pin its package version for repeatable
+installation. Configure only the directories needed for the task.
 
-Location: `.cursor/mcp.json` (project root)
+The [official filesystem README](https://github.com/modelcontextprotocol/servers/blob/main/src/filesystem/README.md)
+documents supported options and host examples.
 
-```json
-{
-  "mcpServers": {
-    "project-name": {
-      "command": "node",
-      "args": ["./mcp-server/index.js"]
-    }
-  }
-}
+## Codex
+
+Codex uses TOML MCP configuration. For a local server on Windows:
+
+```toml
+[mcp_servers.filesystem]
+command = "cmd"
+args = ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem", "C:/Projects/my-project"]
 ```
 
-## Common MCP Servers
+Use the installed product's configuration scope and credential handling. See the
+[official Codex MCP documentation](https://learn.chatgpt.com/docs/extend/mcp).
+Do not paste a host's JSON wrapper into another host's TOML configuration.
 
-### Database Access
+## Other Hosts
 
-```json
-{
-  "database": {
-    "command": "uvx",
-    "args": ["mcp-server-sqlite", "--db-path", "./data/database.db"]
-  }
-}
-```
+- Claude Desktop: see the filesystem server's documented Desktop setup.
+- Cursor: use its project MCP configuration and verify the supported fields in
+  the installed Cursor version.
+- VS Code: its MCP configuration uses a `servers` map, not the Desktop
+  `mcpServers` wrapper.
 
-### File System
+Environment-variable interpolation is host-specific. A string such as
+`${GITHUB_TOKEN}` is not universally expanded by MCP itself.
 
-```json
-{
-  "filesystem": {
-    "command": "npx",
-    "args": ["-y", "@anthropic/mcp-filesystem", "./src"]
-  }
-}
-```
+## GitHub and Database Integrations
 
-### GitHub
+Use [GitHub's official MCP server](https://github.com/github/github-mcp-server)
+for GitHub integration. Choose its documented remote or local installation and
+authentication flow for your host; do not use the old `@anthropic/mcp-github`
+example.
 
-```json
-{
-  "github": {
-    "command": "npx",
-    "args": ["-y", "@anthropic/mcp-github"],
-    "env": {
-      "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-    }
-  }
-}
-```
+The old reference SQLite server is in
+[servers-archived](https://github.com/modelcontextprotocol/servers-archived).
+It is not a default recommendation for new projects. Select a maintained database
+integration for the required database and access model, and verify its source
+and release before adding it.
 
-## Project-Specific Configuration
+Discover servers through the [official MCP Registry](https://registry.modelcontextprotocol.io/).
+A registry listing is not a security or compatibility guarantee.
 
-(Add your project's MCP server configurations here)
+## Project Configuration Record
 
-### Server 1: [Name]
+When enabling an integration, document:
 
-**Purpose**: (What this server provides)
+| Field | Value to record |
+|-------|-----------------|
+| Host | Product and installed version |
+| Server | Maintainer, source, pinned package/container version |
+| Transport | Local stdio or the supported remote transport |
+| Protocol | Revision verified with this client/server pair |
+| Access | Allowed paths, tool permissions, auth method |
+| Validation | Date, command, result, and known limitations |
 
-```json
-{
-  "server-name": {
-    "command": "",
-    "args": [],
-    "env": {}
-  }
-}
-```
-
-## Security Considerations
-
-- Never commit MCP configs with hardcoded secrets
-- Use environment variables for sensitive data
-- Limit server permissions to minimum required
-- Review server code before enabling
-
-## Resources
-
-- [MCP Documentation](https://modelcontextprotocol.io)
-- [MCP GitHub](https://github.com/modelcontextprotocol)
-- [MCP Server Registry](https://github.com/modelcontextprotocol/servers)
-
----
-
-*Last updated: YYYY-MM-DD*
+Keep credentials in the host's credential store or supported environment
+configuration. Commit only examples with placeholders. Server configuration
+and a successful discovery call do not authorize unrelated writes.

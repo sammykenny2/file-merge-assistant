@@ -1,0 +1,12 @@
+event: message
+data: {"jsonrpc":"2.0","id":2,"result":{"task":{"id":"[task-id]","contextId":"[context-id]","status":{"state":"TASK_STATE_SUBMITTED","timestamp":"2026-09-05T00:00:00Z"}}}}
+
+event: message
+data: {"jsonrpc":"2.0","id":2,"result":{"statusUpdate":{"taskId":"[task-id]","contextId":"[context-id]","status":{"state":"TASK_STATE_WORKING","timestamp":"2026-09-05T00:00:01Z"}}}}
+
+event: message
+data: {"jsonrpc":"2.0","id":2,"result":{"artifactUpdate":{"taskId":"[task-id]","contextId":"[context-id]","artifact":{"artifactId":"summary","name":"summary","parts":[{"text":"Deployment logs indicate elevated errors after the canary release.","mediaType":"text/plain"}]},"lastChunk":true}}}
+
+event: message
+data: {"jsonrpc":"2.0","id":2,"result":{"statusUpdate":{"taskId":"[task-id]","contextId":"[context-id]","status":{"state":"TASK_STATE_COMPLETED","timestamp":"2026-09-05T00:00:02Z"}}}}
+

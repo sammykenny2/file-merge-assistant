@@ -1,0 +1,28 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "SendMessage",
+  "params": {
+    "message": {
+      "messageId": "[message-id]",
+      "role": "ROLE_USER",
+      "parts": [
+        {
+          "text": "Summarize this deployment alert and propose the next operator action.",
+          "mediaType": "text/plain"
+        }
+      ],
+      "metadata": {
+        "conversationId": "[conversation-id]"
+      }
+    },
+    "configuration": {
+      "acceptedOutputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "historyLength": 10,
+      "returnImmediately": false
+    }
+  }
+}

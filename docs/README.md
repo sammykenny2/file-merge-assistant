@@ -8,26 +8,28 @@ These important documents live in the project root:
 
 | Document | Status | Description |
 |----------|--------|-------------|
-| [PROGRESS.md](../PROGRESS.md) | ?? Template | Implementation status and work packages |
-| [ROADMAP.md](../ROADMAP.md) | ?? Template | Project roadmap and milestones |
+| [PROGRESS.md](../PROGRESS.md) | Template | Implementation status and work packages |
+| [ROADMAP.md](../ROADMAP.md) | Template | Project roadmap and milestones |
 
 ## Core Documents
 
 | Document | Status | Description |
 |----------|--------|-------------|
-| [requirements.md](./requirements.md) | ?? Template | Requirements specification |
-| [architecture.md](./architecture.md) | ?? Template | System architecture |
-| [api.md](./api.md) | ?? Template | API specification (REST/WebSocket) |
+| [requirements.md](./requirements.md) | Template | Requirements specification |
+| [architecture.md](./architecture.md) | Template | System architecture |
+| [api.md](./api.md) | Template | API specification (REST/WebSocket) |
 
 ## Development Guides
 
 | Document | Status | Description |
 |----------|--------|-------------|
-| [setup-guide.md](./setup-guide.md) | ?? Template | Environment setup |
-| [testing.md](./testing.md) | ?? Template | Testing strategy |
-| [deployment.md](./deployment.md) | ?? Template | Deployment instructions |
-| [security-guidelines.md](./security-guidelines.md) | ?? Template | Security policies |
-| [mcp-config.md](./mcp-config.md) | ?? Template | MCP server configuration |
+| [setup-guide.md](./setup-guide.md) | Template | Environment setup |
+| [testing.md](./testing.md) | Complete | .NET test commands, validation results, and known baseline issues |
+| [deployment.md](./deployment.md) | Template | Deployment instructions |
+| [security-guidelines.md](./security-guidelines.md) | Template | Security policies |
+| [mcp-config.md](./mcp-config.md) | Template | MCP server configuration |
+| [services.md](./services.md) | Template | Service registry and port assignments |
+| [SCRIPT-STANDARDS.md](./SCRIPT-STANDARDS.md) | Template | Script standards and naming |
 
 ## Scripts
 
@@ -41,18 +43,32 @@ The `scripts/` directory contains platform-specific scripts for your project:
 
 Add your project-specific automation scripts here.
 
-## AAIF Documents
+## Agent Guidance and Protocol Examples
 
 | Document | Status | Description |
 |----------|--------|-------------|
-| [AGENT-GUIDE.md](./AGENT-GUIDE.md) | ? | Agent collaboration guide |
-| [terminology.md](./terminology.md) | ?? Template | AAIF/A2A/MCP terminology |
-| [a2a/](./a2a/) | ?? | A2A agent card and task templates |
-| [specs/](./specs/) | ?? | Feature specifications |
-| [plans/](./plans/) | ?? | Implementation plans |
-| [decisions/](./decisions/) | ?? | Architecture Decision Records |
+| [AGENT-GUIDE.md](./AGENT-GUIDE.md) | Bootstrap | Agent collaboration guide |
+| [terminology.md](./terminology.md) | Template | AAIF/A2A/MCP terminology |
+| [a2a/](./a2a/) | Examples | Installed A2A 1.0 static protocol examples; no running service |
+| [specs/](./specs/) | Directory | Feature specifications |
+| [plans/](./plans/) | Directory | Implementation plans |
+| [decisions/](./decisions/) | Directory | Architecture Decision Records |
 
-**Legend**: ? Complete | ?? Template (needs content) | ?? Directory
+**Legend**:
+
+- Complete - project-specific content is written
+- Draft - partially written; needs review
+- Template - placeholder content; needs project details
+- Bootstrap - generic guidance supplied by the bootstrap; usable as-is
+- Directory - container for individual records
+- Optional - requires an additional flavor
+- Examples - static fixtures; runtime behavior is not implemented
+
+## Research
+
+| Document | Status | Description |
+|----------|--------|-------------|
+| [research/](./research/) | Directory | Research notes and external sources |
 
 ## Context-Driven Development
 
@@ -79,3 +95,5 @@ When working on this project:
 - Include a clear title and purpose at the top
 - Keep documents focused and concise
 - Update the "Last updated" date when modifying
+
+Last updated: 2026-10-23.

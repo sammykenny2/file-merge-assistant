@@ -64,6 +64,15 @@ If assigned as Conductor in Project Roles table:
 
 (Add any project-specific context or conventions that Gemini should be aware of)
 
+### Agent Skills
+
+Antigravity CLI (agy, the Gemini CLI successor) discovers skills from `.agents/skills/<name>/SKILL.md`, the same path Codex uses. The canonical source is the `skills/` directory at the project root.
+
+To sync skills after changes:
+```powershell
+.\scripts\windows\Sync-AgentSkills.ps1
+```
+
 ### Personal Memory
 
 (This section is for Gemini to record long-term observations or preferences specific to this user/project)

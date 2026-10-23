@@ -1,0 +1,42 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "task": {
+      "id": "[task-id]",
+      "contextId": "[context-id]",
+      "status": {
+        "state": "TASK_STATE_COMPLETED",
+        "message": {
+          "messageId": "[agent-message-id]",
+          "contextId": "[context-id]",
+          "taskId": "[task-id]",
+          "role": "ROLE_AGENT",
+          "parts": [
+            {
+              "text": "The alert points to elevated error rates after the latest deployment. Roll back the canary slice first, then re-check the health metrics.",
+              "mediaType": "text/plain"
+            }
+          ]
+        },
+        "timestamp": "2026-09-05T00:00:02Z"
+      },
+      "artifacts": [
+        {
+          "artifactId": "summary",
+          "name": "summary",
+          "description": "Structured task result.",
+          "parts": [
+            {
+              "data": {
+                "summary": "Canary deployment introduced elevated 5xx responses.",
+                "nextStep": "Roll back the canary and compare metrics over the next five minutes."
+              },
+              "mediaType": "application/json"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -14,10 +14,20 @@ Check the **Project Roles** table in `AGENTS.md`.
 
 ## Command Aliases
 
-| Alias | Action |
-|-------|--------|
-| `dyu` | **MUST** confirm you have read `AGENTS.md` and this file. **MUST** respond with exactly: "I am Claude, and I understand." |
-| `mbf` | **Merge Bootstrap Files** - Execute the following steps in order: (1) Find all `*.bootstrap` files in the project, (2) For each `.bootstrap` file, compare with its corresponding file and merge appropriate content (preserve user customizations, incorporate new template additions), (3) Delete each `.bootstrap` file after successful merge, (4) Find all `.gitkeep` files and check if their parent directory contains other files not ignored by `.gitignore` - if so, delete the `.gitkeep` file. Report summary of changes when complete. |
+- `dyu` - **MUST** confirm you have read `AGENTS.md` and this file. **MUST** respond with exactly: "I am Claude, and I understand."
+- `mbf` - **Merge Bootstrap Files**:
+  1. Find all `*.bootstrap` files in the project
+  2. For each `.bootstrap` file, compare with its corresponding file and merge appropriate content
+  3. Delete each `.bootstrap` file after successful merge
+  4. Find all `.gitkeep` files and check if their parent directory contains other files not ignored by `.gitignore` - if so, delete the `.gitkeep` file
+  5. Report summary of changes when complete
+
+## Output Formatting Rules
+
+- **MUST** 使用條列式 (bullet list) 而非表格，除非是模擬圖表或表格真正必要
+- **MUST NOT** 濫用表格語法（`|` 和 `-----`）
+- **SHOULD** 用縮排條列取代多欄表格
+- 例外情況：比較多個選項的優缺點、數據對照表、API 參數規格等真正需要表格的場景
 
 ## About This File
 
@@ -53,6 +63,15 @@ If assigned as Conductor in Project Roles table:
 - **MUST** follow coding conventions specified in AGENTS.md
 - **SHOULD** make minimal, focused changes
 - **SHOULD** commit frequently with clear messages
+
+### Agent Skills
+
+Claude Code discovers skills from `.claude/skills/<name>/SKILL.md`. The canonical source is the `skills/` directory at the project root.
+
+To sync skills after changes:
+```powershell
+.\scripts\windows\Sync-AgentSkills.ps1
+```
 
 ### MCP Server Configurations
 
