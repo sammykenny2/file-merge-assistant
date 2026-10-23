@@ -101,7 +101,61 @@ public class EmptyDirectoryServiceTests : IDisposable
     Assert.Equal(4, dryRunCount);
     Assert.Equal(dryRunCount, realCount);
     Assert.False(Directory.Exists(Path.Combine(_tempDir, "a")));
-    Assert.True(Directory.Exists(Path.Combine(_tempDir, "keep")));
+    Assert.False(Directory.Exists(Path.Combine(_tempDir, "keep", "empty")));
+    Assert.True(File.Exists(Path.Combine(_tempDir, "keep", "file.txt")));
+  }
+
+  [Fact]
+  public void Cleanup_Does_Not_Remove_Empty_Root()
+  {
+    var removed = _sut.Cleanup(_tempDir);
+
+    Assert.Equal(0, removed);
+    Assert.True(Directory.Exists(_tempDir));
+  }
+
+  [Fact]
+  public void Cleanup_Does_Not_Follow_Junction_Outside_Root()
+  {
+    var root = Path.Combine(_tempDir, "root");
+    var outside = Path.Combine(_tempDir, "outside");
+    var outsideEmpty = Path.Combine(outside, "emptyChild");
+    Directory.CreateDirectory(root);
+    Directory.CreateDirectory(outsideEmpty);
+    var junction = Path.Combine(root, "link");
+    CreateJunction(junction, outside);
+
+    try
+    {
+      var dryRunCount = _sut.Cleanup(root, dryRun: true);
+      var realCount = _sut.Cleanup(root);
+
+      Assert.Equal(0, dryRunCount);
+      Assert.Equal(0, realCount);
+      Assert.True(Directory.Exists(outsideEmpty));
+      Assert.True(Directory.Exists(junction));
+    }
+    finally
+    {
+      // Remove the link itself so Dispose does not have to delete through it.
+      if (Directory.Exists(junction))
+        Directory.Delete(junction);
+    }
+  }
+
+  private static void CreateJunction(string junctionPath, string targetPath)
+  {
+    using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+    {
+      FileName = "cmd.exe",
+      ArgumentList = { "/c", "mklink", "/J", junctionPath, targetPath },
+      UseShellExecute = false,
+      CreateNoWindow = true,
+      RedirectStandardOutput = true,
+      RedirectStandardError = true
+    })!;
+    process.WaitForExit();
+    Assert.True(process.ExitCode == 0 && Directory.Exists(junctionPath), "Could not create a test junction with mklink /J.");
   }
 
   [Fact]

@@ -58,7 +58,7 @@
 測試全部通過之前，其他階段都不開始。
 
 - [x] Task 0.1：修正 [testing.md](../testing.md) 記錄的 CA1716（`IWatchService.Stop()`）與 CA1859（`PreviewStatisticsService.BuildDirectoryBreakdown()`），讓 `TreatWarningsAsErrors` 下也能建置。實作時另外發現並修正：GUI 的 CA1305，以及 ImageSharp 2.1.13 的 NuGet 稽核錯誤（升級到 4.1.3）。
-- [x] Task 0.2：找出並修正 `EmptyDirectoryServiceTests.Cleanup_DryRun_Does_Not_Delete` 卡住的原因：dry run 時目錄不會被刪掉，迴圈永遠不會結束。這是產品程式的錯誤，不只是測試的問題。
+- [x] Task 0.2：找出並修正 `EmptyDirectoryServiceTests.Cleanup_DryRun_Does_Not_Delete` 卡住的原因：dry run 時目錄不會被刪掉，迴圈永遠不會結束。這是產品程式的錯誤，不只是測試的問題。獨立審閱另外發現清理會跟著 junction 走到 root 之外刪除空目錄（改動前就存在），一併修正。
 - [x] Task 0.3：在 testing.md 記錄全部通過的基準：SDK 版本、測試數與耗時。
 - [ ] Task 0.4：把所有專案的 `TargetFramework` 升級到 `net10.0-windows`，更新套件，重新跑完整測試。一併處理 testing.md 列出的間接相依漏洞（System.Text.Json、System.Net.Http、System.Text.RegularExpressions）。
 - [ ] Task 0.5：向 Six Labors 申請 ImageSharp 授權金鑰，放在 repo 之外（環境變數或 `SixLaborsLicenseFile`）。沒有金鑰時 Release 建置會失敗；這是 Phase 7 的前置條件。
@@ -171,8 +171,9 @@
 | 檔案 | 動作 | 說明 |
 |------|------|------|
 | `Directory.Build.props`、各 `*.csproj` | Modify | 升級到 `net10.0-windows` 並更新套件 |
-| `src/Core/Services/IWatchService.cs`、`PreviewStatisticsService.cs` | Modify | 修正 CA1716、CA1859 |
-| `tests/Core.Tests/Services/EmptyDirectoryServiceTests.cs` | Modify | 修正卡住的測試 |
+| `src/Core/Services/IWatchService.cs`、`WatchService.cs`、`PreviewStatisticsService.cs`、`src/Gui/ViewModels/ScannedFileViewModel.cs` | Modify | 修正 CA1716、CA1859、CA1305（Phase 0 已完成） |
+| `src/Core/Services/EmptyDirectoryService.cs`、`tests/Core.Tests/Services/EmptyDirectoryServiceTests.cs` | Modify | 修正 dry run 無窮迴圈，並且不再跟隨 junction（Phase 0 已完成） |
+| `src/Core/Core.csproj`、`.gitignore` | Modify | ImageSharp 升級到 4.1.3；Git 忽略 `sixlabors.lic`（Phase 0 已完成） |
 | `scripts/windows/New-TestDataset.ps1` | Create | 資料集與 ground truth 產生器 |
 | `scripts/windows/Get-FolderStatistics.ps1` | Create | 只收集統計數字的腳本（需同意） |
 | `tests/Core.Benchmarks/` | Create | 量測工具 |
@@ -263,7 +264,7 @@
 | 日期 | 更新 |
 |------|------|
 | 2026-10-23 | 建立草稿；等待 ADR 決定後再開始 Phase 0 以外的工作 |
-| 2026-10-23 | 完成 Task 0.1 至 0.3：solution 建置通過，147 個測試全部通過；新增 Task 0.5（ImageSharp 授權金鑰） |
+| 2026-10-23 | 完成 Task 0.1 至 0.3：solution 建置通過，測試全部通過；新增 Task 0.5（ImageSharp 授權金鑰）。依獨立審閱修正 junction 問題後，測試增為 149 個 |
 
 ---
 

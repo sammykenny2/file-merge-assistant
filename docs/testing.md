@@ -39,11 +39,11 @@ and YAML; they do not run this .NET test suite.
 
 ## Test Baseline
 
-Checked on 2026-10-23 with SDK 8.0.426, with `TreatWarningsAsErrors` and NuGet
-audit at their defaults:
+Checked on 2026-10-23 with SDK 8.0.426, with `TreatWarningsAsErrors` on (set in
+`Directory.Build.props`) and NuGet audit at its default:
 
 - `dotnet build file-merge-assistant.sln` succeeds for the Debug configuration.
-- `dotnet test tests/Core.Tests/Core.Tests.csproj` passes all 147 tests; VSTest
+- `dotnet test tests/Core.Tests/Core.Tests.csproj` passes all 149 tests; VSTest
   reports about 0.2 seconds of test time.
 
 To guard against future hangs, add a bounded timeout when diagnosing:
@@ -52,7 +52,8 @@ To guard against future hangs, add a bounded timeout when diagnosing:
 dotnet test tests/Core.Tests/Core.Tests.csproj --blame-hang-timeout 60s --blame-hang-dump-type none
 ```
 
-VSTest writes its sequence attachment under `tests/Core.Tests/TestResults/`.
+When a test hangs, VSTest writes a sequence attachment under
+`tests/Core.Tests/TestResults/` that names the test that was running.
 
 ### Fixes That Established This Baseline
 
@@ -62,8 +63,16 @@ VSTest writes its sequence attachment under `tests/Core.Tests/TestResults/`.
   This blocked the solution build, not the test build.
 - `EmptyDirectoryService.Cleanup(dryRun: true)` never returned when the tree held
   an empty directory, which hung `Cleanup_DryRun_Does_Not_Delete`. Cleanup now
-  makes one deepest-first pass, and a dry run reports the same count as a real
-  cleanup. Two regression tests cover nested and mixed trees.
+  makes one deepest-first pass. When every delete succeeds, a dry run reports
+  the same count as a real cleanup; a directory that cannot be deleted (in use,
+  read-only) is still counted by a dry run.
+- Independent review found that cleanup followed junctions and directory
+  symlinks, so it could delete empty directories outside the root (this predates
+  the dry-run fix). Cleanup now skips reparse points, so it neither follows nor
+  deletes them, and a directory that contains one is not treated as empty.
+  Inaccessible subdirectories are skipped instead of aborting the whole cleanup.
+  Regression tests cover nested and mixed trees, an empty root, and a junction
+  that points outside the root.
 - NuGet audit errors NU1902/NU1903: `SixLabors.ImageSharp` moved from 2.1.13 to
   4.1.3, which fixes GHSA-gwg2-r3hj-4w44, GHSA-wmxv-xphr-5c9g,
   GHSA-j3p4-wp97-rph4, GHSA-j9gm-c75j-xc9q and GHSA-jjfr-hcj7-qf5w.
@@ -71,11 +80,19 @@ VSTest writes its sequence attachment under `tests/Core.Tests/TestResults/`.
 ### Known Remaining Issues
 
 - **Release builds fail without a Six Labors license key.** ImageSharp 4.x is
-  under the Six Labors Split License; this MIT-licensed project qualifies for its
-  Apache 2.0 terms, but the package validates a key at build time. Debug builds
-  only warn. Provide the key through `SixLaborsLicenseKey` or
-  `SixLaborsLicenseFile` outside the repository; `sixlabors.lic` is ignored by Git.
+  under the Six Labors Split License, which grants Apache 2.0 terms to software
+  under an open source license; this project is MIT-licensed, which the owner
+  should confirm when requesting the key. The package validates a key at build
+  time: Debug builds only warn. Supply the key as the `SixLaborsLicenseKey`
+  property or environment variable, point `SixLaborsLicenseFile` at a key file
+  outside the repository, or place `sixlabors.lic` under `src/Core/` (the package
+  only searches the Core project folder). `sixlabors.lic` is ignored by Git.
   Obtaining the key is a prerequisite for release packaging (PLAN-001 Phase 7).
+- **CoenM.ImageSharp.ImageHash 1.3.6 was built against ImageSharp 2.x** and
+  declares an open `>= 2.1.3` range. The one API this project uses,
+  `AverageHash.Hash`, is covered by `PerceptualHashAlgorithmTests` and gave the
+  same hashes under 2.1.13 and 4.1.3 in review. Rerun those tests whenever
+  ImageSharp is updated.
 - **Transitive packages with known vulnerabilities** (reported by
   `dotnet list package --vulnerable --include-transitive`; they do not fail the
   current build):

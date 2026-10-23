@@ -21,12 +21,21 @@ public class EmptyDirectoryService : IEmptyDirectoryService
     if (!Directory.Exists(rootPath))
       return 0;
 
+    // Skip reparse points so junctions and directory symlinks are neither followed outside
+    // rootPath nor deleted; a parent that contains one is not empty and stays.
+    var options = new EnumerationOptions
+    {
+      RecurseSubdirectories = true,
+      AttributesToSkip = FileAttributes.ReparsePoint,
+      IgnoreInaccessible = true
+    };
+
     // A child path is always longer than its parent, so this visits children first.
     // Tracking removals lets a dry run treat parents of removable directories as empty too.
-    var directories = Directory.EnumerateDirectories(rootPath, "*", SearchOption.AllDirectories)
+    var directories = Directory.EnumerateDirectories(rootPath, "*", options)
       .OrderByDescending(d => d.Length)
       .ToList();
-    var removedDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    var removedDirs = new HashSet<string>(StringComparer.Ordinal);
 
     foreach (var dir in directories)
     {
