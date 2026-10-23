@@ -31,6 +31,14 @@ public static class PerceptualFingerprints
   public static int Distance(string first, string second)
   {
     if (!TryParse(Mean8D8, first, out var a) || !TryParse(Mean8D8, second, out var b)) { throw new ArgumentException("Invalid perceptual evidence."); }
+    return Distance(a, b);
+  }
+
+  internal static ulong[] Parse(string fingerprint) => TryParse(Mean8D8, fingerprint, out var values)
+    ? values : throw new ArgumentException("Invalid perceptual evidence.", nameof(fingerprint));
+
+  internal static int Distance(ulong[] a, ulong[] b)
+  {
     var minimum = 64;
     foreach (var left in a)
     {

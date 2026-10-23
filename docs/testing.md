@@ -82,6 +82,18 @@ native image snapshot, alongside malformed-header dimension and format guards.
 Independent foundation review passed 12 Rust and 21 focused Core tests, zero
 skips, after resource-lifetime and exact-index boundary corrections.
 
+Slice 4d's persistent image route adds `SimilarImageSessionTests`: native
+cross-source candidates and corrupt-image errors, preservation of existing exact
+proof, count/pair limits, cancellation acknowledgement, and later-cohort cloud
+eviction or same-metadata replacement before backend upload. The separate
+perceptual publication entry never activates `files.hash`. CLI/WPF image review
+remains a subsequent slice; G4 is not complete.
+Final validation passes **485 Core / 20 GUI / 10 CLI**, zero skips. Independent
+review passed **44 focused cases**, zero skips, including actual DLL execution,
+cloud/identity changes, final coverage, exact publication and scanner/session
+regressions. The global 2000-image guard bounds pair comparison after per-source
+analysis; it does not bound the sum of decoding across multiple sources.
+
 Before PLAN-002 implementation, commit `a01ba97` passed the full solution suite:
 404 Core and 16 GUI tests, SDK 10.0.402. The new shared known-answer fixture is
 checked independently by `AnalysisBaselineTests` and the native adapter's Rust

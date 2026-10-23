@@ -1,6 +1,6 @@
 # 相似圖片逐檔適配（2026-10-24）
 
-PLAN-002 Slice 4d 第一部分新增原生 `SimilarImages` 逐檔證據，成熟度
+PLAN-002 Slice 4d 新增原生 `SimilarImages` 逐檔證據與 Core 持久工作，成熟度
 Experimental。GUI／CLI 的候選審閱與完整工作流程尚待後續 slice；
 不能宣告 G4 或相似圖片產品驗收完成。
 
@@ -24,7 +24,7 @@ Experimental。GUI／CLI 的候選審閱與完整工作流程尚待後續 slice�
 版本化算法為 `image-mean8-d8-v1`，距離為兩份 transform hash 集合的
 最小 Hamming distance（0–64 bits），越低越近。這不是百分比，
 距離 0 也不是精確內容相同。Core 驗證編碼及配對距離；精確內容
-`ContentFingerprints` 拒收這個算法。此 slice 尚未將圖片證據寫入主索引。
+`ContentFingerprints` 拒收這個算法。
 `SourceScanner` 的精確索引入口也明確拒收這個能力，避免經由一般
 validator 接受後把感知 hash 發布到 `files.hash`。
 
@@ -67,3 +67,38 @@ Rust 測試先驗證逐檔結果與來源 bytes 未改動；.NET 實際 DLL 測�
 Adapter 升至 0.2.0、C ABI 仍為 1；原 0.1.0 快照不能以新版默默續跑，
 需原版或新建工作。既有精確內容算法、預設與歷史結果不變。
 ImageSharp Release 授權仍待取得；這項 Rust Debug 驗證不能取代發佈驗收。
+
+## Core 持久任務與全域候選
+
+Slice 4d 第二部分提供 `SimilarImageAnalysis`。每輪建立獨立 analysis index，
+保留完整來源 inventory、固定引擎／來源快照、逐檔觀察、錯誤、世代及證據。
+沿用 schema 5 的 `file_fingerprints` 與 `analysis_results`，以算法、參數、
+引擎版本及任務快照識別種類，不新增或重解讀既有 exact hash。
+
+精確 `SourceScanner` 入口仍拒絕圖片設定；`ImageSourceScanner` 重用 inventory
+後，按每批 100 個圖片呼叫引擎。Cache lookup、送出前與 checkpoint 前都重新
+驗證身份、大小／時間、祖先連結、來源規則及 cloud-only flags。
+變成雲端檔時只更新隔離清單並回報部分完成，不送入 decoder／下載。
+發布前與最後報告整理也重查雲端狀態；先前 checkpoint 的圖片若變成
+cloud-only，不作為本輪完整候選，報告不帶可誤用的感知 fingerprint。
+圖片發布必須使用 `PublishPerceptual`；這個入口只標記完整圖片世代，
+不啟用 `files.hash`。既有有效 exact hash 可保留；觀察到實際檔案改變時
+原證據仍會失效。沒有新增任何決定、操作計畫或執行歷史。
+
+全域比較按已驗證的 per-file hashes 產生跨來源配對；每對有兩個 File ID
+與 bit distance，threshold 另外保存於報告，與可重用的 hash 設定分開。
+可選閾值 0–16，預設 6；實驗版每來源最多 2000 個圖片送入解碼，
+全域配對最多比較 2000 個圖片、產生最多 10000 個候選配對。
+全域數量在各來源完成分析後、配對前檢查，因此多來源的總解碼量可能
+超過 2000；這不是跨來源的解碼總量上限。超限明確回報，保留索引，
+不把截斷結果當成功。
+部分完成、來源改變、未說明的本機圖片缺證據及取消都不回報完整候選。
+取消等待 backend 停止，已保存 inventory／checkpoints 保留。
+
+回歸覆蓋實際 DLL 跨來源配對、損壞圖片的部分終態、既有 exact hash
+不被感知 hash 覆寫、2000／10000 上限與停止確認；後續批次檔案在第一批
+處理時被換成同大小／同時間的新身份或設成 Offline，也不會被送入 backend。
+Offline 測試只設可重建檔案的 attribute，沒有連接雲端服務或下載個人檔案。
+另外測試已 checkpoint 的早期檔在下一批被設 Offline，以及工作完成後、
+報告整理前的雲端變動或缺證據；結果都不能宣告完整，所有非 Completed
+報告皆無可用候選配對。這些檢查仍不是跨來源原子快照，預覽須再次驗證。

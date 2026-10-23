@@ -52,7 +52,7 @@ public sealed class ReadOnlyAnalysisSession
   {
     ArgumentNullException.ThrowIfNull(paths);
     if (paths.Count == 0) { throw new ArgumentException("At least one source folder is required.", nameof(paths)); }
-    if (engine.Capability != AnalysisCapability.ExactDuplicates) { throw new ArgumentException("This session supports exact-content analysis only.", nameof(engine)); }
+    if (engine.Capability is not (AnalysisCapability.ExactDuplicates or AnalysisCapability.SimilarImages)) { throw new ArgumentException("This session does not support the requested capability.", nameof(engine)); }
     _engines.Resolve(engine);
     var frozenPaths = paths.ToImmutableArray();
     return Task.Run(() => RunCoreAsync(frozenPaths, sources, engine, progress, cancellationToken), cancellationToken);
@@ -81,11 +81,11 @@ public sealed class ReadOnlyAnalysisSession
     var database = IndexDatabase.OpenOrCreate(index);
     using (var setup = IndexedWorkbenchStore.Open(index, _volumes, context: null, startWorker: false, engines: _engines))
     {
-      setup.SelectNewJobEngine(engine);
+      if (engine.Capability == AnalysisCapability.ExactDuplicates) { setup.SelectNewJobEngine(engine); }
       var problems = await setup.AddSourcesAsync(paths, new SourceOptions(true, true, paths), startScan: true).ConfigureAwait(false);
       if (problems.Count > 0) { throw new ArgumentException(string.Join(Environment.NewLine, problems), nameof(paths)); }
     }
-    if (!sources.IsDefault) { BindConfiguredSources(database, engine, sources, dataRoot); }
+    if (!sources.IsDefault || engine.Capability == AnalysisCapability.SimilarImages) { BindConfiguredSources(database, engine, sources, dataRoot); }
     using var worker = new ScanWorker(database, _volumes, [dataRoot], _engines);
     var canceled = false;
     worker.Start();
@@ -120,7 +120,7 @@ public sealed class ReadOnlyAnalysisSession
       foreach (var file in files)
       {
         cancellationToken.ThrowIfCancellationRequested();
-        if (file.Status == "Confirmed" && file.Fingerprint is { } fingerprint)
+        if (engine.Capability == AnalysisCapability.ExactDuplicates && file.Status == "Confirmed" && file.Fingerprint is { } fingerprint)
         {
           if (!byHash.TryGetValue(fingerprint, out var ids)) { byHash[fingerprint] = ids = []; }
           ids.Add(file.Id);
@@ -149,6 +149,7 @@ public sealed class ReadOnlyAnalysisSession
     using var connection = database.Open();
     using var transaction = connection.BeginTransaction();
     var registered = ScanJobSnapshot.Capture(connection, "binding", engine, [dataRoot]).Sources;
+    if (sources.IsDefault) { sources = registered; }
     var bound = registered.Select(item =>
     {
       var policy = sources.Single(source => string.Equals(source.Source.Root, item.Source.Root, StringComparison.Ordinal));
@@ -198,11 +199,14 @@ public sealed class ReadOnlyAnalysisSession
     using var connection = database.Open();
     using var command = IndexDatabase.Command(connection,
       """
-      SELECT f.id,f.source_id,s.root,f.rel_path,f.size,f.mtime,f.hash,f.cloud_only,p.file_identity
+      SELECT f.id,f.source_id,s.root,f.rel_path,f.size,f.mtime,
+        CASE WHEN $images=1 THEN p.hash ELSE f.hash END,f.cloud_only,p.file_identity
       FROM files f JOIN sources s ON s.id=f.source_id
-      LEFT JOIN file_fingerprints p ON p.file_id=f.id AND p.hash=f.hash AND p.algorithm=$algorithm AND p.parameters=$parameters
+      LEFT JOIN file_fingerprints p ON p.file_id=f.id AND ($images=1 OR p.hash=f.hash) AND p.algorithm=$algorithm AND p.parameters=$parameters
+        AND p.engine_id=$engine AND p.engine_version=$version AND p.upstream_commit IS $commit
       ORDER BY f.id
-      """, ("$algorithm", engine.Algorithm), ("$parameters", engine.ParametersJson));
+      """, ("$algorithm", engine.Algorithm), ("$parameters", engine.ParametersJson), ("$engine", engine.EngineId),
+      ("$version", engine.EngineVersion), ("$commit", engine.UpstreamCommit), ("$images", engine.Capability == AnalysisCapability.SimilarImages ? 1 : 0));
     using var reader = command.ExecuteReader();
     while (reader.Read())
     {
@@ -215,18 +219,32 @@ public sealed class ReadOnlyAnalysisSession
         FileObservation? evidence = null;
         try { if (!reader.IsDBNull(8)) { evidence = JsonSerializer.Deserialize<FileObservation>(reader.GetString(8), AnalysisJson.Options); } }
         catch (JsonException) { }
-        if (!ContentFingerprints.IsValid(engine.Algorithm, hash) || evidence is null || !observation.Matches(evidence)) { hash = null; complete = false; }
+        if (!PerceptualFingerprints.IsValid(engine, hash) || evidence is null || !observation.Matches(evidence)) { hash = null; complete = false; }
         else { observation = evidence; }
       }
       var status = reader.GetInt64(7) != 0 ? "CloudOnly" : hash is not null ? "Confirmed" : complete ? "NotContentCandidate" : "Unconfirmed";
+      if (status == "CloudOnly") { hash = null; }
+      if (engine.Capability == AnalysisCapability.SimilarImages && status != "CloudOnly")
+      {
+        status = !ImageSourceScanner.SupportsPath(path) ? "NotImage" : hash is not null ? "PerceptualEvidence" : "Unconfirmed";
+        if (status == "Unconfirmed") { complete = false; }
+      }
       if (!online.Contains(reader.GetString(1))) { status = "SourceUnavailable"; hash = null; complete = false; }
       if (status is not ("CloudOnly" or "SourceUnavailable"))
       {
         try
         {
-          var current = FileObservation.Capture(path);
-          if (!observation.Matches(current)) { hash = null; status = "Changed"; complete = false; }
-          else { observation = current; }
+          if (engine.Capability == AnalysisCapability.SimilarImages && ImageSourceScanner.IsCloudOnly(File.GetAttributes(path)))
+          {
+            status = "CloudOnly"; hash = null; complete = false;
+            IndexDatabase.Execute(connection, "UPDATE files SET cloud_only=1,hash=NULL WHERE id=$id", ("$id", reader.GetInt64(0)));
+          }
+          else
+          {
+            var current = FileObservation.Capture(path);
+            if (!observation.Matches(current)) { hash = null; status = "Changed"; complete = false; }
+            else { observation = current; }
+          }
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {

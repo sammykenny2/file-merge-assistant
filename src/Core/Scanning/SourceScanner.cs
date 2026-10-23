@@ -100,6 +100,7 @@ public sealed class SourceScanner
     using var connection = _database.Open();
     checkScope?.Invoke();
     var state = new State(source, jobId, connection, report, checkScope ?? (() => { }), _analysis);
+    _ = state.Evidence; // Begin the exact generation before discovery, including interruption checkpoints.
     state.CheckScope();
     var stop = Discover(state, pauseRequested, cancellationToken);
     if (stop != ScanStop.Completed)
@@ -108,6 +109,14 @@ public sealed class SourceScanner
     }
     var policies = scopeSources ?? onlineRoots.ToDictionary(pair => pair.Key, pair => source with { Id = pair.Key, Root = pair.Value }, StringComparer.Ordinal);
     return ConfirmAsync(state, onlineRoots, policies, pauseRequested, cancellationToken).GetAwaiter().GetResult();
+  }
+
+  internal static ScanStop Inventory(IndexDatabase database, ScanSource source, string jobId, Action<ScanProgress> report,
+    Func<bool> pauseRequested, Action checkScope, CancellationToken cancellationToken)
+  {
+    using var connection = database.Open();
+    checkScope();
+    return Discover(new State(source, jobId, connection, report, checkScope, null), pauseRequested, cancellationToken);
   }
 
   /// <summary>Content fingerprint of a file: XxHash128 over all its bytes, tagged with the algorithm.</summary>
@@ -571,7 +580,7 @@ public sealed class SourceScanner
 
   private static string WithSeparator(string root) => root.EndsWith('\\') ? root : root + "\\";
 
-  private static bool Approved(ScanSource source, string relative, FileInfo file)
+  internal static bool Approved(ScanSource source, string relative, FileInfo file)
   {
     var root = WithSeparator(Path.GetFullPath(source.Root));
     if (Path.IsPathRooted(relative) || !Path.GetFullPath(file.FullName).StartsWith(root, StringComparison.OrdinalIgnoreCase))
@@ -590,9 +599,11 @@ public sealed class SourceScanner
   }
 
   private sealed class State(ScanSource source, string jobId, SqliteConnection connection, Action<ScanProgress> report,
-    Action checkScope, AnalysisEngineSnapshot analysis)
+    Action checkScope, AnalysisEngineSnapshot? analysis)
   {
-    public AnalysisEvidenceStore Evidence { get; } = new(connection, jobId, analysis);
+    private AnalysisEvidenceStore? _evidence;
+    public AnalysisEvidenceStore Evidence => _evidence ??= new(Connection, JobId,
+      analysis ?? throw new InvalidOperationException("Inventory cannot publish analysis evidence."));
     public Action CheckScope { get; } = checkScope;
     public string JobId { get; } = jobId;
     public ScanSource Source { get; } = source;

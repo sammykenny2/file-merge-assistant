@@ -42,7 +42,7 @@ internal sealed class AnalysisEvidenceStore
     FileObservation? identity;
     try { identity = reader.IsDBNull(3) ? null : JsonSerializer.Deserialize<FileObservation>(reader.GetString(3), AnalysisJson.Options); }
     catch (JsonException) { return null; }
-    if (!ContentFingerprints.IsValid(_engine.Algorithm, hash) || identity is null
+    if (!PerceptualFingerprints.IsValid(_engine, hash) || identity is null
       || reader.GetInt64(1) != input.Observation.Size || reader.GetInt64(2) != input.Observation.ModifiedUtcTicks
       || !input.Observation.Matches(identity) || !identity.Matches(input.Observation)) { return null; }
     return hash;
@@ -57,6 +57,7 @@ internal sealed class AnalysisEvidenceStore
     }
     foreach (var (input, hash) in results)
     {
+      if (!PerceptualFingerprints.IsValid(_engine, hash)) { throw new InvalidDataException("Evidence does not match the analysis capability."); }
       IndexDatabase.Execute(_connection,
         """
         INSERT INTO file_fingerprints(file_id, algorithm, parameters, hash, size, mtime, file_identity,
@@ -89,12 +90,32 @@ internal sealed class AnalysisEvidenceStore
 
   public bool Publish(long expected, Action checkScope, Action<string, string> reportError, CancellationToken cancellationToken)
   {
+    if (_engine.Capability != AnalysisCapability.ExactDuplicates) { throw new InvalidOperationException("Only exact-content evidence can update the active content hash."); }
+    return PublishCore(expected, checkScope, reportError, activateContent: true, cancellationToken);
+  }
+
+  public bool PublishPerceptual(long expected, Action checkScope, Action<string, string> reportError, CancellationToken cancellationToken)
+  {
+    if (_engine.Capability != AnalysisCapability.SimilarImages) { throw new InvalidOperationException("This publication requires similar-image evidence."); }
+    return PublishCore(expected, checkScope, reportError, activateContent: false, cancellationToken);
+  }
+
+  private bool PublishCore(long expected, Action checkScope, Action<string, string> reportError, bool activateContent, CancellationToken cancellationToken)
+  {
     var unchanged = true;
     foreach (var (id, path, observation) in StagedInputs(checkScope))
     {
       cancellationToken.ThrowIfCancellationRequested();
       try
       {
+        if (_engine.Capability == AnalysisCapability.SimilarImages && ImageSourceScanner.IsCloudOnly(File.GetAttributes(path)))
+        {
+          checkScope();
+          IndexDatabase.Execute(_connection, "UPDATE files SET cloud_only=1,hash=NULL WHERE id=$id", ("$id", id));
+          reportError(path, "The image became cloud-only after its checkpoint; it was not downloaded.");
+          unchanged = false;
+          continue;
+        }
         var current = FileObservation.Capture(path);
         if (observation.Matches(current)) { continue; }
         checkScope();
@@ -123,11 +144,14 @@ internal sealed class AnalysisEvidenceStore
         WHERE r.job_id=$job AND r.generation=$generation AND f.size=r.size AND f.mtime=r.mtime AND f.cloud_only=0
         """, ("$job", _jobId), ("$generation", Generation));
       if (matching != expected) { return; }
-      IndexDatabase.Execute(_connection,
-        """
-        UPDATE files SET hash = (SELECT r.hash FROM analysis_results r WHERE r.job_id=$job AND r.generation=$generation AND r.file_id=files.id)
-        WHERE id IN (SELECT file_id FROM analysis_results WHERE job_id=$job AND generation=$generation)
-        """, ("$job", _jobId), ("$generation", Generation));
+      if (activateContent)
+      {
+        IndexDatabase.Execute(_connection,
+          """
+          UPDATE files SET hash = (SELECT r.hash FROM analysis_results r WHERE r.job_id=$job AND r.generation=$generation AND r.file_id=files.id)
+          WHERE id IN (SELECT file_id FROM analysis_results WHERE job_id=$job AND generation=$generation)
+          """, ("$job", _jobId), ("$generation", Generation));
+      }
       IndexDatabase.Execute(_connection, "UPDATE jobs SET analysis_complete=1 WHERE id=$job AND analysis_generation=$generation",
         ("$job", _jobId), ("$generation", Generation));
       cancellationToken.ThrowIfCancellationRequested();

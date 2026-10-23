@@ -267,14 +267,17 @@ public sealed class ScanWorker : IDisposable
         }
       }
       CheckScope();
-      var scanner = new SourceScanner(_database, engine, snapshot.Engine);
-      stop = scanner.Run(source, jobId, roots, Report, () =>
+      bool PauseRequested()
       {
         lock (_gate)
         {
           return _pauseRequested;
         }
-      }, cancel.Token, CheckScope, snapshot.Sources.ToDictionary(item => item.Source.Id, item => item.Source, StringComparer.Ordinal));
+      }
+      stop = snapshot.Engine.Capability == AnalysisCapability.SimilarImages
+        ? new ImageSourceScanner(_database, engine, snapshot.Engine).Run(source, jobId, Report, PauseRequested, CheckScope, cancel.Token)
+        : new SourceScanner(_database, engine, snapshot.Engine).Run(source, jobId, roots, Report, PauseRequested, cancel.Token,
+          CheckScope, snapshot.Sources.ToDictionary(item => item.Source.Id, item => item.Source, StringComparer.Ordinal));
     }
     catch (OperationCanceledException)
     {
