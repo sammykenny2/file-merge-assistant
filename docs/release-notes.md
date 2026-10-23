@@ -7,6 +7,21 @@ workflow refuses to start without an entry for the version. See [deployment.md](
 
 No version has been published yet.
 
+## 0.2.0
+
+Summary: A new workbench that consolidates copies one small stack at a time: scan your folders, pick the copy to keep, merge in what only the others have, and move the rest to a recycle area you can restore from.
+
+- New window with the stack-by-stack workbench: add folders, watch scans, review one stack of copies at a time, check
+  the pending plan, run it, and see the history.
+- Real local index (SQLite) with staged scanning that can pause and resume; code projects, regenerable folders and
+  cloud-only files are recognised.
+- Running the plan copies files that only other copies have into the keeper (verified by fingerprint, never
+  overwriting), then moves the other copies to a recycle area on the same drive. Failed items can be retried; single
+  items or whole runs can be restored; emptying the recycle area is a separate step.
+- Every copy is checked on disk right before it is moved and is left alone if anything changed after you decided;
+  folders are compared by identity, so a network path or junction to the keeper is never taken for a copy.
+- `--demo` starts the app on the GUI flow mock's sample data.
+
 ## 0.1.0
 
 Summary: First preview of File Merge Assistant for Windows, with a per-user setup program and an in-app update check.
