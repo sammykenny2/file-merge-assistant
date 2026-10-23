@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:FileMergeAssistant.Gui.ViewModels"
+             xmlns:l="clr-namespace:FileMergeAssistant.Gui.Localization"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -34,8 +35,9 @@
                   ToolTip="以 --demo 啟動：用的是 GUI 流程 mock 的模擬資料，不會讀取或改動你的檔案。">
             <TextBlock Text="模擬資料" FontSize="12.5" Foreground="{StaticResource MutedBrush}" />
           </Border>
-          <TextBlock Text="{Binding VersionText}" Style="{StaticResource Faint}" VerticalAlignment="Center" Margin="0,0,10,0" />
-          <Button Content="檢查更新…" Style="{StaticResource LinkButton}" FontSize="13" Command="{Binding CheckForUpdatesCommand}" />
+          <Button Content="{l:T settings.title}" Style="{StaticResource NavTab}" Tag="{Binding IsSettingsSelected}"
+                  Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:NavSection.Settings}"
+                  Visibility="{Binding HasSettings, Converter={StaticResource BoolToVisibility}}" />
         </StackPanel>
 
         <StackPanel Orientation="Horizontal">

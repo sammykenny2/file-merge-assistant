@@ -106,7 +106,8 @@ manifest and the release tag `v<version>` all use it. Every version needs an ent
 
 ## In-app updates
 
-"Check for updates…" in the app reads `https://github.com/<UpdateRepository>/releases.atom`, the public release
+"Check for updates" (Settings > Version and updates, and "Check for updates…" in the tray menu) reads
+`https://github.com/<UpdateRepository>/releases.atom`, the public release
 feed (no GitHub REST API, so its per-IP quota does not apply), and picks the highest `v<major>.<minor>.<patch>` release
 newer than the running version. It then reads `file-merge-assistant-update-windows.json` from that release:
 
@@ -125,9 +126,22 @@ The manifest must match its release (tag, version, platform), and the only insta
 `FileMergeAssistant-<version>-x64-setup.exe`. The installer is downloaded from the same release into
 `%LOCALAPPDATA%\FileMergeAssistant\updates`; its size and SHA-256 must match the manifest, and a download that makes
 no progress for 60 seconds stops. Only a copy installed by the setup program can install updates: the app checks that
-it runs from `InstallDir\app`. After the download it asks before closing, opens the installer so nothing else can
-change it, checks its SHA-256 again, starts it with `/S /WAITPID=<its pid> /RELAUNCH` and exits. Closing the update
-window cancels a running download. Other copies see a link to the releases page.
+it runs from `InstallDir\app`. The settings page offers one next step at a time ("Check for updates", "Download
+update", "Restart and install"); downloading checks again first. Installing waits while a plan runs, opens the
+installer so nothing else can change it, checks its SHA-256 again, starts it with `/S /WAITPID=<its pid> /RELAUNCH`
+and exits. The tray item checks, then asks once before downloading and installing. Other copies explain why they
+cannot update and link to the releases page ([ADR-014](decisions/ADR-014-tray-startup-and-display-language.md)).
+
+## Start at sign-in and the tray
+
+Settings > Startup has three switches, as in desktop-work-fleet: start at sign-in (on by default), keep running in
+the tray when the main window closes (on), and open the main window after a sign-in start (off). Only the copy the
+setup program installed can start at sign-in. It writes the value `FileMergeAssistant` under
+`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, `"<InstallDir>\app\FileMergeAssistant.exe" --launch-at-login`:
+once on its first start, then only when the user changes the switch. The app never writes
+`...\Explorer\StartupApproved\Run`, where Windows keeps the user's own Startup apps switch, and the settings page shows
+that switch's state. Uninstalling removes the Run value. A second launch shows the running app's window through a
+named pipe per user and data folder; the setup program's "is running" message tells the user to exit from the tray.
 
 `UpdateRepository` in `Directory.Build.props` names the repository (Debug builds also accept `FMA_UPDATE_REPOSITORY`,
 for testing). **The check cannot work while that repository is private**: GitHub answers the feed with 404, and the app

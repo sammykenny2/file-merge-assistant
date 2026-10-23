@@ -1,0 +1,132 @@
+<UserControl x:Class="FileMergeAssistant.Gui.Settings.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:s="clr-namespace:FileMergeAssistant.Gui.Settings"
+             xmlns:l="clr-namespace:FileMergeAssistant.Gui.Localization"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance s:SettingsViewModel}">
+  <UserControl.Resources>
+    <Style x:Key="RowLabel" TargetType="TextBlock" BasedOn="{StaticResource Body}">
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style x:Key="RowHint" TargetType="TextBlock" BasedOn="{StaticResource Small}">
+      <Setter Property="Margin" Value="0,3,0,0" />
+    </Style>
+    <Style x:Key="Section" TargetType="Border" BasedOn="{StaticResource Card}">
+      <Setter Property="Padding" Value="22,18,22,8" />
+      <Setter Property="Margin" Value="0,0,0,16" />
+    </Style>
+    <Style x:Key="Row" TargetType="Border">
+      <Setter Property="BorderBrush" Value="{StaticResource RowDividerBrush}" />
+      <Setter Property="BorderThickness" Value="0,1,0,0" />
+      <Setter Property="Padding" Value="0,14" />
+    </Style>
+  </UserControl.Resources>
+
+  <ScrollViewer Style="{StaticResource PageScroll}">
+    <StackPanel Margin="40,32,40,56" MaxWidth="760" HorizontalAlignment="Left" MinWidth="560">
+      <TextBlock Text="{l:T settings.title}" Style="{StaticResource H1}" />
+
+      <Border Background="{StaticResource WarnSoftBrush}" BorderBrush="{StaticResource WarnBorderBrush}" BorderThickness="1" CornerRadius="6"
+              Padding="14,10" Margin="0,18,0,0" Visibility="{Binding HasMessage, Converter={StaticResource BoolToVisibility}}">
+        <TextBlock Text="{Binding Message}" Style="{StaticResource Body}" Foreground="{StaticResource WarnInkBrush}" />
+      </Border>
+
+      <!-- General -->
+      <Border Style="{StaticResource Section}" Margin="0,22,0,16">
+        <StackPanel>
+          <TextBlock Text="{l:T settings.general.title}" Style="{StaticResource H2}" Margin="0,0,0,12" />
+          <Border Style="{StaticResource Row}">
+            <DockPanel>
+              <ComboBox DockPanel.Dock="Right" Width="220" VerticalAlignment="Center" FontSize="14"
+                        ItemsSource="{Binding Languages}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                        SelectedValue="{Binding Language}" AutomationProperties.Name="{l:T settings.general.language}" />
+              <StackPanel Margin="0,0,24,0">
+                <TextBlock Text="{l:T settings.general.language}" Style="{StaticResource RowLabel}" />
+                <TextBlock Text="{l:T settings.general.languageHint}" Style="{StaticResource RowHint}" />
+              </StackPanel>
+            </DockPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Startup -->
+      <Border Style="{StaticResource Section}">
+        <StackPanel>
+          <TextBlock Text="{l:T settings.startup.title}" Style="{StaticResource H2}" Margin="0,0,0,12" />
+          <Border Style="{StaticResource Row}">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Content="{l:T settings.startup.openSystem}" Style="{StaticResource SmallButton}" VerticalAlignment="Center"
+                      Margin="16,0,0,0" Command="{Binding OpenSystemSettingsCommand}"
+                      Visibility="{Binding ShowOpenSystem, Converter={StaticResource BoolToVisibility}}" />
+              <CheckBox Style="{StaticResource Check}" IsChecked="{Binding StartAtLogin}" IsEnabled="{Binding StartAtLoginEnabled}"
+                        AutomationProperties.Name="{l:T settings.startup.startLogin}">
+                <StackPanel>
+                  <TextBlock Text="{l:T settings.startup.startLogin}" Style="{StaticResource RowLabel}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=CheckBox}}" />
+                  <TextBlock Text="{Binding StartAtLoginDetail}" Style="{StaticResource RowHint}" />
+                </StackPanel>
+              </CheckBox>
+            </DockPanel>
+          </Border>
+          <Border Style="{StaticResource Row}">
+            <CheckBox Style="{StaticResource Check}" IsChecked="{Binding CloseToTray}" IsEnabled="{Binding CloseToTrayEnabled}"
+                      AutomationProperties.Name="{l:T settings.startup.closeToTray}">
+              <StackPanel>
+                <TextBlock Text="{l:T settings.startup.closeToTray}" Style="{StaticResource RowLabel}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=CheckBox}}" />
+                <TextBlock Text="{Binding CloseToTrayDetail}" Style="{StaticResource RowHint}" />
+              </StackPanel>
+            </CheckBox>
+          </Border>
+          <Border Style="{StaticResource Row}">
+            <CheckBox Style="{StaticResource Check}" IsChecked="{Binding OpenMainAtLogin}" IsEnabled="{Binding OpenMainEnabled}"
+                      AutomationProperties.Name="{l:T settings.startup.openMain}">
+              <StackPanel>
+                <TextBlock Text="{l:T settings.startup.openMain}" Style="{StaticResource RowLabel}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=CheckBox}}" />
+                <TextBlock Text="{l:T settings.startup.openMainHint}" Style="{StaticResource RowHint}" />
+              </StackPanel>
+            </CheckBox>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Version and updates -->
+      <Border Style="{StaticResource Section}">
+        <StackPanel>
+          <TextBlock Text="{l:T settings.update.heading}" Style="{StaticResource H2}" Margin="0,0,0,12" />
+          <Border Style="{StaticResource Row}">
+            <StackPanel>
+              <TextBlock Text="{Binding VersionText}" Style="{StaticResource RowLabel}" />
+              <TextBlock Text="{Binding DistributionText}" Style="{StaticResource RowHint}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource Row}">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                <Button Content="{l:T settings.update.releasesPage}" Style="{StaticResource SmallButton}" Command="{Binding OpenReleasesPageCommand}"
+                        Visibility="{Binding ShowReleasesLink, Converter={StaticResource BoolToVisibility}}" />
+                <Button Content="{Binding UpdateActionText}" Style="{StaticResource SecondaryButton}" Command="{Binding RunUpdateActionCommand}"
+                        Visibility="{Binding HasUpdateAction, Converter={StaticResource BoolToVisibility}}" />
+              </StackPanel>
+              <StackPanel>
+                <TextBlock Text="{Binding UpdateStatusText}" Style="{StaticResource RowLabel}" />
+                <TextBlock Text="{Binding UpdateDetailText}">
+                  <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource RowHint}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding UpdateDetailIsError}" Value="True">
+                          <Setter Property="Foreground" Value="{StaticResource WarnInkBrush}" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </TextBlock.Style>
+                </TextBlock>
+              </StackPanel>
+            </DockPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

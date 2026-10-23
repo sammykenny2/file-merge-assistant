@@ -217,6 +217,7 @@ public sealed partial class PlanViewModel : PageViewModel
     }
     IsRunning = true;
     CanExecute = false;
+    Interlocked.Increment(ref _runs);
     try
     {
       var batch = await Store.ExecutePlanAsync(CancellationToken.None);
@@ -224,9 +225,15 @@ public sealed partial class PlanViewModel : PageViewModel
     }
     finally
     {
+      Interlocked.Decrement(ref _runs);
       IsRunning = false;
     }
   }
+
+  private static int _runs;
+
+  /// <summary>Whether a plan is running, even after the user left this screen; an update waits for it.</summary>
+  public static bool AnyRunning => Volatile.Read(ref _runs) > 0;
 
   [RelayCommand]
   private void GoToHub() => Navigator.ShowHub();

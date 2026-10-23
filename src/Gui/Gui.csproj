@@ -5,7 +5,13 @@
     <RootNamespace>FileMergeAssistant.Gui</RootNamespace>
     <AssemblyName>FileMergeAssistant</AssemblyName>
     <UseWPF>true</UseWPF>
+    <!-- scripts/windows/New-AppIcon.ps1 draws it; the tray, the window and the setup program's shortcuts show it. -->
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\app.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />

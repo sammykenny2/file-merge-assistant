@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
+using FileMergeAssistant.Localization;
 
 namespace FileMergeAssistant.Updates;
 
@@ -12,7 +13,10 @@ public sealed record UpdateRelease(string Repository, string Tag, Version Versio
 /// <summary>The installer a release offers for this platform and architecture, as its update manifest describes it.</summary>
 public sealed record UpdatePackage(Version Version, string Tag, string Summary, string FileName, long Size, string Sha256, Uri DownloadUrl, Uri PageUrl);
 
-/// <summary>An update step that failed; <see cref="Code"/> is stable and the message is shown to the user as is.</summary>
+/// <summary>
+/// An update step that failed; <see cref="Code"/> is stable and the message, in the display language when it was thrown,
+/// is shown to the user as is.
+/// </summary>
 public sealed class UpdateException : Exception
 {
   public UpdateException(string code, string message, Exception? inner = null) : base(message, inner) => Code = code;
@@ -78,7 +82,7 @@ public static partial class UpdateFeed
   public static Uri AssetUrl(UpdateRelease release, string fileName)
   {
     if (!FileNamePattern().IsMatch(fileName))
-      throw Invalid("The update manifest names an invalid file.");
+      throw Invalid(AppText.Get("update.invalidFile"));
     return new Uri($"https://github.com/{release.Repository}/releases/download/{release.Tag}/{fileName}");
   }
 
@@ -106,7 +110,7 @@ public static partial class UpdateFeed
       var document = XDocument.Load(reader);
       XNamespace atom = "http://www.w3.org/2005/Atom";
       if (document.Root?.Name != atom + "feed")
-        throw Invalid("The release feed is not an Atom feed.");
+        throw Invalid(AppText.Get("update.feedInvalid"));
       entries = document.Root.Elements(atom + "entry").ToArray();
       foreach (var entry in entries)
       {
@@ -128,12 +132,12 @@ public static partial class UpdateFeed
     }
     catch (XmlException ex)
     {
-      throw Invalid("The release feed could not be read.", ex);
+      throw Invalid(AppText.Get("update.feedUnreadable"), ex);
     }
 
     // A feed that lists releases, none of them versioned, cannot prove that this version is the newest.
     if (entries.Length > 0 && !found)
-      throw new UpdateException("release_missing", "The release feed has no versioned release (vX.Y.Z) yet.");
+      throw new UpdateException("release_missing", AppText.Get("update.releaseMissing"));
     return best;
   }
 
@@ -147,33 +151,33 @@ public static partial class UpdateFeed
       if (root.ValueKind != JsonValueKind.Object
           || !root.TryGetProperty("schemaVersion", out var schema) || schema.ValueKind != JsonValueKind.Number
           || !schema.TryGetInt32(out var schemaVersion) || schemaVersion != 1)
-        throw Invalid("The update manifest has an unsupported format.");
+        throw Invalid(AppText.Get("update.manifestFormat"));
 
       var summary = Text(root, "summary") ?? string.Empty;
       if (Text(root, "platform") != Platform || Text(root, "tag") != release.Tag || ParseVersion(Text(root, "version")) != release.Version)
-        throw Invalid("The update manifest does not match its release.");
+        throw Invalid(AppText.Get("update.manifestMismatch"));
       if (summary.Length > 2000)
-        throw Invalid("The update manifest summary is too long.");
+        throw Invalid(AppText.Get("update.summaryTooLong"));
 
       if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
-        throw Invalid("The update manifest lists no installers.");
+        throw Invalid(AppText.Get("update.noInstallers"));
       var matches = assets.EnumerateArray()
         .Where(asset => asset.ValueKind == JsonValueKind.Object && Text(asset, "arch") == architecture)
         .ToArray();
       if (matches.Length != 1)
-        throw Invalid($"The update has no single installer for {architecture}.");
+        throw Invalid(AppText.Get("update.noArchitecture", ("architecture", architecture)));
 
       var chosen = matches[0];
       var name = Text(chosen, "name");
       var sha256 = Text(chosen, "sha256");
       // Only this release's setup program may be downloaded and started, never another file in the release.
       if (name != InstallerFileName(release.Version, architecture))
-        throw Invalid("The update manifest names an unexpected installer.");
+        throw Invalid(AppText.Get("update.unexpectedInstaller"));
       if (sha256 is null || !DigestPattern().IsMatch(sha256)
           || !chosen.TryGetProperty("size", out var sizeElement) || sizeElement.ValueKind != JsonValueKind.Number
           || !sizeElement.TryGetInt64(out var size)
           || size <= 0 || size > MaxPackageBytes)
-        throw Invalid("The update manifest describes the installer incorrectly.");
+        throw Invalid(AppText.Get("update.installerDescription"));
 
       return new UpdatePackage(
         release.Version, release.Tag,
@@ -182,7 +186,7 @@ public static partial class UpdateFeed
     }
     catch (JsonException ex)
     {
-      throw Invalid("The update manifest could not be read.", ex);
+      throw Invalid(AppText.Get("update.manifestUnreadable"), ex);
     }
   }
 
@@ -192,7 +196,7 @@ public static partial class UpdateFeed
   private static void RequireRepository(string repository)
   {
     if (!IsValidRepository(repository))
-      throw new UpdateException("not_configured", "No valid update source is configured.");
+      throw new UpdateException("not_configured", AppText.Get("update.notConfigured"));
   }
 
   private static UpdateException Invalid(string message, Exception? inner = null) => new("metadata_invalid", message, inner);

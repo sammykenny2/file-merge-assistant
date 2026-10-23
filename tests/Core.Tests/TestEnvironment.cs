@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using FileMergeAssistant.Infrastructure;
+using FileMergeAssistant.Localization;
 
 namespace FileMergeAssistant.Tests;
 
@@ -12,5 +13,7 @@ internal static class TestEnvironment
   internal static void Initialize()
   {
     Environment.SetEnvironmentVariable(AppDataPaths.DataDirectoryVariable, DataRoot);
+    // Messages the tests compare are in Traditional Chinese, whatever language this Windows uses.
+    AppText.Apply("zh-TW", []);
   }
 }

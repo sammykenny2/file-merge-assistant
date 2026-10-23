@@ -2,10 +2,11 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FileMergeAssistant.Gui.Settings;
 using FileMergeAssistant.Gui.Workbench;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Sources;
 using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Updates;
 using FileMergeAssistant.Workbench;
 
 namespace FileMergeAssistant.Gui.ViewModels;
@@ -16,6 +17,7 @@ public enum NavSection
   Sources,
   Plan,
   History,
+  Settings,
 }
 
 /// <summary>How an item of the status strip under the header is drawn.</summary>
@@ -32,7 +34,7 @@ public sealed record StripItem(string Text, StripTone Tone);
 public partial class MainViewModel : ObservableObject, INavigator
 {
   private readonly IWorkbenchStore _store;
-  private readonly Func<UpdateWindow> _updateWindowFactory;
+  private readonly SettingsContext? _settings;
 
   [ObservableProperty]
   private object? _currentPage;
@@ -43,12 +45,14 @@ public partial class MainViewModel : ObservableObject, INavigator
   [ObservableProperty]
   private int _pendingCount;
 
-  public MainViewModel(IWorkbenchStore store, Func<UpdateWindow> updateWindowFactory)
+  /// <param name="settings">What the settings page changes; without it the page is not offered.</param>
+  public MainViewModel(IWorkbenchStore store, SettingsContext? settings = null)
   {
     ArgumentNullException.ThrowIfNull(store);
     _store = store;
-    _updateWindowFactory = updateWindowFactory;
+    _settings = settings;
     _store.Changed += (_, e) => OnStoreChanged(e);
+    AppText.Changed += (_, _) => OnLanguageChanged();
 
     RefreshHeader();
     if (_store.Sources.Count == 0)
@@ -63,7 +67,7 @@ public partial class MainViewModel : ObservableObject, INavigator
 
   public bool IsDemo => _store.IsDemo;
 
-  public string VersionText { get; } = $"版本 {UpdateService.CurrentVersion.ToString(3)}";
+  public bool HasSettings => _settings is not null;
 
   public ObservableCollection<StripItem> Strip { get; } = [];
 
@@ -74,6 +78,8 @@ public partial class MainViewModel : ObservableObject, INavigator
   public bool IsPlanSelected => Section == NavSection.Plan;
 
   public bool IsHistorySelected => Section == NavSection.History;
+
+  public bool IsSettingsSelected => Section == NavSection.Settings;
 
 
   public bool HasPending => PendingCount > 0;
@@ -92,12 +98,12 @@ public partial class MainViewModel : ObservableObject, INavigator
 
   public void ShowSince() => Show(NavSection.Hub, new SinceViewModel(_store, this));
 
-  [RelayCommand]
-  private void CheckForUpdates()
+  public void ShowSettings()
   {
-    var window = _updateWindowFactory();
-    window.Owner = Application.Current.MainWindow;
-    window.ShowDialog();
+    if (_settings is not null)
+    {
+      Show(NavSection.Settings, new SettingsViewModel(_store, this, _settings));
+    }
   }
 
   [RelayCommand]
@@ -114,6 +120,9 @@ public partial class MainViewModel : ObservableObject, INavigator
       case NavSection.History:
         ShowHistory();
         break;
+      case NavSection.Settings:
+        ShowSettings();
+        break;
       default:
         ShowHub();
         break;
@@ -126,14 +135,29 @@ public partial class MainViewModel : ObservableObject, INavigator
     OnPropertyChanged(nameof(IsSourcesSelected));
     OnPropertyChanged(nameof(IsPlanSelected));
     OnPropertyChanged(nameof(IsHistorySelected));
+    OnPropertyChanged(nameof(IsSettingsSelected));
   }
 
   partial void OnPendingCountChanged(int value) => OnPropertyChanged(nameof(HasPending));
 
   private void Show(NavSection section, object page)
   {
+    (CurrentPage as IDisposable)?.Dispose();
     Section = section;
     CurrentPage = page;
+  }
+
+  /// <summary>Text built in code redraws in the new display language; bound catalog text follows by itself.</summary>
+  private void OnLanguageChanged()
+  {
+    var dispatcher = Application.Current?.Dispatcher;
+    if (dispatcher is not null && !dispatcher.CheckAccess())
+    {
+      dispatcher.BeginInvoke(OnLanguageChanged);
+      return;
+    }
+    RefreshHeader();
+    (CurrentPage as PageViewModel)?.Refresh();
   }
 
   private void OnStoreChanged(WorkbenchChangedEventArgs change)

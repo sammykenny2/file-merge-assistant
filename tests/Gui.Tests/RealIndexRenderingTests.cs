@@ -67,7 +67,7 @@ public sealed class RealIndexRenderingTests : IDisposable
       WpfHost.Wait(store.WaitForScansAsync(TimeSpan.FromSeconds(60)));
       store.RefreshNow();
 
-      var main = new MainViewModel(store, () => throw new InvalidOperationException());
+      var main = new MainViewModel(store, TestSettings.Create());
       var shell = new ShellView { DataContext = main };
       void Snap(string name)
       {

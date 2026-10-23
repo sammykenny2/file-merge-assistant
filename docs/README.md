@@ -34,7 +34,7 @@ stack detection (read-only). Running the plan, which changes files, is still to 
 | [SPEC-001](./specs/SPEC-001-persistent-scan-workbench.md) | Draft | Multi-source scanning, persistent indexing, task states, operation review, and acceptance scenarios |
 | [GUI flow mock](./gui-flow-mock.md) | Draft | Link to the clickable prototype, its stack-by-stack review proposal, assumptions, and open product questions |
 | [PLAN-001](./plans/PLAN-001-batch-consolidation-workbench.md) | Draft | Phased implementation plan with decision gates per ADR, task list, testing strategy, and FR/AC traceability |
-| [ADR-001 to ADR-013](./decisions/README.md) | Mixed | Decision records: the mock's open questions (001–007), requirements D-01, D-03, D-05, D-06 (008–012), and in-app updates (013). Accepted: 001 to 010 and 013; 011 proposed; 012 partly accepted |
+| [ADR-001 to ADR-014](./decisions/README.md) | Mixed | Decision records: the mock's open questions (001–007), requirements D-01, D-03, D-05, D-06 (008–012), in-app updates (013), and the tray, startup behaviour and display language (014). Accepted: 001 to 010, 013 and 014; 011 proposed; 012 partly accepted |
 
 ## Development Guides
 
@@ -42,7 +42,8 @@ stack detection (read-only). Running the plan, which changes files, is still to 
 |----------|--------|-------------|
 | [setup-guide.md](./setup-guide.md) | Template | Environment setup |
 | [testing.md](./testing.md) | Complete | .NET test commands, validation results, and known baseline issues |
-| [deployment.md](./deployment.md) | Draft | Building the Windows setup program, versions, in-app updates and publishing releases |
+| [deployment.md](./deployment.md) | Draft | Building the Windows setup program, versions, in-app updates, start at sign-in and publishing releases |
+| [i18n.md](./i18n.md) | Complete | Display languages, the language catalogs and how the window switches language |
 | [release-notes.md](./release-notes.md) | Draft | Release notes per version; the source of the update summary and release text |
 | [security-guidelines.md](./security-guidelines.md) | Template | Security policies |
 | [mcp-config.md](./mcp-config.md) | Template | MCP server configuration |

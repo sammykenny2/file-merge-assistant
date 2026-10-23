@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Security.Cryptography;
 using FileMergeAssistant.Infrastructure;
+using FileMergeAssistant.Localization;
 
 namespace FileMergeAssistant.Updates;
 
@@ -86,20 +87,20 @@ public sealed class UpdateService : IUpdateService, IDisposable
     }
     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
     {
-      throw new UpdateException("io_error", "The downloaded installer could not be opened. Download it again.", ex);
+      throw new UpdateException("io_error", AppText.Get("update.openFailed"), ex);
     }
 
     try
     {
       if (stream.Length != package.Size || Convert.ToHexStringLower(SHA256.HashData(stream)) != package.Sha256)
-        throw new UpdateException("checksum_mismatch", "The downloaded installer changed after it was checked. Download it again.");
+        throw new UpdateException("checksum_mismatch", AppText.Get("update.changed"));
       stream.Position = 0;
       return stream;
     }
     catch (IOException ex)
     {
       stream.Dispose();
-      throw new UpdateException("io_error", "The downloaded installer could not be read. Download it again.", ex);
+      throw new UpdateException("io_error", AppText.Get("update.readFailed"), ex);
     }
     catch
     {
@@ -112,14 +113,14 @@ public sealed class UpdateService : IUpdateService, IDisposable
   {
     var feed = await GetBytesAsync(
       UpdateFeed.FeedUrl(_repository), UpdateFeed.MaxFeedBytes, followRedirects: false,
-      "The release source was not found. The repository may be private or have no releases yet.", cancellationToken);
+      AppText.Get("update.feedNotFound"), cancellationToken);
     var release = UpdateFeed.Latest(feed, _repository, current);
     if (release is null)
       return null;
 
     var manifest = await GetBytesAsync(
       UpdateFeed.AssetUrl(release, UpdateFeed.ManifestFileName), UpdateFeed.MaxManifestBytes, followRedirects: true,
-      $"Release {release.Tag} has no Windows update manifest.", cancellationToken);
+      AppText.Get("update.manifestNotFound", ("tag", release.Tag)), cancellationToken);
     return UpdateFeed.ReadManifest(manifest, release, _architecture);
   }
 
@@ -162,19 +163,19 @@ public sealed class UpdateService : IUpdateService, IDisposable
       }
 
       if (Convert.ToHexStringLower(hash.GetHashAndReset()) != package.Sha256)
-        throw new UpdateException("checksum_mismatch", "The downloaded installer does not match its published checksum, so it was deleted.");
+        throw new UpdateException("checksum_mismatch", AppText.Get("update.checksumMismatch"));
 
       File.Move(partial, target, overwrite: true);
       return target;
     }
     catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
     {
-      throw new UpdateException("timeout", "The download stopped making progress and was cancelled.");
+      throw new UpdateException("timeout", AppText.Get("update.stalled"));
     }
     // Network failures were already turned into "offline" by OverNetwork, so what remains here is the local disk.
     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
     {
-      throw new UpdateException("io_error", $"The installer could not be saved: {ex.Message}", ex);
+      throw new UpdateException("io_error", AppText.Get("update.saveFailed", ("detail", ex.Message)), ex);
     }
     finally
     {
@@ -239,14 +240,14 @@ public sealed class UpdateService : IUpdateService, IDisposable
       while ((read = await stream.ReadAsync(chunk, timeout.Token)) > 0)
       {
         if (buffer.Length + read > maxBytes)
-          throw new UpdateException("metadata_invalid", "The release source returned more data than expected.");
+          throw new UpdateException("metadata_invalid", AppText.Get("update.tooLarge"));
         buffer.Write(chunk, 0, read);
       }
       return buffer.ToArray();
     }
     catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
     {
-      throw new UpdateException("timeout", "The release source did not respond in time.");
+      throw new UpdateException("timeout", AppText.Get("update.noResponse"));
     }
     // Only network reads happen here, so every transport or stream failure means the connection failed.
     catch (Exception ex) when (ex is HttpRequestException or IOException)
@@ -270,10 +271,10 @@ public sealed class UpdateService : IUpdateService, IDisposable
         var location = response.Headers.Location;
         response.Dispose();
         if (!followRedirects || location is null)
-          throw new UpdateException("provider_rejected", "The release source redirected the request unexpectedly.");
+          throw new UpdateException("provider_rejected", AppText.Get("update.redirected"));
         var next = location.IsAbsoluteUri ? location : new Uri(current, location);
         if (redirects >= MaxRedirects || next.Scheme != Uri.UriSchemeHttps || !RedirectHosts.Contains(next.Host) || !string.IsNullOrEmpty(next.UserInfo))
-          throw new UpdateException("provider_rejected", "The download was redirected to an unexpected location.");
+          throw new UpdateException("provider_rejected", AppText.Get("update.redirectedDownload"));
         current = next;
         continue;
       }
@@ -291,19 +292,19 @@ public sealed class UpdateService : IUpdateService, IDisposable
         HttpStatusCode.TooManyRequests => RateLimited(),
         HttpStatusCode.Forbidden when retryAfter => RateLimited(),
         HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized =>
-          new UpdateException("provider_rejected", "The release source refused the request. The repository may be private."),
-        _ when status >= 500 => new UpdateException("provider_unavailable", "The release source is temporarily unavailable. Try again later."),
-        _ => new UpdateException("provider_rejected", $"The release source answered with HTTP {status}.")
+          new UpdateException("provider_rejected", AppText.Get("update.refused")),
+        _ when status >= 500 => new UpdateException("provider_unavailable", AppText.Get("update.providerUnavailable")),
+        _ => new UpdateException("provider_rejected", AppText.Get("update.providerStatus", ("status", status)))
       };
     }
   }
 
   private static UpdateException RateLimited() =>
-    new("rate_limited", "The release source is limiting requests from this network. Try again later.");
+    new("rate_limited", AppText.Get("update.rateLimited"));
 
   private static UpdateException SizeMismatch() =>
     new("size_mismatch", "The downloaded installer has a different size than published, so it was deleted.");
 
   private static UpdateException Offline(Exception ex) =>
-    new("offline", "Could not reach the release source, or the connection was interrupted. Check the internet connection and try again.", ex);
+    new("offline", AppText.Get("update.offline"), ex);
 }
