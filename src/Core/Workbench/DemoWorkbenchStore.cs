@@ -42,6 +42,7 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
   public IReadOnlyList<ScanJobInfo> Jobs => _jobs;
   public IReadOnlyList<Stack> Stacks => _stacks;
   public IReadOnlyList<PlanEntry> Plan => _plan;
+  public int ConvergedCount => _stacks.Count(s => s.Status == StackStatus.Converged);
   public DateTimeOffset? PlanCheckedAt { get; private set; }
   public IReadOnlyList<ExecutionBatch> History => _history;
   public IReadOnlyList<RestoreConflict> RestoreConflicts => _conflicts;

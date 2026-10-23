@@ -36,7 +36,7 @@ File Merge Assistant helps you clean up years of accumulated duplicate files acr
 - [x] Watch mode (directory monitoring)
 - [x] Space savings dashboard / analytics
 - [x] PowerShell script export
-- [ ] Stack-by-stack workbench GUI ([GUI flow mock](./docs/gui-flow-mock.md)): all 7 screens; real index, staged scanning and stack detection (read-only). Running the plan (copy, recycle, restore) comes next; `--demo` shows the mock's data
+- [ ] Stack-by-stack workbench GUI ([GUI flow mock](./docs/gui-flow-mock.md)): all 7 screens; real index, staged scanning and stack detection; running the plan: copy and verify into the keeper, per-volume recycle areas, retry and restore; `--demo` shows the mock's data
 
 ## Quick Start
 

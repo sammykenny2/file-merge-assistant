@@ -2,6 +2,9 @@ namespace FileMergeAssistant.Plans;
 
 public enum BatchItemState
 {
+  /// <summary>Recorded before the item acts; an item still Running after a restart was interrupted mid-way.</summary>
+  Running,
+
   Done,
 
   /// <summary>Some or all of the item failed; only the failed part is retried.</summary>
@@ -12,6 +15,9 @@ public enum BatchItemState
 
   /// <summary>Put back by a restore.</summary>
   Restored,
+
+  /// <summary>Permanently deleted when the recycle areas were emptied; it can no longer be restored.</summary>
+  Emptied,
 }
 
 /// <summary>What happened to one plan item when the plan ran.</summary>
@@ -34,7 +40,39 @@ public sealed record BatchItem(string Id, string StackId, PlanItemKind Kind, str
   /// <summary>Volume of the recycle area that holds the item, for example <c>D:\</c>.</summary>
   public string? RecycleVolume { get; init; }
 
-  public bool CanRestore => State == BatchItemState.Done;
+  /// <summary>Recycle: where the folder or file was. Replace: the keeper's file that was swapped out.</summary>
+  public string? OriginalPath { get; init; }
+
+  /// <summary>Recycle: where it is now in the recycle area. Replace: where the keeper's old version went.</summary>
+  public string? RecycledPath { get; init; }
+
+  /// <summary>Copy, save-as and replace: the file this run created in the keeper (recycled again on restore).</summary>
+  public string? CreatedPath { get; init; }
+
+  /// <summary>The keeper of the item's stack when it ran.</summary>
+  public string? KeeperPath { get; init; }
+
+  /// <summary>Copy-like items: the file that was copied.</summary>
+  public string? SourcePath { get; init; }
+
+  /// <summary>
+  /// Size and time (<c>size|ticks</c>) when the item ran. Copy-like items: of what was copied; the created file must still
+  /// match to be undone. A recycled single file: of that file; a retry moves it only if it still matches.
+  /// </summary>
+  public string? SourceStamp { get; init; }
+
+  /// <summary>Copy-like items after a restore: where the created file went in the recycle area.</summary>
+  public string? UndonePath { get; init; }
+
+  /// <summary>
+  /// A recycle that moved file by file: every file (<c>relative|size|ticks</c> per line) that was there when it ran. A
+  /// retry moves only files still matching this list, never new or edited ones.
+  /// </summary>
+  public string? Manifest { get; init; }
+
+  /// <summary>Done items can be undone; a partly moved recycle can be put back too.</summary>
+  public bool CanRestore => State == BatchItemState.Done
+    || (State == BatchItemState.Failed && Kind is PlanItemKind.Recycle or PlanItemKind.Replace && RecycledPath is not null);
 }
 
 /// <summary>One run of the pending plan, kept in the history.</summary>

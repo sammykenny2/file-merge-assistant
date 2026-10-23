@@ -188,6 +188,57 @@ When a test hangs, VSTest writes a sequence attachment under
     folders, wrappers and containers, boilerplate inside code projects), `SourceScannerTests`,
     `IndexedWorkbenchStoreTests` and `RealIndexRenderingTests`. Core.Tests has 304 tests, Gui.Tests 3;
     all 307 pass.
+- 2026-10-23, running the plan (PLAN-001 Phase 5):
+  - `PlanExecutorTests` move and copy real files inside temp trees, with the recycle area under the test data
+    folder: copy and verify, never overwrite, a stack's recycling held back when its copy fails, a protected
+    copy refused, a locked file left behind and moved on retry, restore, a restore conflict settled by
+    renaming, and emptying. Store tests run, restore and empty end to end, and the real-index GUI test runs
+    the plan from the plan screen. Core.Tests has 319 tests, Gui.Tests 3; all 322 pass.
+- 2026-10-23, fixes from the Phase 5 reviews:
+  - `PlanExecutorTests` add: every item journalled as running with its paths before it acts; a partly moved
+    folder never emptied and put back file by file; retry moving only files unchanged since the run; a copy
+    retry refused when its source was edited; restore leaving a copied file the user edited; emptying a
+    recycled folder that holds a junction without touching the junction's target; a folder gone before its
+    move failing without moving anything; replace and its restore.
+  - `IndexedWorkbenchStoreTests` add: a copy whose files changed after the decision going back for another
+    look (and staying out of the plan after a restart); a keeper emptied after the decision stopping the whole
+    stack; a copy edited right before the run skipped although the index is stale; convergence only when
+    every item finished (after a retry); a pending decision with an offline keeper waiting without errors;
+    another disk under the same letter not scanned; a folder added while another source is offline; a junction
+    to a source refused as a second source; the
+    app's own folder, recycle areas and partial files never scanned; a crashed run settled from the disk on
+    the next start; a copy not undone while its source is still recycled.
+  - Core.Tests has 338 tests, Gui.Tests 3; all 341 pass.
+- 2026-10-23, fixes from the second Phase 5 review:
+  - `PlanExecutorTests` add: a copy that is the keeper under another name (a junction, and `\\localhost\C$`
+    when the administrative share is reachable) is never recycled; a copy holding the app's own folder is never
+    recycled; undoing a copy waits until its source is back even when another run recycled it; emptying keeps
+    what it cannot reach and it stays restorable; unchecked and cancelled items are recorded as skipped; a
+    locked single file moves on retry only while unchanged; a leftover partial file does not block a copy.
+  - `IndexedWorkbenchStoreTests` add: a network path to a source is not added as another source; changes the
+    scan does not list (`.git`, `node_modules`) keep a copy from being recycled; a retry is refused once the
+    keeper is gone; unchecked items keep the stack from counting as done; an interrupted item on an unplugged
+    drive waits for it.
+  - `SourceScannerTests` add: generic folder names count as regenerable only next to a project marker.
+  - With the identity check switched off, the junction and app-folder tests fail and the UNC test is still
+    stopped by the after-move backstop; with the snapshot check switched off, the `.git` test fails.
+  - Core.Tests has 352 tests, Gui.Tests 3; all 355 pass, three runs in a row.
+- 2026-10-23, fixes from the third Phase 5 review:
+  - `PlanExecutorTests` add: undoing a copy is refused when another file now sits where its source was; a probe
+    shows up under every name of its folder (a junction) and is gone afterwards; a cloned drive is not the same
+    volume even with the same serial and ids; a snapshot taken while the copy changes is not a baseline.
+  - `IndexedWorkbenchStoreTests` add: a retry is refused once the keeper is empty; a change right after deciding
+    keeps the copy even before the background snapshot is done.
+  - With the source-stamp check or the snapshot time cut-off switched off, their tests fail.
+  - Not testable here: a NAS that reports a different volume serial per share name (the probe covers it), and a
+    sector-cloned drive (the volume GUID covers it; the comparison itself is unit-tested).
+  - Core.Tests has 358 tests, Gui.Tests 3; all 361 pass, three runs in a row.
+- 2026-10-23, fourth Phase 5 review (OK to merge):
+  - The reviewer re-ran its scenarios (UNC alias, offline recycle area, interrupted run, cross-run undo, `.git` and
+    `node_modules` changes, cancelled and unchecked items, a different file at the source path, a change racing the
+    snapshot with 5,000 and 20,000 files) against temp trees; none lost data.
+  - `PlanExecutorTests` add: a file dated in the future does not block its copy forever.
+  - Core.Tests has 359 tests, Gui.Tests 3; all 362 pass, three runs in a row.
 
 ## Bootstrap Validation
 

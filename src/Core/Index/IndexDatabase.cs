@@ -11,7 +11,7 @@ namespace FileMergeAssistant.Index;
 public sealed class IndexDatabase
 {
   /// <summary>Version of the schema this build writes.</summary>
-  public const int SchemaVersion = 1;
+  public const int SchemaVersion = 3;
 
   private static readonly string[] Migrations =
   [
@@ -103,6 +103,64 @@ public sealed class IndexDatabase
       status TEXT NOT NULL,
       decided_at TEXT NOT NULL
     );
+    """,
+
+    // Version 2: runs of the plan, each item's journal (where things went), restore conflicts, and per-source counts
+    // kept by the scanner so the interface never counts the files table.
+    """
+    ALTER TABLE sources ADD COLUMN indexed_files INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE sources ADD COLUMN cloud_files INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE sources ADD COLUMN regenerable_files INTEGER NOT NULL DEFAULT 0;
+    UPDATE sources SET
+      indexed_files = (SELECT COUNT(*) FROM files f WHERE f.source_id = sources.id AND f.cloud_only = 0),
+      cloud_files = (SELECT COUNT(*) FROM files f WHERE f.source_id = sources.id AND f.cloud_only = 1),
+      regenerable_files = (SELECT COALESCE(SUM(files), 0) FROM regenerable_dirs r WHERE r.source_id = sources.id);
+    CREATE TABLE batches (
+      id TEXT PRIMARY KEY,
+      ran_at TEXT NOT NULL,
+      emptied_at TEXT
+    );
+    CREATE TABLE batch_items (
+      batch_id TEXT NOT NULL REFERENCES batches(id) ON DELETE CASCADE,
+      id TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      stack_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      target TEXT NOT NULL,
+      detail TEXT NOT NULL,
+      state TEXT NOT NULL,
+      bytes INTEGER NOT NULL,
+      file_count INTEGER NOT NULL,
+      failed_files INTEGER NOT NULL,
+      failure_reason TEXT,
+      retried INTEGER NOT NULL,
+      recycle_volume TEXT,
+      original_path TEXT,
+      recycled_path TEXT,
+      created_path TEXT,
+      source_path TEXT,
+      source_stamp TEXT,
+      undone_path TEXT,
+      manifest TEXT,
+      PRIMARY KEY (batch_id, id)
+    );
+    CREATE TABLE restore_conflicts (
+      id TEXT PRIMARY KEY,
+      batch_id TEXT NOT NULL REFERENCES batches(id) ON DELETE CASCADE,
+      item_id TEXT NOT NULL,
+      original_path TEXT NOT NULL,
+      recycled_at TEXT NOT NULL,
+      recycled_bytes INTEGER NOT NULL,
+      recycled_modified TEXT NOT NULL,
+      current_created TEXT NOT NULL,
+      current_bytes INTEGER NOT NULL,
+      resolution TEXT
+    );
+    """,
+
+    // Version 3: each journalled item records its stack's keeper, so a retry can check the keeper is still there.
+    """
+    ALTER TABLE batch_items ADD COLUMN keeper_path TEXT;
     """,
   ];
 

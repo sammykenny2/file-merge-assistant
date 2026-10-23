@@ -22,6 +22,9 @@ it:
   file contents. Before a schema upgrade the app saves the old index as `index.db.v<N>.bak`.
 - To start over, close the app and delete `index.db` and its `-wal` and `-shm` files; the sources and decisions go
   with them, and the user's own files are not affected.
+- `recycle-areas\<run>\`: what a run of the plan moved out of folders on the same volume as the data folder. On
+  other volumes the app uses a hidden `.fma-recycle\<run>\` folder at the volume's root, so recycling is a rename and
+  never copies data. Restore from the app's history; emptying the recycle areas from the app deletes them for good.
 - Starting the GUI with `--demo` uses the GUI flow mock's simulated data instead and does not open the index.
 
 Setup and uninstall remove only what this program owns:

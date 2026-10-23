@@ -57,6 +57,12 @@ public sealed record SourceInfo(
   /// <summary>Exclusion rules for this source.</summary>
   public IReadOnlyList<string> Exclusions { get; init; } = [];
 
+  /// <summary>Regenerable folders are measured instead of indexed file by file.</summary>
+  public bool SkipsRegenerable { get; init; } = true;
+
+  /// <summary>Serial number of the volume the source was added from, when known (ADR-010).</summary>
+  public string? VolumeSerial { get; init; }
+
   public bool IsOffline => State == SourceState.Offline;
 }
 

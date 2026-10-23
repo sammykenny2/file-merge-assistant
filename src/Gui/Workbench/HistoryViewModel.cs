@@ -333,7 +333,8 @@ public sealed partial class HistoryViewModel : PageViewModel
       var title = stack?.Title ?? "這疊";
       var stackId = group.Key;
       Skipped.Add(new SkippedViewModel(
-        $"{string.Join("、", group.Select(i => i.Target))}：你決定之後有變動。{title} 這疊已放回待整理，其他項目照常完成。",
+        $"{string.Join("、", group.Select(i => i.Target))}：{string.Join(string.Empty, group.Select(i => i.FailureReason ?? "這次略過。").Distinct(StringComparer.Ordinal))}"
+          + $"{title} 這疊已放回待整理，其他項目照常完成。",
         new RelayCommand(() => Navigator.ShowStack(stackId))));
     }
 
@@ -358,6 +359,8 @@ public sealed partial class HistoryViewModel : PageViewModel
 
   private static ChipInfo ItemStatus(ExecutionBatch batch, BatchItem item) => item.State switch
   {
+    BatchItemState.Running => new ChipInfo("中斷", Tone.Warn),
+    BatchItemState.Emptied => new ChipInfo("已清空", Tone.Plain),
     BatchItemState.Failed => new ChipInfo("失敗", Tone.Warn),
     BatchItemState.Skipped => new ChipInfo("略過", Tone.Skipped),
     BatchItemState.Restored => new ChipInfo("已還原", Tone.Plain),
@@ -373,17 +376,25 @@ public sealed partial class HistoryViewModel : PageViewModel
 
   private static string ItemDetail(BatchItem item)
   {
+    // A finished item can carry a note from a restore that did not go ahead (for example, the file was edited since).
+    var note = item.State == BatchItemState.Done && item.FailureReason is { } reason ? $"；{reason}" : string.Empty;
     if (item.Kind != PlanItemKind.Recycle)
     {
-      return item.Detail.Length > 0 ? $"到 {item.Detail}" : string.Empty;
+      return item.State switch
+      {
+        BatchItemState.Failed or BatchItemState.Skipped or BatchItemState.Running => item.FailureReason ?? string.Empty,
+        _ => (item.Detail.Length > 0 ? $"到 {item.Detail}" : string.Empty) + note,
+      };
     }
     var size = item.FileCount > 1 ? $"{Fmt.Count(item.FileCount)} 個檔，{Fmt.Size(item.Bytes)}" : Fmt.Size(item.Bytes);
     return item.State switch
     {
+      BatchItemState.Running => item.FailureReason ?? "程式在處理這一項時結束了。",
       BatchItemState.Failed => $"{Fmt.Count(item.FileCount - item.FailedFiles)} / {Fmt.Count(item.FileCount)} 個檔完成；{item.FailureReason}",
       BatchItemState.Skipped => item.FailureReason ?? "這次略過",
       BatchItemState.Restored => $"{size}，已放回原處",
-      _ => $"{size}，放在 {item.RecycleVolume} 的回收區" + (item.Retried ? "；重試後完成" : string.Empty),
+      BatchItemState.Emptied => $"{size}，回收區清空時已永久刪除",
+      _ => $"{size}，放在 {item.RecycleVolume} 的回收區" + (item.Retried ? "；重試後完成" : string.Empty) + note,
     };
   }
 

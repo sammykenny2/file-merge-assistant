@@ -21,6 +21,15 @@ public static class RegenerableFolders
     "Library",
   ];
 
+  /// <summary>
+  /// Names that are common outside code projects too (a music <c>Library</c>, a <c>bin</c> of old files). They count as
+  /// regenerable only next to a project marker; elsewhere their files are indexed and compared like any others.
+  /// </summary>
+  public static bool NeedsProject(string folderName) =>
+    GenericNames.Contains(folderName, StringComparer.OrdinalIgnoreCase);
+
+  private static readonly string[] GenericNames = ["bin", "obj", "dist", "target", "Library"];
+
   public static bool IsRegenerable(string folderName, IReadOnlyList<string>? names = null)
   {
     foreach (var name in names ?? Defaults)

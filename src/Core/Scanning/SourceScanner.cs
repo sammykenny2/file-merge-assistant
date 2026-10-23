@@ -15,7 +15,11 @@ public sealed record ScanSource(
   bool SkipRegenerable,
   bool SkipCloudOnly,
   IReadOnlyList<string> RegenerableNames,
-  IReadOnlyList<string> Exclusions);
+  IReadOnlyList<string> Exclusions)
+{
+  /// <summary>Absolute folders never indexed, such as the app's own data folder and its recycle area.</summary>
+  public IReadOnlyList<string> ExcludedRoots { get; init; } = [];
+}
 
 /// <summary>How a scan ended.</summary>
 public enum ScanStop
@@ -142,8 +146,10 @@ public sealed class SourceScanner
     var connection = state.Connection;
     var source = state.Source;
     var root = WithSeparator(source.Root);
-    var scan = IndexDatabase.Scalar<long>(connection, "SELECT scan_number FROM sources WHERE id = $id", ("$id", source.Id)) + 1;
-    IndexDatabase.Execute(connection, "UPDATE sources SET scan_number = $n WHERE id = $id", ("$n", scan), ("$id", source.Id));
+    // One statement, so two scans of the same source can never share a scan number.
+    var scan = IndexDatabase.Scalar<long>(connection, "UPDATE sources SET scan_number = scan_number + 1 WHERE id = $id RETURNING scan_number",
+      ("$id", source.Id));
+    var filter = new ScanFilter(source, source.ExcludedRoots);
 
     var pending = new List<(string Path, long Size, long Mtime, bool Cloud)>(BatchSize);
     var regenerable = new List<(string Path, string Name, long Bytes, long Files)>();
@@ -169,45 +175,33 @@ public sealed class SourceScanner
         foreach (var entry in new DirectoryInfo(fullDirectory).EnumerateFileSystemInfos("*", options))
         {
           var relative = relativeDirectory.Length == 0 ? entry.Name : relativeDirectory + "\\" + entry.Name;
-          if ((entry.Attributes & FileAttributes.ReparsePoint) != 0)
+          var kind = filter.Classify(entry, relative);
+          if (kind == EntryKind.GitFolder)
           {
+            projects.Add((relativeDirectory, ".git"));
             continue;
           }
-          if (entry is DirectoryInfo directory)
+          if (kind == EntryKind.Regenerable)
           {
-            if (directory.Name.Equals(".git", StringComparison.OrdinalIgnoreCase))
-            {
-              projects.Add((relativeDirectory, ".git"));
-              continue;
-            }
-            if (source.SkipRegenerable && RegenerableFolders.IsRegenerable(directory.Name, source.RegenerableNames))
-            {
-              var (bytes, files) = Measure(directory);
-              regenerable.Add((relative, directory.Name, bytes, files));
-              continue;
-            }
-            if (IsExcluded(relative, directory.Name, source.Exclusions))
-            {
-              state.Skipped++;
-              continue;
-            }
+            var (bytes, files) = Measure((DirectoryInfo)entry);
+            regenerable.Add((relative, entry.Name, bytes, files));
+            continue;
+          }
+          if (kind == EntryKind.Skip)
+          {
+            state.Skipped++;
+            continue;
+          }
+          if (entry is DirectoryInfo)
+          {
             directories.Push(relative);
             continue;
           }
 
           var file = (FileInfo)entry;
-          if (IsExcluded(relative, file.Name, source.Exclusions))
+          if (ScanFilter.ProjectMarker(file.Name) is not null)
           {
-            state.Skipped++;
-            continue;
-          }
-          foreach (var marker in ProjectMarkers)
-          {
-            if (FileSystemName.MatchesSimpleExpression(marker, file.Name, ignoreCase: true))
-            {
-              projects.Add((relativeDirectory, file.Name));
-              break;
-            }
+            projects.Add((relativeDirectory, file.Name));
           }
           var cloud = (file.Attributes & CloudPlaceholder) != 0;
           pending.Add((relative, file.Length, file.LastWriteTimeUtc.Ticks, cloud));
@@ -327,10 +321,11 @@ public sealed class SourceScanner
 
     var hashed = new List<(long Id, string Hash)>(HashBatchSize);
     var changed = new List<(long Id, long Size, long Mtime)>();
+    var becameCloud = new List<long>();
     var sinceCommit = Stopwatch.StartNew();
     void Commit()
     {
-      if (hashed.Count == 0 && changed.Count == 0)
+      if (hashed.Count == 0 && changed.Count == 0 && becameCloud.Count == 0)
       {
         return;
       }
@@ -352,7 +347,14 @@ public sealed class SourceScanner
           stale.Parameters["$id"].Value = id;
           stale.ExecuteNonQuery();
         }
+        using var cloud = IndexDatabase.Command(connection, "UPDATE files SET cloud_only = 1, hash = NULL WHERE id = $id", ("$id", 0L));
+        foreach (var id in becameCloud)
+        {
+          cloud.Parameters["$id"].Value = id;
+          cloud.ExecuteNonQuery();
+        }
       });
+      becameCloud.Clear();
       hashed.Clear();
       changed.Clear();
       sinceCommit.Restart();
@@ -376,6 +378,13 @@ public sealed class SourceScanner
         {
           // Changed since discovery: record the new facts; the next scan fingerprints it if it is still a candidate.
           changed.Add((id, file.Length, file.LastWriteTimeUtc.Ticks));
+          state.Skipped++;
+          continue;
+        }
+        if ((file.Attributes & CloudPlaceholder) != 0)
+        {
+          // It became cloud-only since it was discovered; reading it would download it.
+          becameCloud.Add(id);
           state.Skipped++;
           continue;
         }

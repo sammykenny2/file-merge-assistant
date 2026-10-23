@@ -245,13 +245,10 @@ public static partial class StackDetector
     {
       var member = members[i];
       var prefix = member.RelativePath + "\\";
-      foreach (var file in context.FilesOf(member.SourceId))
+      foreach (var file in context.FilesUnder(member.SourceId, prefix))
       {
-        if (file.RelativePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-        {
-          contents[i][file.RelativePath[prefix.Length..].Replace('\\', '/')] = file;
-          covered.Add(file.Id);
-        }
+        contents[i][file.RelativePath[prefix.Length..].Replace('\\', '/')] = file;
+        covered.Add(file.Id);
       }
       foreach (var folder in context.Input.RegenerableFolders)
       {
@@ -297,6 +294,7 @@ public static partial class StackDetector
       {
         IndexedAt = source.IsOffline ? source.IndexedAt : null,
         Notes = context.IsProject(m.SourceId, m.RelativePath) ? ["程式碼專案"] : [],
+        Digest = CopyDigest.Of(contents[i].Select(kv => (kv.Key, kv.Value.Size, kv.Value.ModifiedTicks))),
       };
     }).ToList();
 
@@ -340,6 +338,7 @@ public static partial class StackDetector
           source.IsProtected, source.IsOffline, f.Size, 0, 1, Local(f.ModifiedTicks))
         {
           IndexedAt = source.IsOffline ? source.IndexedAt : null,
+          Digest = CopyDigest.Of([(Path.GetFileName(f.RelativePath), f.Size, f.ModifiedTicks)]),
         };
       }).ToList();
       var (keeper, reason) = SuggestKeeper(copies, c => Path.GetFileNameWithoutExtension(c.Path));
@@ -483,7 +482,7 @@ public static partial class StackDetector
 
   private sealed class Context
   {
-    private readonly Dictionary<string, List<IndexedFile>> _bySource;
+    private readonly Dictionary<string, IndexedFile[]> _sorted;
     private readonly Dictionary<string, int> _fileCounts = new(StringComparer.Ordinal);
     private readonly HashSet<string> _hasDirectFiles = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _directFileCounts = new(StringComparer.Ordinal);
@@ -497,7 +496,8 @@ public static partial class StackDetector
       Sources = input.Sources.ToDictionary(s => s.Id, StringComparer.Ordinal);
       _order = input.Sources.Select((s, i) => (s.Id, i)).ToDictionary(x => x.Id, x => x.i, StringComparer.Ordinal);
       var known = input.Files.Where(f => Sources.ContainsKey(f.SourceId)).ToList();
-      _bySource = known.GroupBy(f => f.SourceId, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+      _sorted = known.GroupBy(f => f.SourceId, StringComparer.Ordinal)
+        .ToDictionary(g => g.Key, g => g.OrderBy(f => f.RelativePath, StringComparer.OrdinalIgnoreCase).ToArray(), StringComparer.Ordinal);
 
       foreach (var file in known)
       {
@@ -556,7 +556,31 @@ public static partial class StackDetector
     public Dictionary<string, FolderRef> Folders { get; } = new(StringComparer.Ordinal);
     public List<List<IndexedFile>> Duplicates { get; }
 
-    public List<IndexedFile> FilesOf(string sourceId) => _bySource.TryGetValue(sourceId, out var files) ? files : [];
+    /// <summary>Files of a source whose relative path starts with <paramref name="prefix"/>, by binary search.</summary>
+    public IEnumerable<IndexedFile> FilesUnder(string sourceId, string prefix)
+    {
+      if (!_sorted.TryGetValue(sourceId, out var files))
+      {
+        yield break;
+      }
+      int low = 0, high = files.Length;
+      while (low < high)
+      {
+        var middle = (low + high) / 2;
+        if (StringComparer.OrdinalIgnoreCase.Compare(files[middle].RelativePath, prefix) < 0)
+        {
+          low = middle + 1;
+        }
+        else
+        {
+          high = middle;
+        }
+      }
+      for (var i = low; i < files.Length && files[i].RelativePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase); i++)
+      {
+        yield return files[i];
+      }
+    }
 
     public int FileCount(string canonicalFolder) => _fileCounts.GetValueOrDefault(canonicalFolder);
 
