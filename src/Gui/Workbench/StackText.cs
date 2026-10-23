@@ -27,7 +27,6 @@ public static class StackText
       .Select(g => (g.First().SourceName, g.All(c => c.IsOffline)))
       .ToList();
 
-  /// <summary>A source's name, marked when its copies are offline: 「WD 2TB 備份（離線）」.</summary>
   /// <summary>Whether a row's description is the demo data's note on renamed files, in either language.</summary>
   private static bool IsRenamedRow(string? description) =>
     description is not null && AppText.Locales.Any(locale =>
@@ -37,6 +36,7 @@ public static class StackText
       return description.StartsWith(fixedPart, StringComparison.Ordinal);
     });
 
+  /// <summary>A source's name, marked when its copies are offline: 「WD 2TB 備份（離線）」.</summary>
   public static string PlaceName(string name, bool offline) =>
     offline ? AppText.Get("stack.place.offline", ("name", name)) : name;
 

@@ -402,13 +402,14 @@ public sealed partial class StackViewModel : PageViewModel
 
   public bool CanSubmit => !IsBlocked;
 
+  /// <summary>A stack's title as the store has it now, in the current language; the remembered one if it is gone.</summary>
+  private string TitleOf(string stackId, string remembered) =>
+    Store.Stacks.FirstOrDefault(s => s.Id == stackId)?.Title ?? remembered;
+
   /// <summary>
   /// Redraws from the store and in the current display language. The decision being edited (keeper, action, conflict
   /// choices, copies kept or removed) lives in <c>_decision</c> and is kept.
   /// </summary>
-  /// <summary>A stack's title as the store has it now, in the current language; the remembered one if it is gone.</summary>
-  private string TitleOf(string stackId, string remembered) =>
-    Store.Stacks.FirstOrDefault(s => s.Id == stackId)?.Title ?? remembered;
 
   public override void Refresh()
   {

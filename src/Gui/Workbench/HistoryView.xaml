@@ -123,7 +123,7 @@
                         </Grid.ColumnDefinitions>
                         <ContentControl Content="{Binding Status}" Focusable="False" VerticalAlignment="Top" Margin="0,1,0,0" />
                         <StackPanel Grid.Column="1" Margin="0,0,12,0">
-                          <TextBlock TextWrapping="Wrap"><Run Text="{Binding Verb, Mode=OneWay}" FontWeight="Bold" /><Run Text="　" /><Run Text="{Binding Target, Mode=OneWay}" /></TextBlock>
+                          <TextBlock TextWrapping="Wrap"><Run Text="{Binding Verb, Mode=OneWay}" FontWeight="Bold" /><Run Text="{Binding Gap, Source={x:Static l:Loc.Instance}, Mode=OneWay}" /><Run Text="{Binding Target, Mode=OneWay}" /></TextBlock>
                           <TextBlock Text="{Binding Detail}" Style="{StaticResource Small}" />
                         </StackPanel>
                         <Button Grid.Column="2" Content="{l:T history.item.restore}" Style="{StaticResource SmallButton}" Command="{Binding Restore}" VerticalAlignment="Top"
@@ -196,7 +196,7 @@
                           Foreground="{StaticResource InkBrush}">
                     <Border x:Name="row" Padding="15,9,18,9" BorderThickness="3,0,0,0" BorderBrush="Transparent" Background="Transparent">
                       <StackPanel>
-                        <TextBlock><Run Text="{Binding When, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="　" /><Run x:Name="state" Text="{Binding State, Mode=OneWay}" Foreground="{StaticResource AccentDarkBrush}" /></TextBlock>
+                        <TextBlock><Run Text="{Binding When, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="{Binding Gap, Source={x:Static l:Loc.Instance}, Mode=OneWay}" /><Run x:Name="state" Text="{Binding State, Mode=OneWay}" Foreground="{StaticResource AccentDarkBrush}" /></TextBlock>
                         <TextBlock Text="{Binding Counts}" Style="{StaticResource Small}" />
                         <TextBlock Text="{Binding Restore}" Style="{StaticResource Faint}" />
                       </StackPanel>

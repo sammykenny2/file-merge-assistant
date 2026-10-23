@@ -9,7 +9,7 @@ public static partial class AppText
   {
     ["run.skip.canceled"] = "The run was canceled, so this item didn't run.",
     ["run.skip.unchecked"] = "You unchecked this item, so it didn't run this time.",
-    ["run.skip.changed"] = "Changed after you decided",
+    ["run.skip.changed"] = "Changed after you decided.",
     ["run.skip.copyIncomplete"] = "Some files of this stack weren't copied into the keeper, so this copy wasn't moved to the recycle area; files that exist only in this copy would have gone with it.",
     ["run.skip.checkFailed"] = "Couldn't check the current state before running: {error}",
     ["run.retry.modified"] = "{path} was modified after the run, so it wasn't retried. Compare this stack again.",

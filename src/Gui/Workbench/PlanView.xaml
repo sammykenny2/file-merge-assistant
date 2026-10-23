@@ -77,7 +77,7 @@
                               <CheckBox Style="{StaticResource Check}" IsChecked="{Binding IsEnabled}" AutomationProperties.Name="{Binding ToggleName}">
                                 <StackPanel>
                                   <TextBlock TextWrapping="Wrap">
-                                    <Run x:Name="verb" Text="{Binding Verb, Mode=OneWay}" FontWeight="Bold" /><Run Text="　" /><Run Text="{Binding Target, Mode=OneWay}" />
+                                    <Run x:Name="verb" Text="{Binding Verb, Mode=OneWay}" FontWeight="Bold" /><Run Text="{Binding Gap, Source={x:Static l:Loc.Instance}, Mode=OneWay}" /><Run Text="{Binding Target, Mode=OneWay}" />
                                   </TextBlock>
                                   <TextBlock Text="{Binding Detail}" Style="{StaticResource Small}" />
                                 </StackPanel>
