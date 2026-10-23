@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Plans;
 using FileMergeAssistant.Sources;
 using FileMergeAssistant.Stacks;
@@ -16,18 +17,33 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
   private const string FailingCopyPath = @"C:\Users\demo\Desktop\京都挑選";
 
   private readonly Stopwatch _clock = Stopwatch.StartNew();
-  private readonly List<SourceInfo> _sources = DemoData.Sources();
-  private readonly List<ScanJobInfo> _jobs = DemoData.Jobs();
-  private readonly List<Stack> _stacks = DemoData.Stacks();
+  private readonly List<SourceInfo> _sources;
+  private readonly List<ScanJobInfo> _jobs;
+  private readonly List<Stack> _stacks;
   private readonly Dictionary<string, StackDecision> _decisions = new(StringComparer.Ordinal);
   private readonly List<PlanEntry> _plan = [];
   private readonly List<ExecutionBatch> _history = DemoData.History();
   private readonly List<RestoreConflict> _conflicts = DemoData.RestoreConflicts();
   private readonly List<RecycleArea> _recycleAreas = DemoData.RecycleAreas();
-  private readonly SinceLastVisit _since = DemoData.Since();
   private readonly HashSet<string> _failedOnce = new(StringComparer.Ordinal);
+
+  // When the changed demo copy changed, by plan item, so its check result can be said again in another language.
+  private readonly Dictionary<string, DateTimeOffset> _changedAt = new(StringComparer.Ordinal);
+
+  // The sample data as last built, in the language of that moment; see FollowLanguage.
+  private Sample _sample;
+  private SinceLastVisit _since;
   private List<ChangeNotice>? _sinceNotices;
   private int _batchNumber;
+
+  public DemoWorkbenchStore()
+  {
+    _sample = Sample.Build();
+    _sources = [.. _sample.Sources];
+    _jobs = [.. _sample.Jobs];
+    _stacks = [.. _sample.Stacks];
+    _since = _sample.Since;
+  }
 
   public event EventHandler<WorkbenchChangedEventArgs>? Changed;
 
@@ -38,16 +54,56 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
 
   public DateTimeOffset Now => DemoData.Start + _clock.Elapsed;
 
-  public IReadOnlyList<SourceInfo> Sources => _sources;
-  public IReadOnlyList<ScanJobInfo> Jobs => _jobs;
-  public IReadOnlyList<Stack> Stacks => _stacks;
-  public IReadOnlyList<PlanEntry> Plan => _plan;
+  public IReadOnlyList<SourceInfo> Sources
+  {
+    get
+    {
+      FollowLanguage();
+      return _sources;
+    }
+  }
+
+  public IReadOnlyList<ScanJobInfo> Jobs
+  {
+    get
+    {
+      FollowLanguage();
+      return _jobs;
+    }
+  }
+
+  public IReadOnlyList<Stack> Stacks
+  {
+    get
+    {
+      FollowLanguage();
+      return _stacks;
+    }
+  }
+
+  public IReadOnlyList<PlanEntry> Plan
+  {
+    get
+    {
+      FollowLanguage();
+      return _plan;
+    }
+  }
+
   public int ConvergedCount => _stacks.Count(s => s.Status == StackStatus.Converged);
   public DateTimeOffset? PlanCheckedAt { get; private set; }
   public IReadOnlyList<ExecutionBatch> History => _history;
   public IReadOnlyList<RestoreConflict> RestoreConflicts => _conflicts;
   public IReadOnlyList<RecycleArea> RecycleAreas => _recycleAreas;
-  public SinceLastVisit? SinceLastVisit => _sinceNotices is null ? _since : _since with { Notices = _sinceNotices };
+
+  public SinceLastVisit? SinceLastVisit
+  {
+    get
+    {
+      FollowLanguage();
+      return _sinceNotices is null ? _since : _since with { Notices = _sinceNotices };
+    }
+  }
 
   public StackDecision? DecisionFor(string stackId) => _decisions.GetValueOrDefault(stackId);
 
@@ -72,8 +128,8 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
       var id = $"src{_sources.Count + 1}";
       var name = Path.GetFileName(path.TrimEnd('\\')) is { Length: > 0 } leaf ? leaf : path;
       var isProtected = options.ProtectedPaths.Contains(path, StringComparer.OrdinalIgnoreCase);
-      _sources.Add(new SourceInfo(id, name, path, startScan ? SourceState.Queued : SourceState.NeedsUpdate, isProtected, 0, 0, 0, null, 0, "內建 SSD",
-        Remark: startScan ? "已排入佇列，等候第一次掃描" : "還沒掃描")
+      _sources.Add(new SourceInfo(id, name, path, startScan ? SourceState.Queued : SourceState.NeedsUpdate, isProtected, 0, 0, 0, null, 0,
+        AppText.Get("demo.source.ssd"), Remark: AppText.Get(startScan ? "scan.source.queuedFirst" : "scan.source.notScanned"))
       {
         RegenerableNames = options.SkipRegenerable ? RegenerableFolders.Defaults : [],
       });
@@ -81,7 +137,7 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
       {
         _jobs.Insert(QueueEnd(), new ScanJobInfo($"job-{id}", id, name, ScanJobKind.FirstScan, ScanJobState.Queued, ScanPhase.Discover, Now)
         {
-          Reason = "第一次掃描",
+          Reason = AppText.Get("scan.job.firstScan"),
         });
       }
     }
@@ -103,7 +159,7 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
     var source = _sources.First(s => s.Id == sourceId);
     _jobs.Insert(QueueEnd(), new ScanJobInfo($"job-{sourceId}-{_jobs.Count}", sourceId, source.Name, ScanJobKind.Update, ScanJobState.Queued, ScanPhase.Discover, Now)
     {
-      Reason = "你要求更新",
+      Reason = AppText.Get("scan.job.requested"),
     });
     SetSourceState(sourceId, SourceState.Queued);
     OnChanged();
@@ -132,12 +188,12 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
         break;
       case ScanJobState.Paused or ScanJobState.Interrupted:
         _jobs.Remove(job);
-        _jobs.Insert(QueueEnd(), job with { State = ScanJobState.Queued, Reason = "繼續上次的進度" });
+        _jobs.Insert(QueueEnd(), job with { State = ScanJobState.Queued, Reason = AppText.Get("scan.job.resume") });
         SetSourceState(job.SourceId, SourceState.Queued);
         OnChanged();
         break;
       case ScanJobState.WaitingForSource:
-        Replace(job with { Reason = "還沒有偵測到這顆硬碟。接上後會先確認是同一顆，再自動開始。" });
+        Replace(job with { Reason = AppText.Get("demo.job.notDetected") });
         break;
     }
     return Task.CompletedTask;
@@ -159,7 +215,7 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
   {
     var job = Job(jobId);
     _jobs.Remove(job);
-    _jobs.Insert(QueueEnd(), job with { State = ScanJobState.Queued, Kind = ScanJobKind.FirstScan, Saved = 0, Reason = "從頭重新掃描" });
+    _jobs.Insert(QueueEnd(), job with { State = ScanJobState.Queued, Kind = ScanJobKind.FirstScan, Saved = 0, Reason = AppText.Get("scan.job.restart") });
     SetSourceState(job.SourceId, SourceState.Queued);
     OnChanged();
     return Task.CompletedTask;
@@ -187,9 +243,9 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
     var source = _sources.First(s => s.Id == job.SourceId);
     _jobs.Insert(QueueEnd(), new ScanJobInfo($"{job.Id}-retry", job.SourceId, source.Name, ScanJobKind.Update, ScanJobState.Queued, ScanPhase.Discover, Now)
     {
-      Reason = string.Create(CultureInfo.InvariantCulture, $"重新掃描上次失敗的 {job.Errors} 個檔"),
+      Reason = AppText.Plural("demo.job.rescanFailed", job.Errors, ("count", job.Errors.ToString(CultureInfo.InvariantCulture))),
     });
-    Replace(job with { Errors = 0, ErrorSummary = null, Reason = "失敗的項目已重新排入佇列" });
+    Replace(job with { Errors = 0, ErrorSummary = null, Reason = AppText.Get("demo.job.requeued") });
     return Task.CompletedTask;
   }
 
@@ -269,12 +325,8 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
         if (item.Kind == PlanItemKind.Recycle && item.SourcePath == ChangedCopyPath)
         {
           var changedAt = entry.DecidedAt + TimeSpan.FromSeconds(Math.Max(1, (Now - entry.DecidedAt).TotalSeconds / 2));
-          return item with
-          {
-            Check = PlanCheck.Changed,
-            ChangeDetail = string.Create(CultureInfo.InvariantCulture,
-              $"你在 {entry.DecidedAt:HH:mm} 決定之後，這份裡的 src/app.ts 在 {changedAt:HH:mm} 被修改了。它已經和你看到的不一樣，所以先停下來。"),
-          };
+          _changedAt[item.Id] = changedAt;
+          return item with { Check = PlanCheck.Changed, ChangeDetail = ChangeDetail(entry, changedAt) };
         }
         return item with { Check = PlanCheck.Confirmed, ChangeDetail = null };
       }).ToList();
@@ -305,7 +357,7 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
           Bytes = item.Bytes,
           FileCount = item.FileCount,
           RecycleVolume = item.Kind == PlanItemKind.Recycle ? Path.GetPathRoot(item.SourcePath) : null,
-          FailureReason = state == BatchItemState.Skipped ? "決定之後有變動" : null,
+          FailureReason = state == BatchItemState.Skipped ? AppText.Get("run.skip.changed") : null,
         };
         if (state == BatchItemState.Done && item.SourcePath == FailingCopyPath && _failedOnce.Add(item.Id))
         {
@@ -313,7 +365,7 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
           {
             State = BatchItemState.Failed,
             FailedFiles = 1,
-            FailureReason = "清水寺-07.jpg 正在被「相片」使用，所以還在原處。關閉它之後再重試。",
+            FailureReason = AppText.Get("demo.run.inUse", ("name", "清水寺-07.jpg")),
           };
         }
         items.Add(result);
@@ -378,9 +430,10 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
     var name = Path.GetFileName(conflict.OriginalPath);
     var resolution = choice switch
     {
-      RestoreConflictChoice.RenameAtOriginal => string.Create(CultureInfo.InvariantCulture, $"已還原為 {name} (還原 {Now:MM-dd})，原位置的新檔沒有被改動。"),
-      RestoreConflictChoice.OtherFolder => $"已還原到 {folder ?? "你指定的資料夾"}。",
-      _ => "已留在回收區，之後仍可還原。",
+      RestoreConflictChoice.RenameAtOriginal => AppText.Get("demo.restore.renamed", ("name", name + " " + PlanExecutor.RestoredSuffix(Now))),
+      RestoreConflictChoice.OtherFolder when folder is not null => AppText.Get("demo.restore.otherFolder", ("folder", folder)),
+      RestoreConflictChoice.OtherFolder => AppText.Get("demo.restore.chosenFolder"),
+      _ => AppText.Get("store.restore.kept"),
     };
     _conflicts[index] = conflict with { Resolution = resolution };
     if (choice != RestoreConflictChoice.KeepInRecycleArea)
@@ -422,10 +475,10 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
     }
     var text = response switch
     {
-      NoticeResponse.SameDrive => "已確認是同一顆。更新工作已排入佇列，目前正在探索。",
-      NoticeResponse.NewSource => @"已當成新的來源加入，不會沿用 E:\ 的索引。",
-      NoticeResponse.NotInStack => "已移出這疊。之後不會再把它和這疊放在一起。",
-      _ => "維持都保留。下次有變動時才會再提醒。",
+      NoticeResponse.SameDrive => AppText.Get("demo.notice.sameDrive"),
+      NoticeResponse.NewSource => AppText.Get("demo.notice.newSource", ("drive", @"E:\")),
+      NoticeResponse.NotInStack => AppText.Get("demo.notice.notInStack"),
+      _ => AppText.Get("demo.notice.keepAll"),
     };
     notices[index] = notices[index] with { HandledText = text };
     _sinceNotices = notices;
@@ -454,9 +507,119 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
   {
     if (entry.Keeper.SourceId == "od")
     {
-      return "正本已下載到本機並確認內容相同";
+      return AppText.Get("demo.plan.keeperDownloaded");
     }
-    return entry.Keeper.IsProtected ? "正本還在，內容和你決定時相同；受保護，只會新增檔案" : "正本還在，內容和你決定時相同";
+    return AppText.Get(entry.Keeper.IsProtected ? "demo.plan.keeperProtected" : "demo.plan.keeperUnchanged");
+  }
+
+  private static string ChangeDetail(PlanEntry entry, DateTimeOffset changedAt) =>
+    AppText.Get("demo.plan.changed", ("decided", entry.DecidedAt.ToString("HH:mm", CultureInfo.InvariantCulture)), ("file", "src/app.ts"),
+      ("modified", changedAt.ToString("HH:mm", CultureInfo.InvariantCulture)));
+
+  /// <summary>
+  /// The sample data's own text follows the display language. When the language changed since it was built, it is built
+  /// again and swapped in wherever the store still shows it, keeping everything the user changed (states, decisions,
+  /// toggles). Text that the user's actions wrote (job reasons, run results, restore resolutions, notice responses) keeps
+  /// its language, as it would in the real index. Called by the getters, so a page that refreshes after a language
+  /// change reads the new text.
+  /// </summary>
+  private void FollowLanguage()
+  {
+    if (_sample.Locale == AppText.Locale)
+    {
+      return;
+    }
+    var before = _sample;
+    var after = _sample = Sample.Build();
+
+    for (var i = 0; i < _sources.Count; i++)
+    {
+      var source = _sources[i];
+      if (before.Sources.FirstOrDefault(s => s.Id == source.Id) is { } was && after.Sources.FirstOrDefault(s => s.Id == source.Id) is { } now)
+      {
+        _sources[i] = source with
+        {
+          VolumeDescription = Swap(source.VolumeDescription, was.VolumeDescription, now.VolumeDescription)!,
+          Remark = Swap(source.Remark, was.Remark, now.Remark),
+          Exclusions = source.Exclusions.SequenceEqual(was.Exclusions, StringComparer.Ordinal) ? now.Exclusions : source.Exclusions,
+        };
+      }
+      else
+      {
+        // Added in this session: its remark says what the real index would say about it now.
+        _sources[i] = source with { Remark = SwapKey(SwapKey(source.Remark, before.Locale, "scan.source.queuedFirst"), before.Locale, "scan.source.notScanned") };
+      }
+    }
+
+    for (var i = 0; i < _jobs.Count; i++)
+    {
+      var job = _jobs[i];
+      if (before.Jobs.FirstOrDefault(j => j.Id == job.Id) is { } was && after.Jobs.FirstOrDefault(j => j.Id == job.Id) is { } now)
+      {
+        _jobs[i] = job with
+        {
+          Reason = Swap(job.Reason, was.Reason, now.Reason),
+          SkippedReason = Swap(job.SkippedReason, was.SkippedReason, now.SkippedReason),
+          ErrorSummary = Swap(job.ErrorSummary, was.ErrorSummary, now.ErrorSummary),
+        };
+      }
+    }
+
+    // Only a stack's status changes in the demo; everything else is sample data.
+    for (var i = 0; i < _stacks.Count; i++)
+    {
+      if (after.Stacks.FirstOrDefault(s => s.Id == _stacks[i].Id) is { } now)
+      {
+        _stacks[i] = now with { Status = _stacks[i].Status };
+      }
+    }
+
+    for (var e = 0; e < _plan.Count; e++)
+    {
+      var entry = _plan[e];
+      PlanEntry rebuilt;
+      try
+      {
+        rebuilt = PlanBuilder.Build(new StackReview(StackById(entry.Stack.Id) with { Status = entry.Stack.Status }, entry.Decision), entry.DecidedAt);
+      }
+      catch (Exception error) when (error is InvalidOperationException or ArgumentException)
+      {
+        continue;
+      }
+      var items = entry.Items.ToDictionary(i => i.Id, StringComparer.Ordinal);
+      _plan[e] = rebuilt with
+      {
+        Items = rebuilt.Items.Select(i => items.TryGetValue(i.Id, out var was)
+          ? i with
+          {
+            Enabled = was.Enabled,
+            SkipChanged = was.SkipChanged,
+            Check = was.Check,
+            ChangeDetail = was.Check == PlanCheck.Changed && _changedAt.TryGetValue(i.Id, out var at) ? ChangeDetail(entry, at) : was.ChangeDetail,
+          }
+          : i).ToList(),
+        KeeperCheck = entry.KeeperCheck is null ? null : KeeperCheckText(entry),
+      };
+    }
+
+    _since = after.Since;
+    _sinceNotices = _sinceNotices?
+      .Select(n => after.Since.Notices.FirstOrDefault(x => x.Id == n.Id) is { } now ? now with { HandledText = n.HandledText } : n)
+      .ToList();
+  }
+
+  /// <summary>The new text where the old sample text is still shown; anything else stays.</summary>
+  private static string? Swap(string? text, string? before, string? after) =>
+    text is not null && string.Equals(text, before, StringComparison.Ordinal) ? after : text;
+
+  private static string? SwapKey(string? text, string before, string key) =>
+    Swap(text, AppText.Format(before, key), AppText.Get(key));
+
+  /// <summary>The sample data built in one display language.</summary>
+  private sealed record Sample(string Locale, IReadOnlyList<SourceInfo> Sources, IReadOnlyList<ScanJobInfo> Jobs, IReadOnlyList<Stack> Stacks,
+    SinceLastVisit Since)
+  {
+    public static Sample Build() => new(AppText.Locale, DemoData.Sources(), DemoData.Jobs(), DemoData.Stacks(), DemoData.Since());
   }
 
   private void AddRecycled(string volume, long bytes)

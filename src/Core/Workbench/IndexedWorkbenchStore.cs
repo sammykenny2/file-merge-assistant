@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using FileMergeAssistant.Index;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Plans;
 using FileMergeAssistant.Scanning;
 using FileMergeAssistant.Sources;
@@ -52,7 +53,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   private readonly Stopwatch _sinceDetect = Stopwatch.StartNew();
   private readonly Dictionary<string, StoredDecision> _decisions = new(StringComparer.Ordinal);
   private readonly Dictionary<string, (bool Enabled, bool Skip)> _toggles = new(StringComparer.Ordinal);
-  private readonly Dictionary<string, (PlanCheck Check, string? Detail)> _checks = new(StringComparer.Ordinal);
+  private readonly Dictionary<string, (PlanCheck Check, Hold? Detail)> _checks = new(StringComparer.Ordinal);
   private readonly List<Task> _snapshotting = [];
 
   private IReadOnlyList<ExecutionBatch> _history = [];
@@ -94,6 +95,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       Apply(Build(detect: false));
       QueueRefresh(detect: true);
     }
+    AppText.Changed += OnLanguageChanged;
   }
 
   public event EventHandler<WorkbenchChangedEventArgs>? Changed;
@@ -219,18 +221,18 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         }
         catch (ArgumentException)
         {
-          problems.Add($"{raw}：不是有效的資料夾路徑。");
+          problems.Add(AppText.Get("store.add.invalid", ("path", raw)));
           continue;
         }
         if (!Directory.Exists(path))
         {
-          problems.Add($"{path}：找不到這個資料夾。");
+          problems.Add(AppText.Get("store.add.missing", ("path", path)));
           continue;
         }
         var real = PathIdentity.Resolve(path);
         if (LocationSuggester.Same(real, appData) || LocationSuggester.Inside(real, appData) || PathIdentity.SameOrInside(path, _areas.AppDataRoot) == true)
         {
-          problems.Add($"{path}：這是 File Merge Assistant 自己的資料夾，不能加入。");
+          problems.Add(AppText.Get("store.add.appFolder", ("path", path)));
           continue;
         }
         // Names first (they also work for sources that are offline), then identity: a UNC path, junction, subst or mapped
@@ -244,18 +246,16 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
             || (known && self is { } mine && PathIdentity.Identify(e.Root) is { } theirs && theirs.SameAs(mine));
           var inside = !same && (LocationSuggester.Inside(real, e.Root) || (known && PathIdentity.SameOrInside(path, e.Root) == true));
           var around = !same && !inside && (LocationSuggester.Inside(e.Root, real) || (known && PathIdentity.SameOrInside(e.Root, path) == true));
-          clash = same ? $"已經是來源「{e.Name}」（{e.Root}）。"
-            : inside ? $"已經包含在來源「{e.Name}」（{e.Root}）裡。"
-            : around ? $"包含已加入的來源「{e.Name}」（{e.Root}）。同一個檔不能屬於兩個來源，請改加其他資料夾或先移除那個來源。"
-            : null;
-          if (clash is not null)
+          var key = same ? "store.add.same" : inside ? "store.add.inside" : around ? "store.add.around" : null;
+          if (key is not null)
           {
+            clash = AppText.Get(key, ("path", path), ("name", e.Name), ("root", e.Root));
             break;
           }
         }
         if (clash is not null)
         {
-          problems.Add($"{path}：{clash}");
+          problems.Add(clash);
           continue;
         }
 
@@ -273,13 +273,14 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
           ("$protected", options.ProtectedPaths.Any(p => LocationSuggester.Same(p, path) || LocationSuggester.Same(p, real)) ? 1 : 0),
           ("$regen", options.SkipRegenerable ? 1 : 0), ("$cloud", options.SkipCloudOnly ? 1 : 0),
           ("$names", string.Join('\n', RegenerableFolders.Defaults)), ("$exclusions", string.Join('\n', DefaultExclusions)),
-          ("$serial", volume?.Serial), ("$label", volume?.Label), ("$kind", volume?.Describe() ?? "磁碟"),
+          // The drive's description is stored in the language of the moment, like every text written into the index.
+          ("$serial", volume?.Serial), ("$label", volume?.Label), ("$kind", volume?.Describe() ?? AppText.Get("scan.volume.other")),
           ("$at", Stamp(Now)), ("$position", position));
         existing.Add((real, name));
         online.Add(real);
         if (startScan)
         {
-          QueueJob(connection, id, name, ScanJobKind.FirstScan, "第一次掃描");
+          QueueJob(connection, id, name, ScanJobKind.FirstScan, AppText.Get("scan.job.firstScan"));
         }
       }
     }
@@ -300,7 +301,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       if (queued == 0)
       {
         var name = IndexDatabase.Scalar<string>(connection, "SELECT name FROM sources WHERE id = $s", ("$s", sourceId)) ?? sourceId;
-        QueueJob(connection, sourceId, name, ScanJobKind.Update, "你要求更新");
+        QueueJob(connection, sourceId, name, ScanJobKind.Update, AppText.Get("scan.job.requested"));
       }
     }
     _worker.Wake();
@@ -324,10 +325,10 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   {
     Execute(
       """
-      UPDATE jobs SET state = 'Queued', kind = 'Resume', reason = '繼續上次的進度', position = (SELECT COALESCE(MIN(position), 0) - 1 FROM jobs)
+      UPDATE jobs SET state = 'Queued', kind = 'Resume', reason = $reason, position = (SELECT COALESCE(MIN(position), 0) - 1 FROM jobs)
       WHERE id = $id AND state IN ('Paused', 'Interrupted', 'WaitingForSource')
       """,
-      ("$id", jobId));
+      ("$id", jobId), ("$reason", AppText.Get("scan.job.resume")));
     _worker.Wake();
     Apply(Build(detect: false, probe: false));
     return Task.CompletedTask;
@@ -354,8 +355,8 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   public Task RestartJobAsync(string jobId)
   {
-    Execute("UPDATE jobs SET state = 'Queued', kind = 'FirstScan', reason = '從頭重新掃描', saved = 0 WHERE id = $id AND state NOT IN ('Running', 'Pausing')",
-      ("$id", jobId));
+    Execute("UPDATE jobs SET state = 'Queued', kind = 'FirstScan', reason = $reason, saved = 0 WHERE id = $id AND state NOT IN ('Running', 'Pausing')",
+      ("$id", jobId), ("$reason", AppText.Get("scan.job.restart")));
     _worker.Wake();
     Apply(Build(detect: false, probe: false));
     return Task.CompletedTask;
@@ -394,7 +395,8 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     using (var connection = _database.Open())
     {
       IndexDatabase.Execute(connection, "UPDATE jobs SET errors = 0, error_summary = NULL WHERE id = $id", ("$id", jobId));
-      QueueJob(connection, job.SourceId, job.Title, ScanJobKind.Update, $"重新掃描上次無法讀取的 {job.Errors} 個項目");
+      QueueJob(connection, job.SourceId, job.Title, ScanJobKind.Update,
+        AppText.Plural("scan.job.rescanFailed", job.Errors, ("count", job.Errors.ToString(CultureInfo.InvariantCulture))));
     }
     _worker.Wake();
     Apply(Build(detect: false, probe: false));
@@ -482,7 +484,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     var plan = _plan.ToList();
     var results = await Task.Run(() =>
     {
-      var keepers = new Dictionary<string, string?>(StringComparer.Ordinal);
+      var keepers = new Dictionary<string, Hold?>(StringComparer.Ordinal);
       return plan.SelectMany(entry => entry.Items.Select(item => (item.Id, Change: CheckItem(entry, item, keepers)))).ToList();
     }).ConfigureAwait(true);
     lock (_stateGate)
@@ -520,8 +522,9 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     ExecutionBatch batch;
     try
     {
-      var keepers = new Dictionary<string, string?>(StringComparer.Ordinal);
-      batch = await Task.Run(() => _executor.Execute(batchId, ranAt, plan, (entry, item) => CheckItem(entry, item, keepers), Record, cancellationToken),
+      // What the executor journals is fixed text in the language of the moment.
+      var keepers = new Dictionary<string, Hold?>(StringComparer.Ordinal);
+      batch = await Task.Run(() => _executor.Execute(batchId, ranAt, plan, (entry, item) => CheckItem(entry, item, keepers)?.Text, Record, cancellationToken),
         CancellationToken.None).ConfigureAwait(true);
     }
     finally
@@ -599,7 +602,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     string? placed = null;
     if (item.State == BatchItemState.Emptied)
     {
-      resolution = "回收區已經清空，這一項不能再還原。";
+      resolution = AppText.Get("store.restore.emptied");
     }
     else
     {
@@ -607,11 +610,11 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       try
       {
         placed = await Task.Run(() => PlanExecutor.Resolve(conflict, item, choice, folder, now)).ConfigureAwait(true);
-        resolution = placed is null ? "已留在回收區，之後仍可還原。" : $"已還原到 {placed}，原位置現在的檔沒有被改動。";
+        resolution = placed is null ? AppText.Get("store.restore.kept") : AppText.Get("store.restore.placed", ("path", placed));
       }
       catch (Exception e) when (e is IOException or UnauthorizedAccessException)
       {
-        resolution = $"還原沒有完成：{e.Message}";
+        resolution = AppText.Get("store.restore.failed", ("error", e.Message));
       }
     }
     Execute("UPDATE restore_conflicts SET resolution = $r WHERE id = $id", ("$r", resolution), ("$id", conflictId));
@@ -668,8 +671,16 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       }
       _disposed = true;
     }
+    AppText.Changed -= OnLanguageChanged;
     _worker.Dispose();
   }
+
+  /// <summary>
+  /// Source remarks, job summaries and the stacks' evidence and keeper reasons are made when the index is read, so a new
+  /// display language reads it again (detection included); <see cref="Changed"/> follows when that is done. Text already
+  /// written into the index, such as job reasons and run results, keeps its language.
+  /// </summary>
+  private void OnLanguageChanged(object? sender, EventArgs e) => QueueRefresh(detect: true);
 
   private async Task RestoreAsync(string batchId, Func<BatchItem, bool> which)
   {
@@ -702,7 +713,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-          items[item.Id] = item with { FailureReason = $"還原沒有完成：{e.Message}" };
+          items[item.Id] = item with { FailureReason = AppText.Get("store.restore.failed", ("error", e.Message)) };
         }
       }
       return (Items: batch.Items.Select(i => items[i.Id]).ToList(), Conflicts: conflicts);
@@ -734,11 +745,11 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     }
     if (item.KeeperPath is not { } keeper)
     {
-      return "這一項沒有記錄正本，所以沒有重試。請重新比對這疊。";
+      return AppText.Get("store.retry.noKeeper");
     }
     if (!File.Exists(keeper) && !(Directory.Exists(keeper) && Directory.EnumerateFileSystemEntries(keeper).Any()))
     {
-      return $"正本 {keeper} 已經不在原處或是空的，所以沒有重試。請重新比對這疊。";
+      return AppText.Get("store.retry.keeperGone", ("path", keeper));
     }
     List<StoredDecision> decisions;
     lock (_stateGate)
@@ -751,7 +762,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       if (d.Status is Pending or Reopened && keeperPath is not null
         && (LocationSuggester.Same(keeperPath, original) || LocationSuggester.Inside(keeperPath, original) || LocationSuggester.Inside(original, keeperPath)))
       {
-        return "這份現在是另一個決定裡的正本，所以沒有重試。";
+        return AppText.Get("store.retry.nowKeeper");
       }
       var copyId = d.CopyIds.FirstOrDefault(id => CopyPath(id) is { } p && LocationSuggester.Same(p, original));
       if (copyId is null)
@@ -760,11 +771,11 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       }
       if (d.Status == KeptAll)
       {
-        return "你之後選了這疊全部保留，所以沒有重試。";
+        return AppText.Get("store.retry.keptAll");
       }
       if (d.Decision.AlsoKeep.Contains(copyId))
       {
-        return "你之後選了保留這份，所以沒有重試。";
+        return AppText.Get("store.retry.keptCopy");
       }
     }
     return null;
@@ -849,7 +860,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         var queued = IndexDatabase.Scalar<long>(connection, "SELECT COUNT(*) FROM jobs WHERE source_id = $s AND state = 'Queued'", ("$s", source.Id));
         if (queued == 0)
         {
-          QueueJob(connection, source.Id, source.Name, ScanJobKind.Update, "整理之後更新索引");
+          QueueJob(connection, source.Id, source.Name, ScanJobKind.Update, AppText.Get("scan.job.afterRun"));
         }
       }
     }
@@ -886,7 +897,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
           => item with { State = BatchItemState.Done },
         PlanItemKind.Copy or PlanItemKind.SaveAs when item.CreatedPath is { } created && File.Exists(created) && PlanExecutor.Stamp(created) == item.SourceStamp
           => item with { State = BatchItemState.Done },
-        _ => item with { State = BatchItemState.Failed, FailureReason = "程式在處理這一項時結束了。可以還原放回已移動的部分，或重試。" },
+        _ => item with { State = BatchItemState.Failed, FailureReason = AppText.Get("store.run.interrupted") },
       };
       SaveItem(batchId, settled, null);
     }
@@ -1006,15 +1017,16 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
           : SourceState.Online;
         var remark = state switch
         {
-          SourceState.Interrupted => "上次掃描沒有完成",
-          SourceState.NeedsUpdate when lastScan is null => job is null ? "還沒掃描" : "第一次掃描已暫停",
-          SourceState.NeedsUpdate => "掃描已暫停",
-          SourceState.Queued when lastScan is null => "已排入佇列，等候第一次掃描",
-          SourceState.Scanning when job is not null => $"{Clock(job.QueuedAt)} 開始",
+          SourceState.Interrupted => AppText.Get("scan.source.interrupted"),
+          SourceState.NeedsUpdate when lastScan is null => AppText.Get(job is null ? "scan.source.notScanned" : "scan.source.firstScanPaused"),
+          SourceState.NeedsUpdate => AppText.Get("scan.source.scanPaused"),
+          SourceState.Queued when lastScan is null => AppText.Get("scan.source.queuedFirst"),
+          SourceState.Scanning when job is not null => AppText.Get("scan.source.startedAt", ("time", Clock(job.QueuedAt))),
           _ => null,
         };
         var info = new SourceInfo(id, reader.GetString(1), root, state, reader.GetInt64(3) != 0, reader.GetInt64(11), reader.GetInt64(12),
-          reader.GetInt64(13), lastScan, (int)reader.GetInt64(9), reader.IsDBNull(7) ? "磁碟" : reader.GetString(7), ParseStamp(reader, 10), remark)
+          reader.GetInt64(13), lastScan, (int)reader.GetInt64(9), reader.IsDBNull(7) ? AppText.Get("scan.volume.other") : reader.GetString(7),
+          ParseStamp(reader, 10), remark)
         {
           RegenerableNames = ScanWorker.SplitLines(reader.GetString(4)),
           Exclusions = ScanWorker.SplitLines(reader.GetString(5)),
@@ -1144,7 +1156,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     }
     if (_checks.TryGetValue(item.Id, out var check))
     {
-      result = result with { Check = check.Check, ChangeDetail = check.Detail };
+      result = result with { Check = check.Check, ChangeDetail = check.Detail?.Text };
     }
     return result;
   }
@@ -1189,11 +1201,11 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   /// Checks one item against the disk; returns why it no longer matches what the user decided on, or null. The keeper is
   /// checked once per stack (cached in <paramref name="keepers"/>), before any of that stack's items has run.
   /// </summary>
-  private string? CheckItem(PlanEntry entry, PlanItem item, Dictionary<string, string?> keepers)
+  private Hold? CheckItem(PlanEntry entry, PlanItem item, Dictionary<string, Hold?> keepers)
   {
     if (!keepers.TryGetValue(entry.Stack.Id, out var keeper))
     {
-      keepers[entry.Stack.Id] = keeper = CheckCopyContent(entry, entry.Keeper, "正本");
+      keepers[entry.Stack.Id] = keeper = CheckCopyContent(entry, entry.Keeper, isKeeper: true);
     }
     if (keeper is not null)
     {
@@ -1204,15 +1216,15 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       return CheckCopy(entry, item);
     }
     var copy = entry.Stack.Copies.FirstOrDefault(c => c.Id == item.CopyId);
-    return copy is null ? "這份已經不在這疊裡。" : CheckCopyContent(entry, copy, "這份");
+    return copy is null ? new Hold("store.check.copyMissing") : CheckCopyContent(entry, copy, isKeeper: false);
   }
 
-  private static string? CheckCopy(PlanEntry entry, PlanItem item)
+  private static Hold? CheckCopy(PlanEntry entry, PlanItem item)
   {
     var copy = entry.Stack.Copies.FirstOrDefault(c => c.Id == item.CopyId);
     if (copy is null)
     {
-      return "來源的那份已經不在這疊裡。";
+      return new Hold("store.check.sourceCopyMissing");
     }
     var relative = item.SourcePath[(copy.Path.TrimEnd('\\').Length + 1)..].Replace('\\', '/');
     var row = entry.Stack.Rows.FirstOrDefault(r => r.RelativePath.Equals(relative, StringComparison.OrdinalIgnoreCase));
@@ -1220,15 +1232,15 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     var file = new FileInfo(item.SourcePath);
     if (!file.Exists)
     {
-      return $"你決定之後，{item.SourcePath} 不見了，所以先停下來。";
+      return new Hold("store.check.fileGone", ("path", item.SourcePath));
     }
     if (version is not null && (file.Length != version.SizeBytes || file.LastWriteTimeUtc.Ticks != version.Modified.UtcTicks))
     {
-      return $"你在 {entry.DecidedAt:HH:mm} 決定之後，{item.SourcePath} 在 {file.LastWriteTime:MM/dd HH:mm} 被修改了。它已經和你看到的不一樣，所以先停下來。";
+      return new Hold("store.check.fileModified", ("decided", DecidedAt(entry)), ("path", item.SourcePath), ("modified", WrittenAt(file)));
     }
     if (item.Kind != PlanItemKind.Replace && File.Exists(item.DestinationPath))
     {
-      return $"正本裡已經有 {item.DestinationPath}，不會覆寫，所以先停下來。";
+      return new Hold("store.check.destinationExists", ("path", item.DestinationPath));
     }
     return null;
   }
@@ -1237,19 +1249,23 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   /// Walks a copy on disk with the same rules as a scan and compares its file list with what the user saw when
   /// deciding (the stored digest); also confirms the volume is the one the source was added from.
   /// </summary>
-  private string? CheckCopyContent(PlanEntry entry, StackCopy copy, string who)
+  /// <param name="entry">The plan entry the copy belongs to.</param>
+  /// <param name="copy">The keeper or the copy an item recycles.</param>
+  /// <param name="isKeeper">Which of the two, for the wording: the sentences name 「正本」 or 「這份」.</param>
+  private Hold? CheckCopyContent(PlanEntry entry, StackCopy copy, bool isKeeper)
   {
+    var who = isKeeper ? ".keeper" : ".copy";
     var separator = copy.Id.IndexOf(':', StringComparison.Ordinal);
     var sourceId = copy.Id[..separator];
     var relativeRoot = copy.Id[(separator + 1)..];
     var source = _sources.FirstOrDefault(s => s.Id == sourceId);
     if (source is null)
     {
-      return $"{who}的來源已經不在清單裡，所以先停下來。";
+      return new Hold("store.check.sourceRemoved" + who);
     }
     if (source.VolumeSerial is { } serial && _volumes.Describe(source.RootPath)?.Serial is { } current && current != serial)
     {
-      return $"{who}所在的位置現在是另一顆硬碟（磁碟區序號不同），所以先停下來。";
+      return new Hold("store.check.otherDrive" + who);
     }
     string? expected;
     lock (_stateGate)
@@ -1262,16 +1278,16 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       var file = new FileInfo(copy.Path);
       if (!file.Exists)
       {
-        return $"{who}已經不在原位置，所以先停下來。";
+        return new Hold("store.check.gone" + who);
       }
       return expected is not null && CopyDigest.Of([(file.Name, file.Length, file.LastWriteTimeUtc.Ticks)]) != expected
-        ? $"你在 {entry.DecidedAt:HH:mm} 決定之後，{who}（{copy.Path}）在 {file.LastWriteTime:MM/dd HH:mm} 被修改了，所以先停下來。"
-        : SnapshotChanged(entry, copy, who);
+        ? new Hold("store.check.modified" + who, ("decided", DecidedAt(entry)), ("path", copy.Path), ("modified", WrittenAt(file)))
+        : SnapshotChanged(entry, copy);
     }
 
     if (!Directory.Exists(copy.Path))
     {
-      return $"{who}（{copy.Path}）已經不在原位置，所以先停下來。";
+      return new Hold("store.check.folderGone" + who, ("path", copy.Path));
     }
     // The same rules as a scan. Cloud placeholders are listed like any file (never read), as they are in the index.
     var filter = new ScanFilter(new ScanSource(source.Id, source.RootPath, source.SkipsRegenerable, true, source.RegenerableNames, source.Exclusions),
@@ -1283,22 +1299,24 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     }
     catch (Exception e) when (e is UnauthorizedAccessException or IOException)
     {
-      return $"無法讀取{who}（{e.Message}），所以先停下來。";
+      return new Hold("store.check.unreadable" + who, ("error", e.Message));
     }
     if (expected is null || CopyDigest.Of(files) == expected)
     {
-      return SnapshotChanged(entry, copy, who);
+      return SnapshotChanged(entry, copy);
     }
-    return $"你在 {entry.DecidedAt:HH:mm} 決定之後，{who}（{copy.Path}）裡的檔有新增、刪除或修改，已經和你看到的不一樣，所以先停下來。"
-      + (Difference(sourceId, relativeRoot, files) is { } detail ? $"例如：{detail}" : string.Empty);
+    // One sentence per kind of example, so each language keeps its own order.
+    return Difference(sourceId, relativeRoot, files) is { } detail
+      ? new Hold(detail.Kind + who, ("decided", DecidedAt(entry)), ("path", copy.Path), ("file", detail.File))
+      : new Hold("store.check.contentChanged" + who, ("decided", DecidedAt(entry)), ("path", copy.Path));
   }
 
   /// <summary>
   /// For a copy that will be recycled: compares everything inside it, including what scans skip (<c>.git</c>, regenerable
   /// folders, excluded files), with the snapshot taken when the user decided. The keeper is not compared this way; work
-  /// in it (new commits, rebuilt folders) never puts the other copies at risk.
+  /// in it (new commits, rebuilt folders) never puts the other copies at risk, so every sentence here is about 「這份」.
   /// </summary>
-  private string? SnapshotChanged(PlanEntry entry, StackCopy copy, string who)
+  private Hold? SnapshotChanged(PlanEntry entry, StackCopy copy)
   {
     if (copy.Id == entry.Keeper.Id)
     {
@@ -1311,11 +1329,11 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     }
     if (snapshot is null)
     {
-      return $"沒有{who}（{copy.Path}）在你決定時的完整紀錄，所以先不移動。請再確認一次這疊。";
+      return new Hold("store.check.noSnapshot", ("path", copy.Path));
     }
     if (snapshot.StartsWith(CopySnapshot.ChangedPrefix, StringComparison.Ordinal))
     {
-      return $"你決定的時候，{who}（{copy.Path}）裡的 {snapshot[CopySnapshot.ChangedPrefix.Length..]} 正在變動（或時間在決定之後），所以先不移動。請再確認一次這疊。";
+      return new Hold("store.check.changingAtDecision", ("path", copy.Path), ("file", snapshot[CopySnapshot.ChangedPrefix.Length..]));
     }
     string now;
     try
@@ -1324,15 +1342,31 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     }
     catch (Exception e) when (e is UnauthorizedAccessException or IOException)
     {
-      return $"無法讀取{who}（{e.Message}），所以先停下來。";
+      return new Hold("store.check.unreadable.copy", ("error", e.Message));
     }
-    return now == snapshot
-      ? null
-      : $"你在 {entry.DecidedAt:HH:mm} 決定之後，{who}（{copy.Path}）裡有變動，包括比較時沒有列出的部分（例如 .git、node_modules 或排除的檔），所以先不移動。";
+    return now == snapshot ? null : new Hold("store.check.snapshotChanged", ("decided", DecidedAt(entry)), ("path", copy.Path));
   }
 
-  /// <summary>Names one file that differs between the disk and the index, to make a change notice concrete.</summary>
-  private string? Difference(string sourceId, string relativeRoot, List<(string Relative, long Size, long ModifiedTicks)> files)
+  /// <summary>When the user decided, as shown in a check result.</summary>
+  private static string DecidedAt(PlanEntry entry) => entry.DecidedAt.ToString("HH:mm", AppText.Culture);
+
+  /// <summary>When a file was last written, as shown in a check result.</summary>
+  private static string WrittenAt(FileInfo file) => file.LastWriteTime.ToString("MM/dd HH:mm", AppText.Culture);
+
+  /// <summary>
+  /// Why an item is held back, as a catalog key and its values, so the plan shows it in the current display language. It
+  /// becomes fixed text only when a run writes it into the journal.
+  /// </summary>
+  private sealed record Hold(string Key, params (string Name, object? Value)[] Values)
+  {
+    public string Text => AppText.Get(Key, Values);
+  }
+
+  /// <summary>
+  /// Names one file that differs between the disk and the index, to make a change notice concrete: the key of the
+  /// sentence (added, modified or missing, without the .keeper/.copy suffix) and the file.
+  /// </summary>
+  private (string Kind, string File)? Difference(string sourceId, string relativeRoot, List<(string Relative, long Size, long ModifiedTicks)> files)
   {
     var indexed = new Dictionary<string, (long Size, long Mtime)>(StringComparer.OrdinalIgnoreCase);
     using (var connection = _database.Open())
@@ -1350,15 +1384,15 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     {
       if (!indexed.TryGetValue(relative, out var known))
       {
-        return $"多了 {relative}。";
+        return ("store.check.contentAdded", relative);
       }
       if (known.Size != size || known.Mtime != modified)
       {
-        return $"{relative} 被修改了。";
+        return ("store.check.contentModified", relative);
       }
     }
     var onDisk = files.Select(f => f.Relative).ToHashSet(StringComparer.OrdinalIgnoreCase);
-    return indexed.Keys.FirstOrDefault(k => !onDisk.Contains(k)) is { } gone ? $"少了 {gone}。" : null;
+    return indexed.Keys.FirstOrDefault(k => !onDisk.Contains(k)) is { } gone ? ("store.check.contentRemoved", gone) : null;
   }
 
   private void UpdateToggle(string itemId, Func<(bool Enabled, bool Skip), (bool Enabled, bool Skip)> change)
@@ -1398,7 +1432,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         Hashed = reader.GetInt64(9),
         Succeeded = reader.GetInt64(10),
         Skipped = reader.GetInt64(11),
-        SkippedReason = reader.GetInt64(11) > 0 ? "排除規則或掃描中變動" : null,
+        SkippedReason = reader.GetInt64(11) > 0 ? AppText.Get("scan.job.skipped") : null,
         Errors = reader.GetInt64(12),
         ErrorSummary = reader.IsDBNull(13) ? null : reader.GetString(13),
         CurrentPath = reader.IsDBNull(14) ? null : reader.GetString(14),
@@ -1418,7 +1452,8 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         var first = IndexDatabase.Scalar<string>(connection, "SELECT path FROM scan_errors WHERE job_id = $id LIMIT 1", ("$id", job.Id));
         jobs[i] = job with
         {
-          ErrorSummary = $"無法讀取 {first} 等 {job.Errors} 個項目。它們不在任何一疊裡，也不會被當成已刪除。",
+          ErrorSummary = AppText.Plural("scan.job.errors", job.Errors,
+            ("path", first ?? string.Empty), ("count", job.Errors.ToString(CultureInfo.InvariantCulture))),
         };
       }
     }

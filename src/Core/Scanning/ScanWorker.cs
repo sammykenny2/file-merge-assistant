@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using FileMergeAssistant.Index;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Sources;
 using Microsoft.Data.Sqlite;
 
@@ -46,7 +47,8 @@ public sealed class ScanWorker : IDisposable
     ArgumentNullException.ThrowIfNull(database);
     using var connection = database.Open();
     IndexDatabase.Execute(connection,
-      "UPDATE jobs SET state = 'Interrupted', reason = '上次掃描時程式沒有正常結束。已保存的索引仍可使用；還沒保存的部分會重新處理，不會產生重複紀錄。', saved = discovered WHERE state IN ('Running', 'Pausing')");
+      "UPDATE jobs SET state = 'Interrupted', reason = $reason, saved = discovered WHERE state IN ('Running', 'Pausing')",
+      ("$reason", AppText.Get("scan.job.recovered")));
   }
 
   public void Start() => _loop ??= Task.Run(LoopAsync);
@@ -229,9 +231,7 @@ public sealed class ScanWorker : IDisposable
     if (!IsOnline(source.Root, serial))
     {
       // Missing, or another disk under the same letter: never index it as this source.
-      SetState(connection, jobId, "WaitingForSource", Directory.Exists(source.Root)
-        ? "這個位置現在是另一顆硬碟（磁碟區序號不同），所以沒有掃描。接上原本那顆後再試。"
-        : "硬碟離線，更新工作先保留在這裡。接上後會先確認是同一顆硬碟，再開始。");
+      SetState(connection, jobId, "WaitingForSource", AppText.Get(Directory.Exists(source.Root) ? "scan.job.otherDrive" : "scan.job.offline"));
       return;
     }
     JobChanged?.Invoke(this, false);
@@ -285,15 +285,15 @@ public sealed class ScanWorker : IDisposable
     var now = DateTimeOffset.Now.ToString("o", CultureInfo.InvariantCulture);
     if (_shutdown.IsCancellationRequested)
     {
-      SetState(connection, jobId, "Interrupted", "程式結束時掃描還沒完成。已保存的索引仍可使用；繼續時只會重做還沒保存的部分。");
+      SetState(connection, jobId, "Interrupted", AppText.Get("scan.job.closed"));
     }
     else if (failure is not null)
     {
-      SetState(connection, jobId, "Interrupted", $"掃描中斷：{failure}");
+      SetState(connection, jobId, "Interrupted", AppText.Get("scan.job.failed", ("error", failure)));
     }
     else if (stop == ScanStop.Paused)
     {
-      SetState(connection, jobId, "Paused", "已暫停，不會再安排新檔案。佇列裡的其他工作也會等這個繼續或取消。");
+      SetState(connection, jobId, "Paused", AppText.Get("scan.job.paused"));
     }
     else if (stop == ScanStop.Canceled)
     {
