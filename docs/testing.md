@@ -78,6 +78,15 @@ existing ImageSharp Debug license warnings remain; this is not Release validatio
 The adaptation evidence is in
 [the research note](research/2026-10-24-pluggable-analysis-engines.md).
 
+PLAN-002 Slice 1 passes the full solution suite: 416 Core and 16 GUI tests.
+The workbench now delegates candidate content analysis to the managed engine;
+`xxh128:` values and the executor's copy verification are unchanged. Contract
+tests cover known answers, per-file coverage, cancellation, changed/missing
+files, unsupported capabilities and malformed results. A fake-engine regression
+checks that Core reobserves metadata instead of trusting a reported change.
+Independent review passed G1 after correcting that metadata boundary. Native
+interop, persisted engine snapshots and schema migration are not covered yet.
+
 ## CI Pause
 
 GitHub Actions CI is temporarily disabled for this repository. The `CI` workflow

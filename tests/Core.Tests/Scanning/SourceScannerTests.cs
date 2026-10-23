@@ -1,4 +1,6 @@
 using FileMergeAssistant.Index;
+using FileMergeAssistant.Analysis;
+using System.Runtime.CompilerServices;
 using FileMergeAssistant.Scanning;
 using FileMergeAssistant.Sources;
 using Xunit;
@@ -78,6 +80,75 @@ public sealed class SourceScannerTests : IDisposable
       files[reader.GetString(0)] = (reader.GetInt64(1), reader.IsDBNull(2) ? null : reader.GetString(2));
     }
     return files;
+  }
+
+  [Fact]
+  public void Analysis_Is_Delegated_Only_For_Size_Candidates_While_All_Files_Are_Indexed()
+  {
+    var source = AddSource("a", "a");
+    _tree.Write(@"a\one.txt", "same");
+    _tree.Write(@"a\copy.txt", "same");
+    _tree.Write(@"a\unique.txt", "a different size");
+    var engine = new RecordingEngine(false);
+
+    Assert.Equal(ScanStop.Completed, new SourceScanner(_database, engine).Run(source, "job-a",
+      new Dictionary<string, string> { [source.Id] = source.Root }, _ => { }, () => false, CancellationToken.None));
+
+    Assert.Equal(3, Files("a").Count);
+    Assert.Equal(["copy.txt", "one.txt"], engine.Paths.Select(Path.GetFileName).Order(StringComparer.Ordinal));
+    Assert.Null(Files("a")["unique.txt"].Hash);
+    Assert.All(Files("a").Where(file => file.Value.Hash is not null), file => Assert.StartsWith("xxh128:", file.Value.Hash));
+  }
+
+  [Fact]
+  public void Unknown_Engine_File_Is_Rejected_Before_The_Cohort_Is_Committed()
+  {
+    var source = AddSource("a", "a");
+    _tree.Write(@"a\one.txt", "same");
+    _tree.Write(@"a\copy.txt", "same");
+
+    Assert.Throws<InvalidDataException>(() => new SourceScanner(_database, new RecordingEngine(true)).Run(source, "job-a",
+      new Dictionary<string, string> { [source.Id] = source.Root }, _ => { }, () => false, CancellationToken.None));
+
+    Assert.All(Files("a"), file => Assert.Null(file.Value.Hash));
+  }
+
+  [Fact]
+  public void Changed_Engine_Metadata_Is_Reobserved_By_Core_Before_Index_Update()
+  {
+    var source = AddSource("a", "a");
+    _tree.Write(@"a\one.txt", "same");
+    _tree.Write(@"a\copy.txt", "same");
+
+    Assert.Equal(ScanStop.Completed, new SourceScanner(_database, new RecordingEngine(false, claimChange: true)).Run(source, "job-a",
+      new Dictionary<string, string> { [source.Id] = source.Root }, _ => { }, () => false, CancellationToken.None));
+
+    Assert.All(Files("a"), file => Assert.Equal(new FileInfo(_tree.PathOf(@"a\" + file.Key)).Length, file.Value.Size));
+    using var connection = _database.Open();
+    Assert.Equal(0, IndexDatabase.Scalar<long>(connection, "SELECT COUNT(*) FROM files WHERE mtime > $max", ("$max", DateTime.UtcNow.Ticks)));
+  }
+
+  private sealed class RecordingEngine(bool tamper, bool claimChange = false) : IFileAnalysisEngine
+  {
+    private readonly ManagedAnalysisEngine _inner = new();
+    public List<string> Paths { get; } = [];
+    public AnalysisEngineDescriptor Descriptor => _inner.Descriptor;
+
+    public async IAsyncEnumerable<AnalysisBatch> AnalyzeAsync(AnalysisRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+      Paths.AddRange(request.Files.Select(file => file.Path));
+      await foreach (var batch in _inner.AnalyzeAsync(request, cancellationToken))
+      {
+        if (claimChange && batch.Sequence == 1 && batch.Files.Length > 0)
+        {
+          yield return batch with { Files = [batch.Files[0] with { Status = AnalysisFileStatus.Changed, Fingerprint = null,
+            Error = "claimed change", Observation = new(999, DateTime.MaxValue.Ticks) }] };
+        }
+        else if (claimChange && batch.IsFinal) { yield return batch with { IsComplete = false }; }
+        else { yield return tamper && batch.Sequence == 2 && batch.Files.Length > 0
+          ? batch with { Files = [batch.Files[0] with { FileId = long.MaxValue }] } : batch; }
+      }
+    }
   }
 
   [Fact]

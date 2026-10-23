@@ -23,6 +23,10 @@
 - `files.hash` 保存既有帶標記的內容指紋；疊偵測依賴它，執行器的複製驗證也使用現有 XxHash128 路徑。
 - 尚無 `IFileAnalysisEngine`、引擎 registry、Rust FFI 程式庫、引擎設定或引擎專用契約測試。下列需求與型別名稱均為目標，不是目前 API。
 
+2026-10-24 Slice 1 已建立 `src/Core/Analysis/` 的共用契約、registry 與 `ManagedAnalysisEngine`，工作台已委派候選分析；原生、持久快照與 GUI／CLI 選擇仍未接入。完成紀錄與測試見 PLAN-002，以上清單保留為原始查閱基準。
+
+目前契約使用不可變 record 與 `ImmutableArray`：`AnalysisRequest` 包含 Job ID、`AnalysisEngineSnapshot` 及明確候選；`IFileAnalysisEngine.AnalyzeAsync` 非同步逐批回傳 `AnalysisBatch`，帶序號、逐檔證據、群組、進度及 final／complete 標記。`AnalysisResultValidator` 驗證全部輸出及完整覆蓋；未收到 final、未知／重複 ID、算法不符、無完整相同證據的精確群組均拒絕。C# 目前僅宣告精確內容分析（xxh128-v1、sha256-v1），成熟度為 Experimental，沒有提供相似圖片能力。
+
 ## 目標
 
 - 可明確選擇引擎，支援功能與驗證程度不必相同。
