@@ -188,10 +188,19 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   public Task<Stack> WithDetailsAsync(Stack stack) => Task.Run(() => GitStatusReader.Enrich(stack));
 
-  public Task<IReadOnlyList<string>> AddSourcesAsync(IReadOnlyList<string> paths, SourceOptions options, bool startScan)
+  public async Task<IReadOnlyList<string>> AddSourcesAsync(IReadOnlyList<string> paths, SourceOptions options, bool startScan)
   {
     ArgumentNullException.ThrowIfNull(paths);
     ArgumentNullException.ThrowIfNull(options);
+    // Resolving real locations can wait on a slow or disconnected network drive; never on the interface thread.
+    var problems = await Task.Run(() => AddSources(paths, options, startScan)).ConfigureAwait(true);
+    _worker.Wake();
+    Apply(Build(detect: false, probe: false));
+    return problems;
+  }
+
+  private List<string> AddSources(IReadOnlyList<string> paths, SourceOptions options, bool startScan)
+  {
     var problems = new List<string>();
     using (var connection = _database.Open())
     {
@@ -256,9 +265,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         }
       }
     }
-    _worker.Wake();
-    Apply(Build(detect: false, probe: false));
-    return Task.FromResult<IReadOnlyList<string>>(problems);
+    return problems;
   }
 
   public Task ScanSourceAsync(string sourceId)
@@ -1149,6 +1156,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     {
       return $"{who}（{copy.Path}）已經不在原位置，所以先停下來。";
     }
+    // The same rules as a scan. Cloud placeholders are listed like any file (never read), as they are in the index.
     var filter = new ScanFilter(new ScanSource(source.Id, source.RootPath, source.SkipsRegenerable, true, source.RegenerableNames, source.Exclusions),
       [_areas.AppDataRoot]);
     List<(string Relative, long Size, long ModifiedTicks)> files;

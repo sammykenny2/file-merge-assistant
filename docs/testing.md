@@ -204,10 +204,11 @@ When a test hangs, VSTest writes a sequence attachment under
     look (and staying out of the plan after a restart); a keeper emptied after the decision stopping the whole
     stack; a copy edited right before the run skipped although the index is stale; convergence only when
     every item finished (after a retry); a pending decision with an offline keeper waiting without errors;
-    another disk under the same letter not scanned; a junction to a source refused as a second source; the
+    another disk under the same letter not scanned; a folder added while another source is offline; a junction
+    to a source refused as a second source; the
     app's own folder, recycle areas and partial files never scanned; a crashed run settled from the disk on
     the next start; a copy not undone while its source is still recycled.
-  - Core.Tests has 337 tests, Gui.Tests 3; all 340 pass, three runs in a row.
+  - Core.Tests has 338 tests, Gui.Tests 3; all 341 pass.
 
 ## Bootstrap Validation
 

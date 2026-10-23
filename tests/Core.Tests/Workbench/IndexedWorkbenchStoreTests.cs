@@ -364,6 +364,21 @@ public sealed class IndexedWorkbenchStoreTests : IDisposable
   }
 
   [Fact]
+  public async Task A_Folder_Can_Be_Added_While_Another_Source_Is_Offline()
+  {
+    _tree.Write(@"usb\a.txt", "a");
+    _tree.Write(@"docs\b.txt", "b");
+    using var store = Open();
+    await store.AddSourcesAsync([_tree.PathOf("usb")], new SourceOptions(true, true, []), startScan: false);
+    Directory.Move(_tree.PathOf("usb"), _tree.PathOf("usb-unplugged"));
+
+    var problems = await store.AddSourcesAsync([_tree.PathOf("docs")], new SourceOptions(true, true, []), startScan: false);
+
+    Assert.Empty(problems);
+    Assert.Equal(2, store.Sources.Count);
+  }
+
+  [Fact]
   public async Task A_Junction_To_A_Source_Is_Not_Added_As_Another_Source()
   {
     _tree.Write(@"real\a.txt", "a");
