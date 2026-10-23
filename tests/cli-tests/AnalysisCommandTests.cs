@@ -28,6 +28,7 @@ public sealed class AnalysisCommandTests
     var root = new RootCommand();
     root.AddCommand(AnalysisCommands.Engines(services));
     root.AddCommand(AnalysisCommands.Analyze(services, dataRoot));
+    root.AddCommand(AnalysisCommands.Compare(services, dataRoot));
     return root;
   }
 
@@ -104,6 +105,38 @@ public sealed class AnalysisCommandTests
   }
 
   [Fact]
+  public async Task Comparison_Reports_Independent_Algorithms_Normalized_Groups_And_Process_Metrics()
+  {
+    using var dataset = new KnownAnswerDataset();
+    using var services = new ServiceCollection().AddSingleton(AnalysisEngineRegistry.ManagedOnly()).BuildServiceProvider();
+    var console = new TestConsole();
+    Assert.Equal(0, await Root(services, DataRoot()).InvokeAsync(
+      ["compare-engines", dataset.Root, "--second", "csharp", "--second-algorithm", "sha256-v1"], console));
+    using var json = JsonDocument.Parse(console.Out.ToString()!);
+    Assert.True(json.RootElement.GetProperty("groupsAgree").GetBoolean());
+    Assert.True(json.RootElement.GetProperty("observationsMatch").GetBoolean());
+    Assert.Equal(2, json.RootElement.GetProperty("matchingGroups").GetInt32());
+    Assert.NotEqual(json.RootElement.GetProperty("first").GetProperty("indexPath").GetString(), json.RootElement.GetProperty("second").GetProperty("indexPath").GetString());
+    Assert.True(json.RootElement.GetProperty("second").GetProperty("metrics").TryGetProperty("processReadBytes", out _));
+    Assert.All(dataset.Files, file => Assert.Equal(file.Bytes, File.ReadAllBytes(file.Path)));
+  }
+
+  [Fact]
+  public async Task Missing_Comparison_Engine_Is_Diagnosed_Before_Reading_The_First_Engine_Scope()
+  {
+    using var dataset = new KnownAnswerDataset();
+    var data = DataRoot();
+    var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Path.Combine(data, "missing"))]);
+    using var services = new ServiceCollection().AddSingleton(registry).BuildServiceProvider();
+    var console = new TestConsole();
+    Assert.Equal(2, await Root(services, data).InvokeAsync(["compare-engines", dataset.Root], console));
+    using var json = JsonDocument.Parse(console.Out.ToString()!);
+    Assert.Equal("MissingDependency", json.RootElement.GetProperty("outcome").GetString());
+    Assert.False(Directory.Exists(data));
+    Assert.All(dataset.Files, file => Assert.Equal(file.Bytes, File.ReadAllBytes(file.Path)));
+  }
+
+  [Fact]
   public void Legacy_Scan_Defaults_Stay_Unchanged_And_Do_Not_Resolve_The_Optional_Native_Engine()
   {
     using var dataset = new KnownAnswerDataset();
@@ -118,6 +151,8 @@ public sealed class AnalysisCommandTests
     Assert.Equal("content", parsed.GetValueForOption((Option<string>)legacy.Options.Single(option => option.Name == "match-mode")));
     Assert.True(parsed.GetValueForOption((Option<bool>)legacy.Options.Single(option => option.Name == "recursive")));
     Assert.False(parsed.GetValueForOption((Option<bool>)legacy.Options.Single(option => option.Name == "cleanup-empty")));
+    Assert.Equal("all", parsed.GetValueForOption((Option<string>)legacy.Options.Single(option => option.Name == "format")));
+    Assert.Equal("./fma-results/", parsed.GetValueForOption((Option<string>)legacy.Options.Single(option => option.Name == "output")));
     Assert.False(resolved);
   }
 }

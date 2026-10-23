@@ -51,10 +51,11 @@ public sealed record ScanJobSnapshot(int Version, string SourceId, AnalysisEngin
       var identity = Directory.Exists(root) && OperatingSystem.IsWindows() ? PathIdentity.Identify(root) : null;
       sources.Add(new(source, reader.IsDBNull(6) ? null : reader.GetString(6), identity, reader.GetInt64(7) != 0));
     }
-    var scope = sources.ToImmutable();
-    var scopeJson = JsonSerializer.Serialize(new { sourceId, sources = scope }, AnalysisJson.Options);
-    return new(1, sourceId, engine with { ScopeJson = scopeJson }, scope);
+    return Create(sourceId, engine, sources.ToImmutable());
   }
+
+  internal static ScanJobSnapshot Create(string sourceId, AnalysisEngineSnapshot engine, ImmutableArray<ScanSourceSnapshot> sources)
+    => new(1, sourceId, engine with { ScopeJson = JsonSerializer.Serialize(new { sourceId, sources }, AnalysisJson.Options) }, sources);
 
   public static bool IsOnline(ScanSourceSnapshot snapshot, IVolumeInfoProvider volumes)
   {

@@ -5,6 +5,7 @@ using FileMergeAssistant.Plans;
 using FileMergeAssistant.Sources;
 using FileMergeAssistant.Stacks;
 using FileMergeAssistant.Analysis;
+using FileMergeAssistant.Scanning;
 
 namespace FileMergeAssistant.Workbench;
 
@@ -40,6 +41,10 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
   public AnalysisEngineSnapshot NewJobEngine { get; private set; } = AnalysisEngineRegistry.ManagedOnly()
     .Snapshot(ManagedAnalysisEngine.EngineId, AnalysisCapability.ExactDuplicates, ContentFingerprints.XxHash128);
   public string? AnalysisConfigurationError => null;
+
+  public Task<AnalysisComparisonReport> CompareEnginesAsync(AnalysisEngineSnapshot first, AnalysisEngineSnapshot second,
+    IProgress<AnalysisComparisonProgress>? progress = null, CancellationToken cancellationToken = default)
+    => throw new InvalidOperationException("Engine comparison requires real sources.");
 
   public Task SelectNewJobEngineAsync(AnalysisEngineSnapshot snapshot)
   {

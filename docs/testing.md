@@ -59,6 +59,17 @@ dotnet test tests/Core.Tests/Core.Tests.csproj --collect:"XPlat Code Coverage"
 
 ## Analysis Engine Baseline (2026-10-24)
 
+Slice 4c full solution validation passes **461 Core / 20 GUI / 10 CLI**, zero
+skips with all three native fixture directories configured. Comparison tests
+cover independent indexes, normalized groups, source changes, second-run
+preflight failure, frozen custom exclusions and regenerable policies, and
+cancellation after worker completion or during comparison. WPF rendering and
+localized completion text pass. The known-answer comparison and measurement
+limits are recorded in [the evidence note](research/2026-10-24-engine-comparison.md).
+This does not complete similar-image, Release, installer or non-Windows acceptance.
+Independent Slice 4c review passed 15 focused Core, 10 CLI and 4 GUI tests,
+zero skips, after the scope and cancellation corrections.
+
 Before PLAN-002 implementation, commit `a01ba97` passed the full solution suite:
 404 Core and 16 GUI tests, SDK 10.0.402. The new shared known-answer fixture is
 checked independently by `AnalysisBaselineTests` and the native adapter's Rust

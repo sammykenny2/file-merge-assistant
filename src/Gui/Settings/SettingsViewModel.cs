@@ -127,6 +127,7 @@ public sealed partial class SettingsViewModel : PageViewModel, IDisposable
       }
       Language = _context.Shell.Preferences.Language;
       RenderAnalysis();
+      RenderComparison();
       RenderStartup();
       VersionText = AppText.Get("settings.version", ("version", UpdateService.CurrentVersion.ToString(3)));
       DistributionText = AppText.Get("settings.distribution." + _context.Distribution);
@@ -138,7 +139,11 @@ public sealed partial class SettingsViewModel : PageViewModel, IDisposable
     }
   }
 
-  public void Dispose() => _context.Updates.PropertyChanged -= OnUpdateChanged;
+  public void Dispose()
+  {
+    CompareEnginesCommand.Cancel();
+    _context.Updates.PropertyChanged -= OnUpdateChanged;
+  }
 
   partial void OnLanguageChanged(string value)
   {

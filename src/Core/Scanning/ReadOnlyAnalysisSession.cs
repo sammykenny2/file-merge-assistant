@@ -41,15 +41,24 @@ public sealed class ReadOnlyAnalysisSession
 
   public Task<AnalysisSessionReport> RunAsync(IReadOnlyList<string> paths, AnalysisEngineSnapshot engine,
     IProgress<ImmutableArray<AnalysisSessionJob>>? progress = null, CancellationToken cancellationToken = default)
+    => RunPreparedAsync(paths, default, engine, progress, cancellationToken);
+
+  internal Task<AnalysisSessionReport> RunConfiguredAsync(ImmutableArray<ScanSourceSnapshot> sources, AnalysisEngineSnapshot engine,
+    IProgress<ImmutableArray<AnalysisSessionJob>>? progress, CancellationToken cancellationToken)
+    => RunPreparedAsync(sources.Select(source => source.Source.Root).ToImmutableArray(), sources, engine, progress, cancellationToken);
+
+  private Task<AnalysisSessionReport> RunPreparedAsync(IReadOnlyList<string> paths, ImmutableArray<ScanSourceSnapshot> sources,
+    AnalysisEngineSnapshot engine, IProgress<ImmutableArray<AnalysisSessionJob>>? progress, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(paths);
     if (paths.Count == 0) { throw new ArgumentException("At least one source folder is required.", nameof(paths)); }
     if (engine.Capability != AnalysisCapability.ExactDuplicates) { throw new ArgumentException("This session supports exact-content analysis only.", nameof(engine)); }
     _engines.Resolve(engine);
-    return Task.Run(() => RunCoreAsync(paths, engine, progress, cancellationToken), cancellationToken);
+    var frozenPaths = paths.ToImmutableArray();
+    return Task.Run(() => RunCoreAsync(frozenPaths, sources, engine, progress, cancellationToken), cancellationToken);
   }
 
-  private async Task<AnalysisSessionReport> RunCoreAsync(IReadOnlyList<string> paths, AnalysisEngineSnapshot engine,
+  private async Task<AnalysisSessionReport> RunCoreAsync(IReadOnlyList<string> paths, ImmutableArray<ScanSourceSnapshot> sources, AnalysisEngineSnapshot engine,
     IProgress<ImmutableArray<AnalysisSessionJob>>? progress, CancellationToken cancellationToken)
   {
     var clock = Stopwatch.StartNew();
@@ -76,6 +85,7 @@ public sealed class ReadOnlyAnalysisSession
       var problems = await setup.AddSourcesAsync(paths, new SourceOptions(true, true, paths), startScan: true).ConfigureAwait(false);
       if (problems.Count > 0) { throw new ArgumentException(string.Join(Environment.NewLine, problems), nameof(paths)); }
     }
+    if (!sources.IsDefault) { BindConfiguredSources(database, engine, sources, dataRoot); }
     using var worker = new ScanWorker(database, _volumes, [dataRoot], _engines);
     var canceled = false;
     worker.Start();
@@ -95,17 +105,71 @@ public sealed class ReadOnlyAnalysisSession
     }
     var finalJobs = ReadJobs(database, snapshots);
     var complete = finalJobs.All(job => job.State == ScanJobState.Completed && job.Complete);
-    var online = finalJobs.SelectMany(job => job.Snapshot.Sources).DistinctBy(source => source.Source.Id)
-      .Where(source => ScanJobSnapshot.IsOnline(source, _volumes)).Select(source => source.Source.Id).ToHashSet(StringComparer.Ordinal);
+    var online = new HashSet<string>(StringComparer.Ordinal);
+    foreach (var source in finalJobs.SelectMany(job => job.Snapshot.Sources).DistinctBy(source => source.Source.Id))
+    {
+      if (cancellationToken.IsCancellationRequested) { break; }
+      if (ScanJobSnapshot.IsOnline(source, _volumes)) { online.Add(source.Source.Id); }
+    }
     if (finalJobs.Any(job => !online.Contains(job.SourceId))) { complete = false; }
-    var files = ReadFiles(database, engine, online, ref complete);
-    var groups = files.Where(file => file.Status == "Confirmed" && file.Fingerprint is not null)
-      .GroupBy(file => file.Fingerprint!, StringComparer.Ordinal).Where(group => group.Count() > 1)
-      .Select(group => new AnalysisSessionGroup(group.Select(file => file.Id).Order().ToImmutableArray())).ToImmutableArray();
+    var files = ReadFiles(database, engine, online, ref complete, cancellationToken);
+    var groups = ImmutableArray<AnalysisSessionGroup>.Empty;
+    try
+    {
+      var byHash = new Dictionary<string, List<long>>(StringComparer.Ordinal);
+      foreach (var file in files)
+      {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (file.Status == "Confirmed" && file.Fingerprint is { } fingerprint)
+        {
+          if (!byHash.TryGetValue(fingerprint, out var ids)) { byHash[fingerprint] = ids = []; }
+          ids.Add(file.Id);
+        }
+      }
+      var builder = ImmutableArray.CreateBuilder<AnalysisSessionGroup>();
+      foreach (var ids in byHash.Values)
+      {
+        cancellationToken.ThrowIfCancellationRequested();
+        // ReadFiles is ordered by ID, so no uninterruptible large-group sort is needed.
+        if (ids.Count > 1) { builder.Add(new(ids.ToImmutableArray())); }
+      }
+      groups = builder.ToImmutable();
+    }
+    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+    canceled |= cancellationToken.IsCancellationRequested;
     var outcome = canceled ? "Canceled" : finalJobs.Any(job => job.State == ScanJobState.WaitingForEngine) ? "Unavailable" : complete ? "Completed" : "Partial";
     var descriptor = _engines.Descriptors.Single(item => item.Id == engine.EngineId);
     clock.Stop();
     return new(1, index, descriptor, engine, outcome, finalJobs, files, groups, AnalysisProcessMetrics.Difference(before, clock.ElapsedMilliseconds));
+  }
+
+  private static void BindConfiguredSources(IndexDatabase database, AnalysisEngineSnapshot engine,
+    ImmutableArray<ScanSourceSnapshot> sources, string dataRoot)
+  {
+    using var connection = database.Open();
+    using var transaction = connection.BeginTransaction();
+    var registered = ScanJobSnapshot.Capture(connection, "binding", engine, [dataRoot]).Sources;
+    var bound = registered.Select(item =>
+    {
+      var policy = sources.Single(source => string.Equals(source.Source.Root, item.Source.Root, StringComparison.Ordinal));
+      return policy with { Source = policy.Source with { Id = item.Source.Id,
+        ExcludedRoots = policy.Source.ExcludedRoots.Append(dataRoot).Distinct(StringComparer.Ordinal).ToImmutableArray() } };
+    }).ToImmutableArray();
+    foreach (var item in bound)
+    {
+      var source = item.Source;
+      IndexDatabase.Execute(connection,
+        """
+        UPDATE sources SET is_protected=$protected,skip_regenerable=$regen,skip_cloud=$cloud,regenerable_names=$names,
+          exclusions=$exclusions,volume_serial=$serial WHERE id=$id
+        """, ("$protected", item.Protected ? 1 : 0), ("$regen", source.SkipRegenerable ? 1 : 0), ("$cloud", source.SkipCloudOnly ? 1 : 0),
+        ("$names", string.Join('\n', source.RegenerableNames)), ("$exclusions", string.Join('\n', source.Exclusions)),
+        ("$serial", item.VolumeSerial), ("$id", source.Id));
+      var snapshot = ScanJobSnapshot.Create(source.Id, engine, bound);
+      IndexDatabase.Execute(connection, "UPDATE jobs SET analysis_snapshot=$snapshot WHERE source_id=$id",
+        ("$snapshot", snapshot.Serialize()), ("$id", source.Id));
+    }
+    transaction.Commit();
   }
 
   private static ImmutableArray<AnalysisSessionJob> ReadJobs(IndexDatabase database, Dictionary<string, ScanJobSnapshot>? snapshots = null)
@@ -127,7 +191,8 @@ public sealed class ReadOnlyAnalysisSession
     return jobs.ToImmutable();
   }
 
-  private static ImmutableArray<AnalysisSessionFile> ReadFiles(IndexDatabase database, AnalysisEngineSnapshot engine, HashSet<string> online, ref bool complete)
+  private static ImmutableArray<AnalysisSessionFile> ReadFiles(IndexDatabase database, AnalysisEngineSnapshot engine, HashSet<string> online,
+    ref bool complete, CancellationToken cancellationToken)
   {
     var files = ImmutableArray.CreateBuilder<AnalysisSessionFile>();
     using var connection = database.Open();
@@ -141,6 +206,7 @@ public sealed class ReadOnlyAnalysisSession
     using var reader = command.ExecuteReader();
     while (reader.Read())
     {
+      if (cancellationToken.IsCancellationRequested) { complete = false; break; }
       var path = Path.Combine(reader.GetString(2), reader.GetString(3));
       var observation = new FileObservation(reader.GetInt64(4), reader.GetInt64(5));
       var hash = reader.IsDBNull(6) ? null : reader.GetString(6);

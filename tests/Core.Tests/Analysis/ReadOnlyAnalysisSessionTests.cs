@@ -142,6 +142,29 @@ public sealed class ReadOnlyAnalysisSessionTests
     }
   }
 
+  private sealed class CancelWhenCompleted(CancellationTokenSource cancel) : IProgress<System.Collections.Immutable.ImmutableArray<AnalysisSessionJob>>
+  {
+    public void Report(System.Collections.Immutable.ImmutableArray<AnalysisSessionJob> jobs)
+    {
+      if (!jobs.IsEmpty && jobs.All(job => job.State == FileMergeAssistant.Sources.ScanJobState.Completed)) { cancel.Cancel(); }
+    }
+  }
+
+  [Fact]
+  public async Task Cancellation_After_Worker_Completion_Does_Not_Claim_A_Completed_Report()
+  {
+    using var dataset = new KnownAnswerDataset();
+    using var cancel = new CancellationTokenSource();
+    var registry = AnalysisEngineRegistry.ManagedOnly();
+    var snapshot = registry.Snapshot(ManagedAnalysisEngine.EngineId, AnalysisCapability.ExactDuplicates, ContentFingerprints.XxHash128);
+    var report = await new ReadOnlyAnalysisSession(registry, DataRoot()).RunAsync([dataset.Root], snapshot, new CancelWhenCompleted(cancel), cancel.Token);
+    Assert.Equal("Canceled", report.Outcome);
+    Assert.False(report.IsComplete);
+    Assert.All(report.Jobs, job => Assert.True(job.Complete));
+    using var connection = IndexDatabase.OpenOrCreate(report.IndexPath).Open();
+    Assert.Equal(7L, IndexDatabase.Scalar<long>(connection, "SELECT COUNT(*) FROM files"));
+  }
+
   [Fact]
   public async Task Session_Cancellation_Waits_For_Acknowledgement_And_Preserves_Saved_Inventory()
   {
@@ -162,7 +185,8 @@ public sealed class ReadOnlyAnalysisSessionTests
     var report = await running.WaitAsync(TimeSpan.FromSeconds(15));
     Assert.Equal("Canceled", report.Outcome);
     Assert.False(report.IsComplete);
-    Assert.Equal(7, report.Files.Length);
+    using var connection = IndexDatabase.OpenOrCreate(report.IndexPath).Open();
+    Assert.Equal(7L, IndexDatabase.Scalar<long>(connection, "SELECT COUNT(*) FROM files"));
     Assert.Empty(report.ExactGroups);
     Assert.True(File.Exists(report.IndexPath));
     Assert.All(dataset.Files, file => Assert.Equal(file.Bytes, File.ReadAllBytes(file.Path)));

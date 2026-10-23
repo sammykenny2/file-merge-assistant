@@ -56,3 +56,32 @@ physical disk-only measurements. Working-set samples and the process-lifetime
 peak are labelled separately. Each run starts with a fresh FMA index; the OS
 filesystem cache is not controlled. These fields support later comparison and
 acceptance work, not an unmeasured claim that one engine is faster.
+
+## Compare two configurations
+
+```powershell
+dotnet run --project src/Cli --no-build -- compare-engines C:\Samples --first csharp --second czkawka
+dotnet run --project src/Cli --no-build -- compare-engines C:\Samples --first csharp --second csharp --first-algorithm xxh128-v1 --second-algorithm sha256-v1
+```
+
+Both configurations are validated before starting. They run sequentially with
+separate durable indexes; groups are compared by their member paths rather than
+by incompatible hash strings. The report contains both runs, measurements,
+matching groups and groups found in only one run. Different file observations
+produce `Incomparable`; a partial run never claims agreement. A second-run
+preflight failure preserves the first report. Exit codes follow `analyze`.
+
+The WPF Settings page offers the same read-only comparison when scans are idle
+and the native engine is available. It freezes the configured online sources,
+their exclusions, regenerable/cloud policies, protection, volume/root identity
+and application-data exclusions for both runs. The CLI uses the defaults
+described above. WPF saves a JSON report under the application's `comparisons`
+folder; leaving Settings cancels the analysis. Cancellation also applies during
+report validation/comparison. Completed index data remains available even when
+the returned canceled report has only a partial inventory. The final atomic
+report save finishes before the UI becomes idle.
+
+Agreement between engines does not establish correctness. Each engine is also
+checked against the shared known-answer fixture; see
+[the comparison evidence](research/2026-10-24-engine-comparison.md). File
+observations are checks at particular times, not an atomic filesystem snapshot.

@@ -73,6 +73,16 @@
               <TextBlock Text="{Binding AnalysisDetail}" Style="{StaticResource RowHint}" />
               <TextBlock Text="{l:T analysis.settings.hint}" Style="{StaticResource RowHint}" />
               <TextBlock Text="{Binding AnalysisDiagnostics}" Style="{StaticResource RowHint}" Foreground="{StaticResource WarnInkBrush}" />
+              <WrapPanel Margin="0,14,0,0">
+                <Button Content="{l:T analysis.compare.button}" Command="{Binding CompareEnginesCommand}" Style="{StaticResource SmallButton}" Margin="0,0,8,0" />
+                <Button Content="{l:T sources.cancel}" Command="{Binding CompareEnginesCancelCommand}" Style="{StaticResource SmallButton}" Margin="0,0,8,0"
+                          IsEnabled="{Binding ComparisonSaving, Converter={StaticResource InverseBool}}"
+                          Visibility="{Binding ComparisonBusy, Converter={StaticResource BoolToVisibility}}" />
+                <Button Content="{l:T analysis.compare.open}" Command="{Binding ShowComparisonReportCommand}" Style="{StaticResource SmallButton}"
+                        Visibility="{Binding HasComparisonReport, Converter={StaticResource BoolToVisibility}}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding ComparisonStatus}" Style="{StaticResource RowHint}" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding ComparisonReportPath}" Style="{StaticResource RowHint}" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
         </StackPanel>

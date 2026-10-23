@@ -29,6 +29,7 @@ static class Program
       rootCommand.AddCommand(PreviewCommand.Create(services));
       rootCommand.AddCommand(AnalysisCommands.Engines(services));
       rootCommand.AddCommand(AnalysisCommands.Analyze(services));
+      rootCommand.AddCommand(AnalysisCommands.Compare(services));
 
       return await rootCommand.InvokeAsync(args);
     }

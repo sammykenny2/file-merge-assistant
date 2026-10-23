@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 using FileMergeAssistant.Analysis;
 using FileMergeAssistant.Gui.Settings;
 using FileMergeAssistant.Gui.ViewModels;
@@ -101,6 +102,55 @@ public sealed class AnalysisSettingsTests : IDisposable
       Assert.Contains(ContentFingerprints.XxHash128, Assert.Single(sources.Finished).Analysis, StringComparison.Ordinal);
       Assert.Equal(Tone.Ok, sources.Finished.Single().State.Tone);
       WpfHost.Render(shell, 1440);
+    });
+    Assert.Empty(errors);
+  }
+
+  [NativeGuiFact]
+  public void Comparison_Runs_Separately_Saves_The_Report_And_Leaves_The_Main_Plan_And_Queue_Alone()
+  {
+    var source = Path.Combine(_root, "source");
+    Directory.CreateDirectory(source);
+    File.WriteAllText(Path.Combine(source, "one.txt"), "same bytes");
+    File.WriteAllText(Path.Combine(source, "two.txt"), "same bytes");
+    var errors = WpfHost.Run(() =>
+    {
+      AppText.Apply("en", []);
+      var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR"))]);
+      var index = Path.Combine(_root, "data", "index.db");
+      using var store = IndexedWorkbenchStore.Open(index, new Volumes(), context: null, engines: registry);
+      Assert.Empty(WpfHost.Wait(store.AddSourcesAsync([source], new SourceOptions(true, true, []), startScan: true)));
+      WpfHost.Wait(store.WaitForScansAsync(TimeSpan.FromSeconds(30)));
+      store.RefreshNow();
+      var jobId = store.Jobs.Single().Id;
+      var main = new MainViewModel(store, TestSettings.Create(Path.Combine(_root, "preferences")));
+      main.ShowSettings();
+      var settings = Assert.IsType<SettingsViewModel>(main.CurrentPage);
+      Assert.True(settings.CanCompareEngines);
+      WpfHost.Wait(settings.CompareEnginesCommand.ExecuteAsync(null));
+      Assert.False(settings.ComparisonBusy);
+      Assert.True(settings.HasComparisonReport);
+      Assert.True(File.Exists(settings.ComparisonReportPath));
+      Assert.Contains("agree", settings.ComparisonStatus, StringComparison.Ordinal);
+      using var report = JsonDocument.Parse(File.ReadAllText(settings.ComparisonReportPath!));
+      Assert.True(report.RootElement.GetProperty("groupsAgree").GetBoolean());
+      var firstIndex = report.RootElement.GetProperty("first").GetProperty("indexPath").GetString();
+      var secondIndex = report.RootElement.GetProperty("second").GetProperty("indexPath").GetString();
+      Assert.NotEqual(firstIndex, secondIndex);
+      Assert.NotEqual(index, firstIndex);
+      Assert.Equal(jobId, store.Jobs.Single().Id);
+      Assert.Empty(store.Plan);
+      Assert.Empty(store.History);
+      AppText.Apply("zh-TW", []);
+      WpfHost.Flush();
+      Assert.Contains("一致", settings.ComparisonStatus, StringComparison.Ordinal);
+      var bitmap = WpfHost.Render(new ShellView { DataContext = main }, 1440);
+      if (Environment.GetEnvironmentVariable("FMA_SNAPSHOT_DIR") is { } snapshots)
+      {
+        Directory.CreateDirectory(snapshots);
+        WpfHost.Save(bitmap, Path.Combine(snapshots, "analysis-comparison-zh.png"));
+      }
+      Assert.All(Directory.GetFiles(source), file => Assert.Equal("same bytes", File.ReadAllText(file)));
     });
     Assert.Empty(errors);
   }

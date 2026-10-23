@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.Json;
 using FileMergeAssistant.Analysis;
@@ -85,7 +86,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     _engines = engines ?? AnalysisEngineRegistry.CreateDefault();
     _newJobEngine = _engines.Snapshot(ManagedAnalysisEngine.EngineId, AnalysisCapability.ExactDuplicates, ContentFingerprints.XxHash128);
     LoadAnalysisSelection();
-    _areas = new RecycleAreaLocator(Path.GetDirectoryName(Path.GetFullPath(database.Path))!);
+    _areas = new RecycleAreaLocator(PathIdentity.Resolve(Path.GetDirectoryName(Path.GetFullPath(database.Path))!));
     _executor = new PlanExecutor(_areas);
     ScanWorker.RecoverInterrupted(database);
     _worker = new ScanWorker(database, volumes, [_areas.AppDataRoot], _engines);
@@ -156,6 +157,23 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   }
 
   public Task SelectNewJobEngineAsync(AnalysisEngineSnapshot snapshot) => Task.Run(() => SelectNewJobEngine(snapshot));
+
+  public Task<AnalysisComparisonReport> CompareEnginesAsync(AnalysisEngineSnapshot first, AnalysisEngineSnapshot second,
+    IProgress<AnalysisComparisonProgress>? progress = null, CancellationToken cancellationToken = default)
+    => Task.Run(async () =>
+    {
+      ImmutableArray<ScanSourceSnapshot> sources;
+      using (var connection = _database.Open())
+      {
+        var id = IndexDatabase.Scalar<string>(connection, "SELECT id FROM sources ORDER BY position LIMIT 1")
+          ?? throw new InvalidOperationException("No sources are configured.");
+        sources = ScanJobSnapshot.Capture(connection, id, first, [_areas.AppDataRoot]).Sources
+          .Where(source => ScanJobSnapshot.IsOnline(source, _volumes)).ToImmutableArray();
+      }
+      if (sources.IsEmpty) { throw new InvalidOperationException("No configured source is online."); }
+      return await new AnalysisEngineComparison(_engines, _areas.AppDataRoot, _volumes)
+        .RunConfiguredAsync(sources, first, second, progress, cancellationToken).ConfigureAwait(false);
+    }, cancellationToken);
 
   private void LoadAnalysisSelection()
   {

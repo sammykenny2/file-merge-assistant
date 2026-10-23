@@ -2,6 +2,7 @@ using FileMergeAssistant.Plans;
 using FileMergeAssistant.Sources;
 using FileMergeAssistant.Stacks;
 using FileMergeAssistant.Analysis;
+using FileMergeAssistant.Scanning;
 
 namespace FileMergeAssistant.Workbench;
 
@@ -49,6 +50,10 @@ public interface IWorkbenchStore
 
   /// <summary>Explicit selection for future jobs only; existing snapshots never change.</summary>
   Task SelectNewJobEngineAsync(AnalysisEngineSnapshot snapshot);
+
+  /// <summary>Compares separate runs using frozen current source policies, without changing the main index or plan.</summary>
+  Task<AnalysisComparisonReport> CompareEnginesAsync(AnalysisEngineSnapshot first, AnalysisEngineSnapshot second,
+    IProgress<AnalysisComparisonProgress>? progress = null, CancellationToken cancellationToken = default);
 
   /// <summary>All known stacks, including pending, converged and kept-all ones.</summary>
   IReadOnlyList<Stack> Stacks { get; }
