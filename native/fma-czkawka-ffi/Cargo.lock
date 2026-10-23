@@ -1086,9 +1086,11 @@ dependencies = [
 
 [[package]]
 name = "fma-czkawka-ffi"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "czkawka_core",
+ "image",
+ "image_hasher",
  "serde",
  "serde_json",
  "tempfile",

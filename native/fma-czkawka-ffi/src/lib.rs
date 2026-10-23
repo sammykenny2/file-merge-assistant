@@ -6,6 +6,7 @@ use czkawka_core::common::model::HashType;
 use czkawka_core::tools::duplicate::{DuplicateEntry, hash_calculation};
 
 mod ffi;
+mod images;
 mod jobs;
 mod protocol;
 

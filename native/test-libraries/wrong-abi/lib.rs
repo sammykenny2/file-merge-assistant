@@ -23,7 +23,7 @@ pub unsafe extern "C" fn fma_engine_info(output: *mut u8, capacity: usize, writt
     "linux"
   };
   let arch = if cfg!(target_arch = "aarch64") { "arm64" } else { "x64" };
-  let json = r#"{"id":"czkawka","name":"Czkawka","version":"0.1.0","upstreamCommit":"eb8b91dbb4d25dff416202674ee0de84ee4b5e5c","contractVersion":1,"abiVersion":1,"platform":"PLATFORM","availability":"Available","unavailableReason":null,"capabilities":[{"capability":"ExactDuplicates","algorithms":["blake3-v1"],"maturity":"Experimental"}]}"#
+  let json = r#"{"id":"czkawka","name":"Czkawka","version":"0.2.0","upstreamCommit":"eb8b91dbb4d25dff416202674ee0de84ee4b5e5c","contractVersion":1,"abiVersion":1,"platform":"PLATFORM","availability":"Available","unavailableReason":null,"capabilities":[{"capability":"ExactDuplicates","algorithms":["blake3-v1"],"maturity":"Experimental"}]}"#
     .replace("PLATFORM", &format!("{os}-{arch}"));
   // Tests provide writable length storage and caller-owned, non-overlapping output.
   unsafe {

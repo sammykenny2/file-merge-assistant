@@ -29,7 +29,8 @@ pub fn descriptor() -> Value {
     "id": ENGINE_ID, "name": "Czkawka", "version": env!("CARGO_PKG_VERSION"),
     "upstreamCommit": UPSTREAM_COMMIT, "contractVersion": 1, "abiVersion": ABI_VERSION,
     "platform": format!("{os}-{arch}"), "availability": "Available", "unavailableReason": null,
-    "capabilities": [{"capability": "ExactDuplicates", "algorithms": ["blake3-v1"], "maturity": "Experimental"}]
+    "capabilities": [{"capability": "ExactDuplicates", "algorithms": ["blake3-v1"], "maturity": "Experimental"},
+      {"capability": "SimilarImages", "algorithms": [crate::images::ALGORITHM], "maturity": "Experimental"}]
   })
 }
 
@@ -64,8 +65,8 @@ impl Header {
       && engine.upstream_commit.as_deref() == Some(UPSTREAM_COMMIT)
       && engine.contract_version == 1
       && engine.abi_version == ABI_VERSION
-      && engine.capability == "ExactDuplicates"
-      && engine.algorithm == "blake3-v1"
+      && ((engine.capability == "ExactDuplicates" && engine.algorithm == "blake3-v1")
+        || (engine.capability == "SimilarImages" && engine.algorithm == crate::images::ALGORITHM))
       && serde_json::from_str::<Value>(&engine.parameters_json)
         .is_ok_and(|value| value.as_object().is_some_and(|map| map.is_empty()))
       && serde_json::from_str::<Value>(&engine.scope_json).is_ok_and(|value| value.is_object())

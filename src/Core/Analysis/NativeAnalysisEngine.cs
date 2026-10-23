@@ -10,7 +10,7 @@ public sealed class NativeAnalysisEngine : IFileAnalysisEngine
 {
   public const string EngineId = "czkawka";
   public const string UpstreamCommit = "eb8b91dbb4d25dff416202674ee0de84ee4b5e5c";
-  public const string Version = "0.1.0";
+  public const string Version = "0.2.0";
   private readonly NativeAnalysisApi? _api;
 
   /// <param name="nativeDirectory">Trusted installation directory, never a scanned source or working-directory search.</param>
@@ -20,7 +20,8 @@ public sealed class NativeAnalysisEngine : IFileAnalysisEngine
     if (!Path.IsPathFullyQualified(nativeDirectory)) { throw new ArgumentException("The native installation directory must be absolute.", nameof(nativeDirectory)); }
     Descriptor = new(EngineId, "Czkawka", Version, UpstreamCommit, 1, 1, RuntimeInformation.RuntimeIdentifier,
       AnalysisAvailability.MissingDependency, "The optional Czkawka native library is not installed.",
-      [new(AnalysisCapability.ExactDuplicates, [ContentFingerprints.Blake3], AnalysisMaturity.Experimental)]);
+      [new(AnalysisCapability.ExactDuplicates, [ContentFingerprints.Blake3], AnalysisMaturity.Experimental),
+        new(AnalysisCapability.SimilarImages, [PerceptualFingerprints.Mean8D8], AnalysisMaturity.Experimental)]);
     if (RuntimeInformation.OSArchitecture is not (Architecture.X64 or Architecture.Arm64))
     {
       Descriptor = Descriptor with { Availability = AnalysisAvailability.Unsupported, UnavailableReason = "No native adapter is provided for this architecture." };

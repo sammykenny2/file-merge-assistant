@@ -235,7 +235,11 @@ impl Job {
           Some("The input changed since discovery"),
         ));
       }
-      let hash = content_hash_with_counter(path, &self.stop, &self.bytes_read)?;
+      let hash = if self.header.engine.capability == "SimilarImages" {
+        crate::images::fingerprint(path, &self.stop, &self.bytes_read)?
+      } else {
+        content_hash_with_counter(path, &self.stop, &self.bytes_read)?
+      };
       let after = observe(path)?;
       if !before.matches(&after) || !file.observation.matches(&after) {
         return Ok(evidence(

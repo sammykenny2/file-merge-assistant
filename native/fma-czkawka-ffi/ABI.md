@@ -5,6 +5,13 @@ lengths (`size_t`, .NET `nuint`). Handles are opaque `uint64_t` IDs, never Rust
 pointers; 0 is invalid. Input/output strings are UTF-8 JSON with explicit byte
 lengths and no NUL terminator. Wire records use camelCase and string enums.
 The canonical schemas are `src/protocol.rs` and the .NET Analysis contracts.
+Adapter 0.2.0 keeps ABI 1 and adds `SimilarImages` / `image-mean8-d8-v1` with
+empty `{}` parameters. The wire fingerprint contains a sorted, unique set of
+1–8 lowercase 64-bit hex hashes after the algorithm prefix; it is perceptual
+evidence, never an exact-content hash. Native output remains per-file; the host
+owns global candidate comparison and threshold selection. Image byte progress
+accounts encoded file size after decoding; header reads and decoder I/O are not
+separately counted. This is not a physical I/O measurement.
 
 | Export | Signature / result |
 |--------|--------------------|

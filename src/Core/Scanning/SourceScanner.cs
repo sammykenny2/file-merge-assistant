@@ -72,6 +72,10 @@ public sealed class SourceScanner
     engine ??= new ManagedAnalysisEngine();
     var registry = new AnalysisEngineRegistry([engine]);
     _analysis = analysis ?? registry.Snapshot(engine.Descriptor.Id, AnalysisCapability.ExactDuplicates, ContentFingerprints.XxHash128);
+    if (_analysis.Capability != AnalysisCapability.ExactDuplicates)
+    {
+      throw new ArgumentException("The exact-content index scanner cannot accept perceptual analysis.", nameof(analysis));
+    }
     _engine = registry.Resolve(_analysis);
   }
 

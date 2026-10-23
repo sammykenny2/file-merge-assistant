@@ -61,7 +61,7 @@ public sealed class AnalysisResultValidator
       if (evidence.Status == AnalysisFileStatus.Succeeded)
       {
         if (!input.Observation.Matches(evidence.Observation) || evidence.Error is not null || evidence.Fingerprint is null
-          || !ContentFingerprints.IsValid(_request.Engine.Algorithm, evidence.Fingerprint))
+          || !PerceptualFingerprints.IsValid(_request.Engine, evidence.Fingerprint))
         {
           throw new InvalidDataException("The content evidence does not match the requested observation or algorithm.");
         }
@@ -86,6 +86,17 @@ public sealed class AnalysisResultValidator
         if (evidenceValues.Any(value => value is null) || evidenceValues.Distinct(StringComparer.Ordinal).Count() != 1)
         {
           throw new InvalidDataException("An exact duplicate group requires identical complete content evidence.");
+        }
+      }
+      else if (group.Kind == AnalysisCapability.SimilarImages)
+      {
+        var values = group.FileIds.Select(id => batch.Files.FirstOrDefault(file => file.FileId == id)?.Fingerprint
+          ?? _fingerprints.GetValueOrDefault(id)).ToArray();
+        if (values.Length != 2 || values.Any(value => value is null || !PerceptualFingerprints.IsValid(_request.Engine, value))
+          || group.DistanceDefinition != PerceptualFingerprints.DistanceDefinition || group.Distance is not { } measured
+          || measured != PerceptualFingerprints.Distance(values[0]!, values[1]!))
+        {
+          throw new InvalidDataException("A similar-image pair requires validated perceptual evidence and its defined bit distance.");
         }
       }
     }

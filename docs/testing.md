@@ -70,6 +70,18 @@ This does not complete similar-image, Release, installer or non-Windows acceptan
 Independent Slice 4c review passed 15 focused Core, 10 CLI and 4 GUI tests,
 zero skips, after the scope and cancellation corrections.
 
+Slice 4d's native-image foundation passes **474 Core / 20 GUI / 10 CLI**, zero
+skips, and **12 Rust** tests plus fmt/clippy. Adapter 0.2.0 retains ABI 1;
+perceptual evidence is distinct from exact-content fingerprints. The synthetic
+corpus records **TP 6 / FP 0 / FN 4 / TN 11** at 6 bits; crop misses and decoder
+limits are detailed in [the adaptation note](research/2026-10-24-similar-images.md).
+Image job persistence and candidate-review entry points remain the next slice.
+The exact-index scanner explicitly rejects perceptual snapshots before any
+generation or file writes. Regression coverage includes an actual supported
+native image snapshot, alongside malformed-header dimension and format guards.
+Independent foundation review passed 12 Rust and 21 focused Core tests, zero
+skips, after resource-lifetime and exact-index boundary corrections.
+
 Before PLAN-002 implementation, commit `a01ba97` passed the full solution suite:
 404 Core and 16 GUI tests, SDK 10.0.402. The new shared known-answer fixture is
 checked independently by `AnalysisBaselineTests` and the native adapter's Rust

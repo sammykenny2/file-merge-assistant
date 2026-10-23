@@ -1,0 +1,51 @@
+{
+  "threshold": 6,
+  "truePositives": 6,
+  "falsePositives": 0,
+  "falseNegatives": 4,
+  "trueNegatives": 11,
+  "files": [
+    {
+      "name": "a-crop.png",
+      "family": "a",
+      "variant": "crop",
+      "sha256": "c3064975018b3124fc0f236576c7d0ad81753dc7741f3e58c275cb509af382fe"
+    },
+    {
+      "name": "a-original.png",
+      "family": "a",
+      "variant": "original",
+      "sha256": "800c3aeb953a9944ee5b48c6c84d6edc617e4d0c31a59e7273d01b5d145192d6"
+    },
+    {
+      "name": "a-recompress.jpg",
+      "family": "a",
+      "variant": "recompress",
+      "sha256": "3e36568dd4d09c99d2ae7c0cae26b95d2662593c88d76988a72e765ec49521c6"
+    },
+    {
+      "name": "a-resize.png",
+      "family": "a",
+      "variant": "resize",
+      "sha256": "991fb07c786180d912a70865372b6dd9abbfcc3ac04e2c6c02a896b49e959646"
+    },
+    {
+      "name": "a-rotate90.png",
+      "family": "a",
+      "variant": "rotate90",
+      "sha256": "c98b24e0d93d30d3723fc22e7645f494dbea1f84dd706956be09652b52bb104c"
+    },
+    {
+      "name": "b-unrelated.png",
+      "family": "b",
+      "variant": "unrelated",
+      "sha256": "1907615189888e5c0ac59ccffec817363e2333e2f4ae29e6d0ca7a8ce6d312df"
+    },
+    {
+      "name": "c-unrelated.png",
+      "family": "c",
+      "variant": "unrelated",
+      "sha256": "34624da629038c18afa11ddbccbe11b78f26a7e515beeaa2a03c4a2e103ea422"
+    }
+  ]
+}

@@ -172,6 +172,7 @@
 | 2026-10-24 | Slice 4a：WPF 設定提供目前精確內容能力的引擎／算法、成熟度及不可用原因，保存為新任務預設；既有快照不變。工作清單顯示原版本／算法與固定範圍，部分世代不顯示成功啟用。Core 446／GUI 19 零略過，獨立 Core 10／GUI 3 通過並完成畫面檢查；CLI 及相似圖片接線仍待後續 slice，G4 尚未通過。 |
 | 2026-10-24 | Slice 4b：新增唯讀 `engines`／`analyze` CLI，使用共用 registry、固定快照、掃描／驗證與獨立持久索引；JSON 格式版本 1，保留原 `scan` 預設及格式。跨來源已知答案、取消停止確認與實際 DLL 皆有測試；修正資料目錄別名可能掃入自身的邊界。Core 453／GUI 19／CLI 8；獨立 Core 9／CLI 8 零略過通過。引擎比較與相似圖片仍待後續 slice。 |
 | 2026-10-24 | Slice 4c：Core、CLI `compare-engines` 與 WPF 唯讀比較；分開保存索引、觀察、群組差異與程序時間／I/O／記憶體。GUI 兩輪沿用完整來源政策；收尾取消不回報成功。小型已知答案兩引擎均 TP 4／FP 0／FN 0，不推論效能優劣。完整 Core 461／GUI 20／CLI 10 零略過；相似圖片仍待後續 slice，G4 尚未通過。 |
+| 2026-10-24 | Slice 4d 第一部分：adapter 0.2.0／ABI 1 新增實驗性相似圖片逐檔證據，使用公開 Czkawka decoder 與具 MIT 聲明的 transform hashing 適配。7 檔合成標註 corpus 在 ≤6 bits 下 TP 6／FP 0／FN 4／TN 11，裁切漏判明確記錄；Rust 12、Core 474／GUI 20／CLI 10 零略過。主索引圖片工作、CLI／WPF 候選審閱仍待後續 slice，Task 4.4／4.5 與 G4 尚未完成。 |
 
 ---
 

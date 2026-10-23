@@ -22,8 +22,19 @@ The version 1 [C ABI](ABI.md) and .NET `NativeAnalysisEngine` now provide
 descriptor validation, bounded job upload/polling, per-file evidence, cooperative
 cancellation with worker-stop acknowledgement and SafeHandle cleanup. The DLL is
 loaded only from an explicit trusted absolute directory (the installed default
-is `runtimes/<rid>/native`). The app's engine selection and persisted jobs are
-still pending; building this crate does not change the default engine.
+is `runtimes/<rid>/native`). Engine selection and persisted exact-content jobs
+are implemented. Building this crate does not change the default engine.
+
+Adapter 0.2.0 adds experimental `SimilarImages` per-file evidence using
+`image-mean8-d8-v1`: public Czkawka decoding, pinned Mean 8x8 / Lanczos3 hashing
+and eight geometric transforms. PNG/JPEG only, with 32 MiB / 24 megapixel
+preflight limits. See the [adaptation and corpus](../../docs/research/2026-10-24-similar-images.md)
+and [MIT attribution](THIRD-PARTY-NOTICES.md). It does not invoke upstream private
+grouping or mutate source images. CLI/WPF candidate review is a subsequent slice.
+
+The engine version is now 0.2.0; ABI remains 1. Jobs frozen to 0.1.0 require that
+exact version and cannot silently resume with 0.2.0. Create a new job to use the
+new adapter. Previously saved reports retain their original version.
 
 On Windows x64, build and run both Rust and real-DLL .NET tests from the repo root:
 
