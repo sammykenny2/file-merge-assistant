@@ -92,8 +92,10 @@ When a test hangs, VSTest writes a sequence attachment under
   GHSA-j3p4-wp97-rph4, GHSA-j9gm-c75j-xc9q and GHSA-jjfr-hcj7-qf5w.
 - .NET 10 upgrade: all projects target `net10.0-windows`; `global.json` requires
   the 10.0 SDK. Microsoft.Extensions.DependencyInjection, Microsoft.Extensions.Hosting
-  and System.IO.Hashing moved to 10.0.13, Serilog.Extensions.Logging to 10.0.0,
-  and Serilog to 4.2.0, the minimum that Serilog.Extensions.Logging 10.0.0 needs.
+  and System.IO.Hashing moved to 10.0.13, and Serilog to 4.2.0. Serilog
+  initially moved to 4.2.0 because Serilog.Extensions.Logging 10.0.0 required it.
+  That package was later removed because nothing used it: the code logs through
+  `Serilog.ILogger` directly. Serilog stays at 4.2.0.
   The upgrade also removed the transitive vulnerable packages that the .NET 8
   build pulled in. System.Text.Json 8.0.0 left Gui with the
   Microsoft.Extensions.Hosting 10.0.13 update. System.Net.Http and
