@@ -274,7 +274,7 @@ public sealed partial class StackViewModel : PageViewModel
   private StackReview _review = null!;
 
   /// <summary>The catalog key and stack title of the toast, so it can be redrawn in another display language.</summary>
-  private (string Key, string Title)? _toastSource;
+  private (string Key, string StackId, string Title)? _toastSource;
 
   [ObservableProperty]
   private string _title = string.Empty;
@@ -406,10 +406,14 @@ public sealed partial class StackViewModel : PageViewModel
   /// Redraws from the store and in the current display language. The decision being edited (keeper, action, conflict
   /// choices, copies kept or removed) lives in <c>_decision</c> and is kept.
   /// </summary>
+  /// <summary>A stack's title as the store has it now, in the current language; the remembered one if it is gone.</summary>
+  private string TitleOf(string stackId, string remembered) =>
+    Store.Stacks.FirstOrDefault(s => s.Id == stackId)?.Title ?? remembered;
+
   public override void Refresh()
   {
     // Text made when something happened (the toast, the alert, the session log) is made again in the current language.
-    Toast = _toastSource is { } toast ? AppText.Get(toast.Key, ("title", toast.Title)) : null;
+    Toast = _toastSource is { } toast ? AppText.Get(toast.Key, ("title", TitleOf(toast.StackId, toast.Title))) : null;
     if (Alert is not null)
     {
       Alert = AppText.Get("stack.alert.changed");
@@ -462,7 +466,7 @@ public sealed partial class StackViewModel : PageViewModel
     Alert = null;
     var changesFiles = _review.ChangesFiles;
     _toastSource = (changesFiles ? "stack.toast.added"
-      : _decision.Action == StackAction.KeepAll ? "stack.toast.keepAll" : "stack.toast.later", _stack.Title);
+      : _decision.Action == StackAction.KeepAll ? "stack.toast.keepAll" : "stack.toast.later", _stack.Id, _stack.Title);
     Toast = AppText.Get(_toastSource.Value.Key, ("title", _stack.Title));
     _session.Add((_stack.Title, _decision.Action));
     Log.Add(new SessionLogItem(_stack.Title, LogText(_decision.Action)));

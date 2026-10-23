@@ -28,6 +28,15 @@ public static class StackText
       .ToList();
 
   /// <summary>A source's name, marked when its copies are offline: 「WD 2TB 備份（離線）」.</summary>
+  /// <summary>Whether a row's description is the demo data's note on renamed files, in either language.</summary>
+  private static bool IsRenamedRow(string? description) =>
+    description is not null && AppText.Locales.Any(locale =>
+    {
+      var text = AppText.Format(locale, "demo.stack.renamedRow");
+      var fixedPart = text.IndexOf('{', StringComparison.Ordinal) is var cut and > 0 ? text[..cut] : text;
+      return description.StartsWith(fixedPart, StringComparison.Ordinal);
+    });
+
   public static string PlaceName(string name, bool offline) =>
     offline ? AppText.Get("stack.place.offline", ("name", name)) : name;
 
@@ -84,9 +93,8 @@ public static class StackText
     var smaller = stack.Copies.Where(c => c.Id != keeper.Id && c.FileCount < keeper.FileCount).ToList();
     if (smaller.Count > 0)
     {
-      // Matches the row description of renamed files (「內容相同、檔名不同」, written by the demo data); it reads data, it
-      // does not show text. If row descriptions are ever localized, this needs a flag on StackRow instead.
-      var renamed = stack.Rows.Any(r => r.Description?.Contains("檔名不同", StringComparison.Ordinal) == true);
+      // Only the demo data describes renamed files on a row (demo.stack.renamedRow), in the language it was made in.
+      var renamed = stack.Rows.Any(r => IsRenamedRow(r.Description));
       var files = smaller.Max(c => c.FileCount);
       return AppText.Plural(renamed ? "stack.detail.containedRenamed" : "stack.detail.contained", files,
         ("sources", JoinList(smaller.Select(c => c.SourceName).Distinct())), ("count", Fmt.Count(files)), ("keeper", keeper.SourceName));

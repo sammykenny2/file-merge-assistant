@@ -115,7 +115,8 @@ public partial class AppTextTests
   private static string[] Placeholders(string text) =>
     [.. AppText.Placeholder().Matches(text).Select(m => m.Value).Distinct().Order(StringComparer.Ordinal)];
 
-  // AppText.Get("key", ...), AppText.Plural("key", ...), AppText.Format(locale, "key", ...) and {l:T key} in XAML.
-  [GeneratedRegex(@"AppText\.(?<call>Get|Plural)\(""(?<key>[a-z][A-Za-z0-9]*.[A-Za-z0-9.]*[A-Za-z0-9])""\s*[,)]|AppText\.(?<call>Format)\([^,]+,\s*""(?<key>[a-z][A-Za-z0-9]*.[A-Za-z0-9.]*[A-Za-z0-9])""\s*[,)]|\{l:T (?<key>[a-z][A-Za-z0-9]*.[A-Za-z0-9.]*[A-Za-z0-9])\}")]
+  // AppText.Get("area.key", ...), AppText.Plural("area.key", ...), AppText.Format(locale, "area.key", ...) and
+  // {l:T area.key} in XAML. A key always has a dot, which keeps examples such as {l:T key} in comments out.
+  [GeneratedRegex(@"AppText\.(?<call>Get|Plural)\(""(?<key>[a-z][A-Za-z0-9]*\.[A-Za-z0-9.]*[A-Za-z0-9])""\s*[,)]|AppText\.(?<call>Format)\([^,]+,\s*""(?<key>[a-z][A-Za-z0-9]*\.[A-Za-z0-9.]*[A-Za-z0-9])""\s*[,)]|\{l:T (?<key>[a-z][A-Za-z0-9]*\.[A-Za-z0-9.]*[A-Za-z0-9])\}")]
   private static partial Regex UsedKey();
 }

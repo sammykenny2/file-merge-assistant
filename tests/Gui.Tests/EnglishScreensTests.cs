@@ -21,6 +21,7 @@ namespace FileMergeAssistant.Gui.Tests;
 [Collection(DisplayLanguageTests.Name)]
 public sealed partial class EnglishScreensTests : IDisposable
 {
+  private static readonly string? SnapshotDirectory = Environment.GetEnvironmentVariable("FMA_SNAPSHOT_DIR");
   private readonly string _root = Path.Combine(Path.GetTempPath(), "fma-gui-english-" + Guid.NewGuid().ToString("N")[..8]);
 
   public void Dispose()
@@ -61,7 +62,12 @@ public sealed partial class EnglishScreensTests : IDisposable
       var shell = new ShellView { DataContext = main };
       void Check(string screen)
       {
-        WpfHost.Render(shell, 1440);
+        var bitmap = WpfHost.Render(shell, 1440);
+        if (SnapshotDirectory is not null)
+        {
+          Directory.CreateDirectory(SnapshotDirectory);
+          WpfHost.Save(bitmap, Path.Combine(SnapshotDirectory, "en-" + screen.Replace(' ', '-') + ".png"));
+        }
         foreach (var text in Texts(shell))
         {
           if (Han().IsMatch(text))

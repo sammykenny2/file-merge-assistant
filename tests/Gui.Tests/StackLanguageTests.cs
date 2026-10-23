@@ -48,7 +48,7 @@ public sealed class StackLanguageTests : IDisposable
       WpfHost.Render(shell, 1440);
 
       stack.SubmitCommand.Execute(null);
-      Assert.Equal("Added to Pending: invoice-tool 專案", stack.Toast);
+      Assert.Equal("Added to Pending: invoice-tool project", stack.Toast);
       AppText.Apply("zh-TW", []);
       WpfHost.Flush();
       Assert.Equal("已加入待執行：invoice-tool 專案", stack.Toast);

@@ -78,9 +78,8 @@ public sealed partial class RestoreConflictViewModel : ObservableObject
       ("size", Fmt.Size(conflict.RecycledBytes)), ("modified", Fmt.Day(conflict.RecycledModified, now)));
     Current = AppText.Get("history.conflict.current", ("day", Fmt.Day(conflict.CurrentCreated, now)), ("size", Fmt.Size(conflict.CurrentBytes)));
     Resolution = conflict.Resolution;
-    // The name PlanExecutor gives the restored file. The suffix is part of a file name on disk, not screen text, so it
-    // follows PlanExecutor rather than the display language.
-    var renamed = string.Create(CultureInfo.InvariantCulture, $"{System.IO.Path.GetFileName(conflict.OriginalPath)} (還原 {now:MM-dd})");
+    // The suffix PlanExecutor gives the restored file, in the display language it is restored in.
+    var renamed = $"{System.IO.Path.GetFileName(conflict.OriginalPath)} {PlanExecutor.RestoredSuffix(now)}";
     Choices =
     [
       new RestoreChoiceViewModel(RestoreConflictChoice.RenameAtOriginal, AppText.Get("history.conflict.renameAtOriginal", ("name", renamed)), Pick),
