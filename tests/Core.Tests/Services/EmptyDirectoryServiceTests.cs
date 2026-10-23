@@ -76,6 +76,35 @@ public class EmptyDirectoryServiceTests : IDisposable
   }
 
   [Fact]
+  public void Cleanup_DryRun_Counts_Nested_Empty_Directories_Without_Deleting()
+  {
+    var dir1 = Path.Combine(_tempDir, "level1");
+    var dir2 = Path.Combine(dir1, "level2");
+    Directory.CreateDirectory(dir2);
+
+    var removed = _sut.Cleanup(_tempDir, dryRun: true);
+
+    Assert.Equal(2, removed);
+    Assert.True(Directory.Exists(dir2));
+  }
+
+  [Fact]
+  public void Cleanup_DryRun_Count_Matches_Real_Cleanup()
+  {
+    Directory.CreateDirectory(Path.Combine(_tempDir, "a", "b", "c"));
+    Directory.CreateDirectory(Path.Combine(_tempDir, "keep", "empty"));
+    File.WriteAllText(Path.Combine(_tempDir, "keep", "file.txt"), "content");
+
+    var dryRunCount = _sut.Cleanup(_tempDir, dryRun: true);
+    var realCount = _sut.Cleanup(_tempDir);
+
+    Assert.Equal(4, dryRunCount);
+    Assert.Equal(dryRunCount, realCount);
+    Assert.False(Directory.Exists(Path.Combine(_tempDir, "a")));
+    Assert.True(Directory.Exists(Path.Combine(_tempDir, "keep")));
+  }
+
+  [Fact]
   public void Cleanup_NonExistent_Path_Returns_Zero()
   {
     var removed = _sut.Cleanup("/nonexistent/path");

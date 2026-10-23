@@ -57,6 +57,10 @@ coverage*/
 publish/
 PublishOutput/
 
+# === License keys ===
+# Six Labors (ImageSharp) license key file; supply it outside the repository.
+sixlabors.lic
+
 # Shared bootstrap exclusions (keep the .NET exclusions above).
 # === Agent Local Configs ===
 .claude/

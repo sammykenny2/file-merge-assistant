@@ -4,7 +4,7 @@
 
 | 欄位 | 值 |
 |------|----|
-| Status | Draft：相關 ADR 尚未決定，實作還不能開始 |
+| Status | Draft：Phase 0 進行中；其他階段等相關 ADR 決定後才開始 |
 | Owner | 待指定（建議在 Phase 1 前指派 Conductor，負責任務分派與 README 的 Current Status） |
 | Assigned To | 待指定 |
 | Reviewer | 產品負責人審閱計畫；各階段程式碼由非作者的 agent 或人審閱 |
@@ -57,10 +57,11 @@
 
 測試全部通過之前，其他階段都不開始。
 
-- [ ] Task 0.1：修正 [testing.md](../testing.md) 記錄的 CA1716（`IWatchService.Stop()`）與 CA1859（`PreviewStatisticsService.BuildDirectoryBreakdown()`），讓 `TreatWarningsAsErrors` 下也能建置。
-- [ ] Task 0.2：找出並修正 `EmptyDirectoryServiceTests.Cleanup_DryRun_Does_Not_Delete` 卡住的原因。
-- [ ] Task 0.3：在 testing.md 記錄全部通過的基準：SDK 版本、測試數與耗時。
-- [ ] Task 0.4：把所有專案的 `TargetFramework` 升級到 `net10.0-windows`，更新套件，重新跑完整測試。
+- [x] Task 0.1：修正 [testing.md](../testing.md) 記錄的 CA1716（`IWatchService.Stop()`）與 CA1859（`PreviewStatisticsService.BuildDirectoryBreakdown()`），讓 `TreatWarningsAsErrors` 下也能建置。實作時另外發現並修正：GUI 的 CA1305，以及 ImageSharp 2.1.13 的 NuGet 稽核錯誤（升級到 4.1.3）。
+- [x] Task 0.2：找出並修正 `EmptyDirectoryServiceTests.Cleanup_DryRun_Does_Not_Delete` 卡住的原因：dry run 時目錄不會被刪掉，迴圈永遠不會結束。這是產品程式的錯誤，不只是測試的問題。
+- [x] Task 0.3：在 testing.md 記錄全部通過的基準：SDK 版本、測試數與耗時。
+- [ ] Task 0.4：把所有專案的 `TargetFramework` 升級到 `net10.0-windows`，更新套件，重新跑完整測試。一併處理 testing.md 列出的間接相依漏洞（System.Text.Json、System.Net.Http、System.Text.RegularExpressions）。
+- [ ] Task 0.5：向 Six Labors 申請 ImageSharp 授權金鑰，放在 repo 之外（環境變數或 `SixLaborsLicenseFile`）。沒有金鑰時 Release 建置會失敗；這是 Phase 7 的前置條件。
 
 **Deliverables**：在 .NET 10 上全部通過的測試套件，並記錄在 testing.md。
 
@@ -262,6 +263,7 @@
 | 日期 | 更新 |
 |------|------|
 | 2026-10-23 | 建立草稿；等待 ADR 決定後再開始 Phase 0 以外的工作 |
+| 2026-10-23 | 完成 Task 0.1 至 0.3：solution 建置通過，147 個測試全部通過；新增 Task 0.5（ImageSharp 授權金鑰） |
 
 ---
 

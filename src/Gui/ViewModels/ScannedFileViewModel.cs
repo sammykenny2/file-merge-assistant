@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FileMergeAssistant.Models;
@@ -20,7 +21,7 @@ public partial class ScannedFileViewModel : ObservableObject
   public bool HasMetadata => File.Metadata != null;
   public string MetadataSummary => FormatMetadata();
   public string? CameraModel => File.Metadata?.CameraModel;
-  public string? DateTaken => File.Metadata?.DateTaken?.ToString("yyyy-MM-dd HH:mm");
+  public string? DateTaken => File.Metadata?.DateTaken?.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
   public string? Resolution => File.Metadata?.Width != null && File.Metadata?.Height != null
     ? $"{File.Metadata.Width}x{File.Metadata.Height}"
     : null;
