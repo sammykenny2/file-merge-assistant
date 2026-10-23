@@ -4,6 +4,8 @@
 
 Accepted（2026-10-23）。產品負責人要求參照 desktop-work-fleet，做出系統匣行為、設定裡「啟動行為」的三個選項與預設值、系統匣與設定裡的「檢查更新」，以及多語言切換（包含下拉選單的用詞），目前支援英文與繁體中文。參考對象是 desktop-work-fleet 的 ADR-043（主視窗與啟動行為）、ADR-044（App 內更新）、ADR-056（英文優先與語言目錄），以及它 Windows 原生殼層的 `NativeTray`、`TrayMenu`、`HostPreferences`、`HostShell`、`SingleInstance`、`HostText`。
 
+分兩步完成：第一步是系統匣、啟動行為、設定頁、檢查更新與語言目錄的機制，以及設定頁、系統匣與對話框的文字；第二步把工作台各畫面與 Core 產生的文字移進語言目錄。第二步完成前，選英文時工作台畫面仍是中文。
+
 ## 背景
 
 - 掃描要跑很久，使用者會希望關掉視窗後它仍在背景建立索引，登入後也自己開始。原本關閉主視窗就結束程式，也沒有登入時啟動。
@@ -15,7 +17,7 @@ Accepted（2026-10-23）。產品負責人要求參照 desktop-work-fleet，做�
 
 ### 主機偏好檔
 
-- 資料夾（`%LOCALAPPDATA%\FileMergeAssistant`，或 `FMA_DATA_DIR`）新增 `host-preferences.json`：`version: 1`、`startAtLogin`、`closeToTray`、`openMainAtLogin`、`lastUpdateCheck`、`language`、`startupApplied`。
+- 資料夾（`%LOCALAPPDATA%\FileMergeAssistant`，或 `FMA_DATA_DIR`）新增 `host-preferences.json`：`version: 1`、`startAtLogin`、`closeToTray`、`openMainAtLogin`、`lastUpdateCheck`、`language`。
 - 它屬於這台電腦，不在索引裡。讀不懂、版本不明或值不合法時一律用預設值，不會擋住啟動；單一個值不合法只影響那個值。
 - 寫入先寫暫存檔、flush 到磁碟再改名取代。
 
@@ -32,18 +34,22 @@ Accepted（2026-10-23）。產品負責人要求參照 desktop-work-fleet，做�
 2. 「關閉主畫面時保留在系統匣」，預設開啟。關閉這個選項，或目前沒有系統匣時，按 X 就結束程式。
 3. 「登入啟動後開啟主畫面」，預設關閉。登入啟動時主畫面不出現，索引在背景繼續；從系統匣或再開一次程式可以叫出主畫面。自己開啟程式時一律顯示主畫面。
 
-- X、Alt+F4 與工作列的關閉（`WM_SYSCOMMAND`/`SC_CLOSE`）收進系統匣；系統匣的「結束」與程式本身的關閉流程照常結束。結束的路徑和原本按 X 結束相同（停止背景工作、關閉索引），執行中斷的整理由執行紀錄在下次啟動時處理。
+- X、Alt+F4 與工作列的關閉（`WM_SYSCOMMAND`/`SC_CLOSE`）收進系統匣；系統匣的「結束」與程式本身的關閉流程照常結束。結束的路徑和原本按 X 結束相同（停止背景工作、關閉索引）。
+- 執行、重試、還原或清空回收區正在移動檔案時（`FileChanges`），「結束」與關閉主畫面都不結束程式，只說明要等它完成：重試、還原與清空要整批做完才寫回歷史，中途結束會讓歷史和磁碟對不上。Windows 登出或關機時，程式請 Windows 等它（Windows 會列出它正在阻擋登出）；使用者仍強制登出時，整理計畫的每一項都有執行紀錄，下次啟動會處理。
 - 登入啟動又不開主畫面時，若 30 秒內沒有系統匣圖示，就顯示主畫面，免得程式在背景跑卻叫不出來。參考專案把這個秒數放在設定檔；本專案先寫在程式裡（`HostShell.TrayWait`）。
-- 系統匣原本在、後來消失（例如 Explorer 當掉）時，主畫面立刻出現。
+- 系統匣圖示消失、而且加不回來時（例如 Explorer 重新啟動後加入失敗），主畫面就出現。
+- 建立系統匣圖示失敗時，程式照常使用：主畫面一律顯示，關閉主畫面就結束。
 
 ### 登入時啟動：與參考專案不同之處
 
 - 改用目前使用者的 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`，值名稱 `FileMergeAssistant`，內容為 `"<安裝位置>\app\FileMergeAssistant.exe" --launch-at-login`。
 - 只有安裝程式裝的那份（執行位置等於登錄檔記錄的 `InstallDir\app`）提供這個選項；從原始碼或解壓縮資料夾執行的副本會停用選項並說明原因，也不會寫 Run 值。
 - 使用者在工作管理員或「設定 > 應用程式 > 啟動」關掉時，Windows 會在 `...\Explorer\StartupApproved\Run` 記下同名的值。在這台電腦上讀到的值，第一個位元組 02 代表開啟、03 代表關閉；程式把奇數視為使用者關閉。這個狀態下，設定頁顯示「已在 Windows 的「啟動應用程式」關閉」並鎖住選項，另提供「開啟系統設定」（`ms-settings:startupapps`）。程式從不寫 StartupApproved，所以不會蓋掉使用者在 Windows 的選擇。
-- Run 值沒有參考專案 `RequestEnableAsync` 那種保護，所以照參考專案在 macOS、Linux 的作法：安裝版第一次啟動時寫入預設值（記為 `startupApplied`），之後只在使用者切換選項時寫或刪。使用者在 Windows 外部刪掉的項目不會被重新建立。唯一的例外是：項目還在、但指向另一份副本（例如重新安裝到別的位置）時，改指向目前這一份。
+- Run 值沒有參考專案 `RequestEnableAsync` 那種保護，所以照參考專案在 macOS、Linux 的作法：每次安裝後第一次啟動時，依偏好（預設開啟）寫入，並在安裝程式自己的 `HKCU\Software\FileMergeAssistant` 記下 `StartupApplied`；之後只在使用者切換選項時寫或刪。使用者在 Windows 外部刪掉的項目不會被重新建立，偏好檔損壞時也不會。唯一的例外是：項目還在、但指向另一份副本時，改指向目前這一份。
+- 解除安裝會刪掉 `HKCU\Software\FileMergeAssistant`，所以重新安裝後第一次啟動又會依偏好寫入；資料夾裡的偏好保留，使用者關掉過就維持關閉。
 - 解除安裝會刪除這個 Run 值；StartupApproved 是 Windows 自己的紀錄，保留不動。
 - 設定頁顯示的一律是 Windows 讀回的實際狀態，不是偏好檔裡的值。
+- 以 `--demo` 啟動時，三個啟動選項只顯示、不能變更，因為它們會改到 Windows 的設定。
 
 ### 第二次開啟
 
@@ -56,7 +62,7 @@ Accepted（2026-10-23）。產品負責人要求參照 desktop-work-fleet，做�
 - 「上次檢查：{時間}」記在偏好檔。
 - 系統匣的「檢查更新…」一律重新檢查，再用 Windows 對話框回答；有新版時詢問後直接下載、重新啟動並安裝。
 - 只有安裝版而且有合法來源時，才提供 App 內更新；其他副本在設定頁說明原因，並提供 releases 頁面連結，系統匣也不顯示這一項。
-- 整理計畫執行中不安裝（安裝程式會結束程式），提示等它完成。
+- 執行、重試、還原或清空回收區正在移動檔案時不安裝（安裝程式會結束程式），顯示原因，等它完成後再按一次。
 
 ### 顯示語言（設定 > 一般 > 顯示語言）
 

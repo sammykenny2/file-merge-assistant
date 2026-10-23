@@ -303,7 +303,7 @@ public sealed class UpdateService : IUpdateService, IDisposable
     new("rate_limited", AppText.Get("update.rateLimited"));
 
   private static UpdateException SizeMismatch() =>
-    new("size_mismatch", "The downloaded installer has a different size than published, so it was deleted.");
+    new("size_mismatch", AppText.Get("update.sizeMismatch"));
 
   private static UpdateException Offline(Exception ex) =>
     new("offline", AppText.Get("update.offline"), ex);

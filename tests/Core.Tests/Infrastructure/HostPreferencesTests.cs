@@ -24,17 +24,14 @@ public sealed class HostPreferencesTests : IDisposable
     Assert.True(preferences.CloseToTray);
     Assert.False(preferences.OpenMainAtLogin);
     Assert.Equal("auto", preferences.Language);
-    Assert.False(preferences.StartupApplied);
     Assert.Null(preferences.LastUpdateCheck);
-    Assert.False(HostPreferences.Exists(_directory));
   }
 
   [Fact]
   public void Written_Preferences_Read_Back()
   {
-    var written = new HostPreferences(false, false, true, "2026-10-23T01:02:03.0000000+00:00", "en", true);
+    var written = new HostPreferences(false, false, true, "2026-10-23T01:02:03.0000000+00:00", "en");
     written.Write(_directory);
-    Assert.True(HostPreferences.Exists(_directory));
     Assert.Equal(written, HostPreferences.Read(_directory));
     Assert.Single(Directory.GetFiles(_directory));
   }

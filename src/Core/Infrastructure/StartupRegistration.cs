@@ -3,7 +3,7 @@ using Microsoft.Win32;
 
 namespace FileMergeAssistant.Infrastructure;
 
-/// <summary>The two per-user registry places that decide whether a program starts at sign-in.</summary>
+/// <summary>The per-user registry places that decide whether the app starts at sign-in.</summary>
 public interface IStartupKeys
 {
   /// <summary>The command under <c>HKCU\Software\Microsoft\Windows\CurrentVersion\Run</c>, or null.</summary>
@@ -18,6 +18,11 @@ public interface IStartupKeys
   /// write when the user turns an entry off or on, or null when the user never changed it.
   /// </summary>
   byte[]? ReadApproval(string name);
+
+  /// <summary>Whether this installation has written its start-at-sign-in setting to Windows before.</summary>
+  bool ReadApplied();
+
+  void WriteApplied();
 }
 
 /// <summary>The real keys of the signed-in user.</summary>
@@ -25,6 +30,11 @@ public sealed class RegistryStartupKeys : IStartupKeys
 {
   private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
   private const string ApprovedKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
+
+  // The installation's own key (installer/FileMergeAssistant.nsi, REG_APP). Uninstalling deletes it, so a new
+  // installation counts as a first start again.
+  private const string AppKey = @"Software\FileMergeAssistant";
+  private const string AppliedValue = "StartupApplied";
 
   public string? ReadRun(string name)
   {
@@ -48,6 +58,18 @@ public sealed class RegistryStartupKeys : IStartupKeys
   {
     using var key = Registry.CurrentUser.OpenSubKey(ApprovedKey);
     return key?.GetValue(name) as byte[];
+  }
+
+  public bool ReadApplied()
+  {
+    using var key = Registry.CurrentUser.OpenSubKey(AppKey);
+    return key?.GetValue(AppliedValue) is int applied && applied == 1;
+  }
+
+  public void WriteApplied()
+  {
+    using var key = Registry.CurrentUser.CreateSubKey(AppKey);
+    key.SetValue(AppliedValue, 1, RegistryValueKind.DWord);
   }
 }
 
@@ -114,7 +136,10 @@ public sealed class StartupRegistration
     }
   }
 
-  /// <summary>Adds or removes the Run value. Windows' own switch for it stays as the user left it.</summary>
+  /// <summary>
+  /// Adds or removes the Run value, the user's own choice from the settings page. Windows' own switch for it stays as
+  /// the user left it.
+  /// </summary>
   /// <exception cref="IOException">The registry could not be changed.</exception>
   /// <exception cref="UnauthorizedAccessException">The registry could not be changed.</exception>
   /// <exception cref="SecurityException">The registry could not be changed.</exception>
@@ -132,29 +157,29 @@ public sealed class StartupRegistration
     {
       _keys.DeleteRun(ValueName);
     }
+    _keys.WriteApplied();
   }
 
   /// <summary>
-  /// Brings Windows in line with the preferences when an installed copy starts. The first time, the preference (on by
-  /// default) is written; later only an existing entry that names another copy of the app is pointed at this one, so
-  /// an entry the user deleted is not created again.
+  /// Brings Windows in line with the preference when an installed copy starts. The first start of an installation
+  /// writes the preference (on by default); later starts only point an existing entry that names another copy of the
+  /// app at this one, so an entry the user deleted is not created again. A damaged preferences file therefore cannot
+  /// bring an entry back either.
   /// </summary>
-  /// <returns>The preferences to store, with <see cref="HostPreferences.StartupApplied"/> set once written.</returns>
-  public HostPreferences Sync(HostPreferences preferences)
+  public void Sync(bool startAtLogin)
   {
-    ArgumentNullException.ThrowIfNull(preferences);
     if (!Supported)
     {
-      return preferences;
+      return;
     }
     try
     {
-      if (!preferences.StartupApplied)
+      if (!_keys.ReadApplied())
       {
-        Apply(preferences.StartAtLogin);
-        return preferences with { StartupApplied = true };
+        Apply(startAtLogin);
+        return;
       }
-      if (preferences.StartAtLogin && _keys.ReadRun(ValueName) is { } command
+      if (startAtLogin && _keys.ReadRun(ValueName) is { } command
           && !string.Equals(command, Command, StringComparison.OrdinalIgnoreCase))
       {
         _keys.WriteRun(ValueName, Command!);
@@ -164,6 +189,5 @@ public sealed class StartupRegistration
     {
       // The settings page shows what Windows has; the next start tries again.
     }
-    return preferences;
   }
 }

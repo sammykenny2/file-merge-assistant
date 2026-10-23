@@ -41,15 +41,8 @@ public sealed class HostShell
 
   public event EventHandler? Changed;
 
-  /// <summary>Writes the start-at-sign-in preference to Windows the first time an installed copy starts.</summary>
-  public void SyncStartup()
-  {
-    var next = Startup.Sync(Preferences);
-    if (next != Preferences)
-    {
-      TryWrite(next);
-    }
-  }
+  /// <summary>Writes the start-at-sign-in preference to Windows the first time an installation starts.</summary>
+  public void SyncStartup() => Startup.Sync(Preferences.StartAtLogin);
 
   /// <summary>One switch from the settings page: startAtLogin, closeToTray or openMainAtLogin.</summary>
   /// <exception cref="InvalidOperationException">The change could not be saved; the message says so in the display language.</exception>
@@ -66,7 +59,6 @@ public sealed class HostShell
       {
         throw new InvalidOperationException(AppText.Get("settings.startup.registryFailed", ("detail", error.Message)), error);
       }
-      next = next with { StartupApplied = next.StartupApplied || Startup.Supported };
     }
     Write(next, "settings.startup.saveFailed");
   }
