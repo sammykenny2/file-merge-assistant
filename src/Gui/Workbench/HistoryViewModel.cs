@@ -1,6 +1,9 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Plans;
 using FileMergeAssistant.Workbench;
 using Microsoft.Win32;
@@ -9,7 +12,7 @@ namespace FileMergeAssistant.Gui.Workbench;
 
 public sealed record BatchItemViewModel(ChipInfo Status, string Verb, string Target, string Detail, bool CanRestore, IRelayCommand Restore)
 {
-  public string RestoreName => $"還原：{Target}";
+  public string RestoreName => AppText.Get("history.item.restoreName", ("target", Target));
 }
 
 public sealed record FailureViewModel(string Verb, string Target, string Reason);
@@ -17,6 +20,9 @@ public sealed record FailureViewModel(string Verb, string Target, string Reason)
 public sealed record SkippedViewModel(string Text, IRelayCommand Open);
 
 public sealed record BatchSummaryViewModel(string When, string State, string Counts, string Restore, bool IsSelected, bool IsLocked, bool HasProblem, IRelayCommand Select);
+
+/// <summary>One recycle area in the side panel: 「D:\ 的回收區」 and how much it holds.</summary>
+public sealed record RecycleAreaRow(string Name, long Bytes);
 
 public sealed partial class RestoreChoiceViewModel : ObservableObject
 {
@@ -56,7 +62,7 @@ public sealed partial class RestoreConflictViewModel : ObservableObject
   private readonly RestoreConflict _conflict;
 
   [ObservableProperty]
-  private string _actionLabel = "還原這項";
+  private string _actionLabel = AppText.Get("history.conflict.restore");
 
   [ObservableProperty]
   private bool _canResolve;
@@ -66,19 +72,26 @@ public sealed partial class RestoreConflictViewModel : ObservableObject
     _store = store;
     _conflict = conflict;
     var now = store.Now;
-    Kicker = $"{Fmt.Day(batchTime, now)} {Fmt.Time(batchTime)} 的整理";
+    Kicker = BatchKicker(batchTime, now);
     Path = conflict.OriginalPath;
-    Recycled = $"{Fmt.Day(conflict.RecycledAt, now)} 移入，{Fmt.Size(conflict.RecycledBytes)}，最後修改 {Fmt.Day(conflict.RecycledModified, now)}";
-    Current = $"{Fmt.Day(conflict.CurrentCreated, now)} 建立，{Fmt.Size(conflict.CurrentBytes)}，內容不同";
+    Recycled = AppText.Get("history.conflict.recycled", ("day", Fmt.Day(conflict.RecycledAt, now)),
+      ("size", Fmt.Size(conflict.RecycledBytes)), ("modified", Fmt.Day(conflict.RecycledModified, now)));
+    Current = AppText.Get("history.conflict.current", ("day", Fmt.Day(conflict.CurrentCreated, now)), ("size", Fmt.Size(conflict.CurrentBytes)));
     Resolution = conflict.Resolution;
-    var name = System.IO.Path.GetFileName(conflict.OriginalPath);
+    // The name PlanExecutor gives the restored file. The suffix is part of a file name on disk, not screen text, so it
+    // follows PlanExecutor rather than the display language.
+    var renamed = string.Create(CultureInfo.InvariantCulture, $"{System.IO.Path.GetFileName(conflict.OriginalPath)} (還原 {now:MM-dd})");
     Choices =
     [
-      new RestoreChoiceViewModel(RestoreConflictChoice.RenameAtOriginal, $"還原到原位置，改名為 {name} (還原 {now:MM-dd})", Pick),
-      new RestoreChoiceViewModel(RestoreConflictChoice.OtherFolder, "還原到我指定的資料夾…", Pick),
-      new RestoreChoiceViewModel(RestoreConflictChoice.KeepInRecycleArea, "這項先不還原，留在回收區", Pick),
+      new RestoreChoiceViewModel(RestoreConflictChoice.RenameAtOriginal, AppText.Get("history.conflict.renameAtOriginal", ("name", renamed)), Pick),
+      new RestoreChoiceViewModel(RestoreConflictChoice.OtherFolder, AppText.Get("history.conflict.otherFolder"), Pick),
+      new RestoreChoiceViewModel(RestoreConflictChoice.KeepInRecycleArea, AppText.Get("history.conflict.keep"), Pick),
     ];
   }
+
+  /// <summary>「10/22 09:12 的整理」: which run a batch or a conflict belongs to.</summary>
+  internal static string BatchKicker(DateTimeOffset ranAt, DateTimeOffset now) =>
+    AppText.Get("history.kicker", ("day", Fmt.Day(ranAt, now)), ("time", Fmt.Time(ranAt)));
 
   public string Kicker { get; }
   public string Path { get; }
@@ -100,7 +113,7 @@ public sealed partial class RestoreConflictViewModel : ObservableObject
     string? folder = null;
     if (choice.Choice == RestoreConflictChoice.OtherFolder)
     {
-      var dialog = new OpenFolderDialog { Title = "選擇要還原到哪個資料夾" };
+      var dialog = new OpenFolderDialog { Title = AppText.Get("history.conflict.folderDialog") };
       if (dialog.ShowDialog() != true)
       {
         return;
@@ -116,7 +129,7 @@ public sealed partial class RestoreConflictViewModel : ObservableObject
     {
       choice.IsChosen = choice == picked;
     }
-    ActionLabel = picked.Choice == RestoreConflictChoice.KeepInRecycleArea ? "留在回收區" : "還原這項";
+    ActionLabel = AppText.Get(picked.Choice == RestoreConflictChoice.KeepInRecycleArea ? "history.conflict.keepAction" : "history.conflict.restore");
     CanResolve = !IsResolved;
   }
 }
@@ -162,6 +175,12 @@ public sealed partial class HistoryViewModel : PageViewModel
   [ObservableProperty]
   private string _recycleTotal = string.Empty;
 
+  [ObservableProperty]
+  private string _emptyWarningBefore = string.Empty;
+
+  [ObservableProperty]
+  private string _emptyWarningAfter = string.Empty;
+
   public HistoryViewModel(IWorkbenchStore store, INavigator navigator, string? batchId)
     : base(store, navigator)
   {
@@ -175,7 +194,7 @@ public sealed partial class HistoryViewModel : PageViewModel
   public ObservableCollection<BatchItemViewModel> Items { get; } = [];
   public ObservableCollection<RestoreConflictViewModel> Conflicts { get; } = [];
   public ObservableCollection<BatchSummaryViewModel> Batches { get; } = [];
-  public ObservableCollection<RecycleArea> Areas { get; } = [];
+  public ObservableCollection<RecycleAreaRow> Areas { get; } = [];
 
   public bool HasFailures => Failures.Count > 0;
   public bool HasSkipped => Skipped.Count > 0;
@@ -228,10 +247,15 @@ public sealed partial class HistoryViewModel : PageViewModel
     Areas.Clear();
     foreach (var area in Store.RecycleAreas)
     {
-      Areas.Add(area);
+      Areas.Add(new RecycleAreaRow(AppText.Get("history.recycle.area", ("volume", area.Volume)), area.Bytes));
     }
     RecycleTotal = Fmt.Size(Store.RecycleAreas.Sum(a => a.Bytes));
     CanEmpty = Store.RecycleAreas.Any(a => a.Bytes > 0) && !IsEmptying;
+    // One sentence in the catalog; the screen shows the total in bold where the placeholder sits.
+    var warning = AppText.Get("history.recycle.emptyWarning");
+    var at = warning.IndexOf(TotalPlaceholder, StringComparison.Ordinal);
+    EmptyWarningBefore = at < 0 ? warning : warning[..at];
+    EmptyWarningAfter = at < 0 ? string.Empty : warning[(at + TotalPlaceholder.Length)..];
 
     OnPropertyChanged(nameof(HasFailures));
     OnPropertyChanged(nameof(HasSkipped));
@@ -246,7 +270,7 @@ public sealed partial class HistoryViewModel : PageViewModel
       return;
     }
     IsRetrying = true;
-    RetryLabel = "重試中…";
+    RetryLabel = AppText.Get("history.retry.running");
     try
     {
       await Store.RetryFailedAsync(_batchId);
@@ -301,40 +325,53 @@ public sealed partial class HistoryViewModel : PageViewModel
 
   private void BuildBatch(ExecutionBatch batch, DateTimeOffset now)
   {
-    Kicker = $"{Fmt.Day(batch.RanAt, now)} {Fmt.Time(batch.RanAt)} 的整理";
+    Kicker = RestoreConflictViewModel.BatchKicker(batch.RanAt, now);
     Headline = StateText(batch);
     var ran = batch.Items.Count(i => i.State != BatchItemState.Skipped);
-    Summary = $"執行了 {Fmt.Count(ran)} 項：{Fmt.Count(batch.Done + batch.Restored)} 項完成"
-      + (batch.Failed > 0 ? $"，{Fmt.Count(batch.Failed)} 項失敗" : string.Empty)
-      + (batch.Skipped > 0 ? $"；另有 {Fmt.Count(batch.Skipped)} 項這次略過" : string.Empty)
-      + (batch.Restored > 0 ? $"；{Fmt.Count(batch.Restored)} 項已還原" : string.Empty)
-      + "。";
+    // The clauses carry their own punctuation and always come in this order, as a list.
+    var details = Clause("history.summary.done", batch.Done + batch.Restored)
+      + (batch.Failed > 0 ? Clause("history.summary.failed", batch.Failed) : string.Empty)
+      + (batch.Skipped > 0 ? Clause("history.summary.skipped", batch.Skipped) : string.Empty)
+      + (batch.Restored > 0 ? Clause("history.summary.restored", batch.Restored) : string.Empty);
+    Summary = AppText.Plural("history.summary", ran, ("count", Fmt.Count(ran)), ("details", details));
 
     var recycled = batch.Items.Where(i => i.Kind == PlanItemKind.Recycle).ToList();
     var failedRecycles = recycled.Where(i => i.State == BatchItemState.Failed).ToList();
+    var doneRecycles = recycled.Count(i => i.State == BatchItemState.Done);
     var areas = Store.RecycleAreas.Where(a => a.Bytes > 0).ToList();
-    SpaceFigures.Add(new SpaceFigure("這次移入回收區", Fmt.Size(batch.RecycledBytes),
-      failedRecycles.Count > 0 ? "失敗的部分還在原處" : $"{Fmt.Count(recycled.Count(i => i.State == BatchItemState.Done))} 項，全部完成", true));
-    SpaceFigures.Add(new SpaceFigure("回收區現在佔用", Fmt.Size(areas.Sum(a => a.Bytes)),
-      areas.Count == 0 ? "目前是空的" : string.Join("，", areas.Select(a => $"{a.Volume} {Fmt.Size(a.Bytes)}")), false));
-    SpaceFigures.Add(new SpaceFigure("實際釋放", batch.EmptiedAt is null ? "0 B" : Fmt.Size(batch.RecycledBytes),
-      batch.EmptiedAt is null ? "清空回收區後才會釋放" : $"回收區在 {Fmt.Day(batch.EmptiedAt.Value, now)} 清空", false));
+    SpaceFigures.Add(new SpaceFigure(AppText.Get("history.space.recycled"), Fmt.Size(batch.RecycledBytes),
+      failedRecycles.Count > 0
+        ? AppText.Get("history.space.recycledFailed")
+        : AppText.Plural("history.space.recycledDone", doneRecycles, ("count", Fmt.Count(doneRecycles))), true));
+    SpaceFigures.Add(new SpaceFigure(AppText.Get("history.space.inUse"), Fmt.Size(areas.Sum(a => a.Bytes)),
+      areas.Count == 0
+        ? AppText.Get("history.space.inUseEmpty")
+        : string.Join(AppText.Get("plan.join.comma"), areas.Select(a => $"{a.Volume} {Fmt.Size(a.Bytes)}")), false));
+    SpaceFigures.Add(new SpaceFigure(AppText.Get("history.space.freed"), batch.EmptiedAt is null ? "0 B" : Fmt.Size(batch.RecycledBytes),
+      batch.EmptiedAt is { } emptiedAt
+        ? AppText.Get("history.space.freedOn", ("day", Fmt.Day(emptiedAt, now)))
+        : AppText.Get("history.space.freedLater"), false));
 
     foreach (var item in batch.Items.Where(i => i.State == BatchItemState.Failed))
     {
-      Failures.Add(new FailureViewModel(Verb(item), item.Target,
-        (item.FileCount > 1 ? $"其中 {Fmt.Count(item.FileCount - item.FailedFiles)} 個已完成。" : string.Empty) + item.FailureReason));
+      Failures.Add(new FailureViewModel(PlanItemViewModel.VerbText(item.Kind), item.Target,
+        item.FileCount > 1
+          ? AppText.Get("history.failures.partial", ("count", Fmt.Count(item.FileCount - item.FailedFiles)), ("reason", item.FailureReason ?? string.Empty))
+          : item.FailureReason ?? string.Empty));
     }
-    RetryLabel = $"重試失敗的 {Fmt.Count(batch.Failed)} 項";
+    RetryLabel = IsRetrying
+      ? AppText.Get("history.retry.running")
+      : AppText.Plural("history.retry", batch.Failed, ("count", Fmt.Count(batch.Failed)));
 
     foreach (var group in batch.Items.Where(i => i.State == BatchItemState.Skipped).GroupBy(i => i.StackId, StringComparer.Ordinal))
     {
       var stack = Store.Stacks.FirstOrDefault(s => s.Id == group.Key);
-      var title = stack?.Title ?? "這疊";
+      var title = stack?.Title ?? AppText.Get("history.skipped.unknownStack");
       var stackId = group.Key;
+      var reasons = group.Select(i => i.FailureReason ?? AppText.Get("history.skipped.reason")).Distinct(StringComparer.Ordinal);
       Skipped.Add(new SkippedViewModel(
-        $"{string.Join("、", group.Select(i => i.Target))}：{string.Join(string.Empty, group.Select(i => i.FailureReason ?? "這次略過。").Distinct(StringComparer.Ordinal))}"
-          + $"{title} 這疊已放回待整理，其他項目照常完成。",
+        AppText.Get("history.skipped.text", ("targets", string.Join(AppText.Get("plan.join.enumeration"), group.Select(i => i.Target))),
+          ("reasons", JoinSentences(reasons)), ("title", title)),
         new RelayCommand(() => Navigator.ShowStack(stackId))));
     }
 
@@ -343,58 +380,76 @@ public sealed partial class HistoryViewModel : PageViewModel
       var batchId = batch.Id;
       var itemId = item.Id;
       var canRestore = item.CanRestore && batch.EmptiedAt is null && !Store.RestoreConflicts.Any(c => c.ItemId == item.Id && c.Resolution is null);
-      Items.Add(new BatchItemViewModel(ItemStatus(batch, item), Verb(item), item.Target, ItemDetail(item), canRestore,
+      Items.Add(new BatchItemViewModel(ItemStatus(batch, item), PlanItemViewModel.VerbText(item.Kind), item.Target, ItemDetail(item), canRestore,
         new AsyncRelayCommand(() => Store.RestoreItemAsync(batchId, itemId))));
     }
     CanRestoreAll = batch.EmptiedAt is null && batch.Items.Any(i => i.CanRestore);
   }
 
-  private static string Verb(BatchItem item) => item.Kind switch
+  private const string TotalPlaceholder = "{total}";
+
+  private static string Clause(string key, long count) => AppText.Get(key, ("count", Fmt.Count(count)));
+
+  /// <summary>
+  /// Recorded reasons keep the language they were written in. Chinese sentences run on as before; a sentence that
+  /// ends with a Latin full stop gets a space before the next one.
+  /// </summary>
+  private static string JoinSentences(IEnumerable<string> sentences)
   {
-    PlanItemKind.Copy => "複製",
-    PlanItemKind.SaveAs => "另存",
-    PlanItemKind.Replace => "取代",
-    _ => "移入回收區",
-  };
+    var text = new StringBuilder();
+    foreach (var sentence in sentences)
+    {
+      if (text.Length > 0 && text[^1] == '.')
+      {
+        text.Append(' ');
+      }
+      text.Append(sentence);
+    }
+    return text.ToString();
+  }
 
   private static ChipInfo ItemStatus(ExecutionBatch batch, BatchItem item) => item.State switch
   {
-    BatchItemState.Running => new ChipInfo("中斷", Tone.Warn),
-    BatchItemState.Emptied => new ChipInfo("已清空", Tone.Plain),
-    BatchItemState.Failed => new ChipInfo("失敗", Tone.Warn),
-    BatchItemState.Skipped => new ChipInfo("略過", Tone.Skipped),
-    BatchItemState.Restored => new ChipInfo("已還原", Tone.Plain),
-    _ when batch.EmptiedAt is not null && item.Kind == PlanItemKind.Recycle => new ChipInfo("已清空", Tone.Plain),
+    BatchItemState.Running => new ChipInfo(AppText.Get("history.status.interrupted"), Tone.Warn),
+    BatchItemState.Emptied => new ChipInfo(AppText.Get("history.status.emptied"), Tone.Plain),
+    BatchItemState.Failed => new ChipInfo(AppText.Get("history.status.failed"), Tone.Warn),
+    BatchItemState.Skipped => new ChipInfo(AppText.Get("history.status.skipped"), Tone.Skipped),
+    BatchItemState.Restored => new ChipInfo(AppText.Get("history.status.restored"), Tone.Plain),
+    _ when batch.EmptiedAt is not null && item.Kind == PlanItemKind.Recycle => new ChipInfo(AppText.Get("history.status.emptied"), Tone.Plain),
     _ => item.Kind switch
     {
-      PlanItemKind.Copy => new ChipInfo("已複製", Tone.Done),
-      PlanItemKind.SaveAs => new ChipInfo("已另存", Tone.Done),
-      PlanItemKind.Replace => new ChipInfo("已取代", Tone.Done),
-      _ => new ChipInfo("可以還原", Tone.Done),
+      PlanItemKind.Copy => new ChipInfo(AppText.Get("history.status.copied"), Tone.Done),
+      PlanItemKind.SaveAs => new ChipInfo(AppText.Get("history.status.savedAs"), Tone.Done),
+      PlanItemKind.Replace => new ChipInfo(AppText.Get("history.status.replaced"), Tone.Done),
+      _ => new ChipInfo(AppText.Get("history.status.restorable"), Tone.Done),
     },
   };
 
   private static string ItemDetail(BatchItem item)
   {
     // A finished item can carry a note from a restore that did not go ahead (for example, the file was edited since).
-    var note = item.State == BatchItemState.Done && item.FailureReason is { } reason ? $"；{reason}" : string.Empty;
+    var note = item.State == BatchItemState.Done && item.FailureReason is { } reason
+      ? AppText.Get("history.item.note", ("reason", reason))
+      : string.Empty;
     if (item.Kind != PlanItemKind.Recycle)
     {
       return item.State switch
       {
         BatchItemState.Failed or BatchItemState.Skipped or BatchItemState.Running => item.FailureReason ?? string.Empty,
-        _ => (item.Detail.Length > 0 ? $"到 {item.Detail}" : string.Empty) + note,
+        _ => (item.Detail.Length > 0 ? AppText.Get("history.item.to", ("detail", item.Detail)) : string.Empty) + note,
       };
     }
-    var size = item.FileCount > 1 ? $"{Fmt.Count(item.FileCount)} 個檔，{Fmt.Size(item.Bytes)}" : Fmt.Size(item.Bytes);
+    var size = item.FileCount > 1 ? PlanItemViewModel.FilesText(item.FileCount, item.Bytes) : Fmt.Size(item.Bytes);
     return item.State switch
     {
-      BatchItemState.Running => item.FailureReason ?? "程式在處理這一項時結束了。",
-      BatchItemState.Failed => $"{Fmt.Count(item.FileCount - item.FailedFiles)} / {Fmt.Count(item.FileCount)} 個檔完成；{item.FailureReason}",
-      BatchItemState.Skipped => item.FailureReason ?? "這次略過",
-      BatchItemState.Restored => $"{size}，已放回原處",
-      BatchItemState.Emptied => $"{size}，回收區清空時已永久刪除",
-      _ => $"{size}，放在 {item.RecycleVolume} 的回收區" + (item.Retried ? "；重試後完成" : string.Empty) + note,
+      BatchItemState.Running => item.FailureReason ?? AppText.Get("history.item.interrupted"),
+      BatchItemState.Failed => AppText.Plural("history.item.failedFiles", item.FileCount, ("done", Fmt.Count(item.FileCount - item.FailedFiles)),
+        ("count", Fmt.Count(item.FileCount)), ("reason", item.FailureReason ?? string.Empty)),
+      BatchItemState.Skipped => item.FailureReason ?? AppText.Get("history.item.skipped"),
+      BatchItemState.Restored => AppText.Get("history.item.restored", ("size", size)),
+      BatchItemState.Emptied => AppText.Get("history.item.emptied", ("size", size)),
+      _ => AppText.Get(item.Retried ? "history.item.inRecycleRetried" : "history.item.inRecycle", ("size", size),
+        ("volume", item.RecycleVolume ?? string.Empty)) + note,
     };
   }
 
@@ -402,29 +457,30 @@ public sealed partial class HistoryViewModel : PageViewModel
   {
     if (batch.EmptiedAt is not null)
     {
-      return "回收區已清空";
+      return AppText.Get("history.state.emptied");
     }
     if (batch.Failed > 0)
     {
-      return "部分完成";
+      return AppText.Get("history.state.partial");
     }
-    return batch.Skipped > 0 ? $"完成，{Fmt.Count(batch.Skipped)} 項略過" : "完成";
+    return batch.Skipped > 0 ? Clause("history.state.doneSkipped", batch.Skipped) : AppText.Get("history.state.done");
   }
 
   private static string CountsText(ExecutionBatch batch) =>
-    $"{Fmt.Count(batch.Done + batch.Restored)} 項完成"
-    + (batch.Failed > 0 ? $"，{Fmt.Count(batch.Failed)} 項失敗" : string.Empty)
-    + (batch.Skipped > 0 ? $"，{Fmt.Count(batch.Skipped)} 項略過" : string.Empty);
+    Clause("history.counts.done", batch.Done + batch.Restored)
+    + (batch.Failed > 0 ? Clause("history.counts.failed", batch.Failed) : string.Empty)
+    + (batch.Skipped > 0 ? Clause("history.counts.skipped", batch.Skipped) : string.Empty);
 
   private string RestoreText(ExecutionBatch batch, DateTimeOffset now)
   {
     if (batch.EmptiedAt is { } emptied)
     {
-      return $"已經不能還原：回收區在 {Fmt.Day(emptied, now)} 清空";
+      return AppText.Get("history.restore.emptied", ("day", Fmt.Day(emptied, now)));
     }
     var conflicts = Store.RestoreConflicts.Count(c => c.BatchId == batch.Id && c.Resolution is null);
-    return $"可以還原 {Fmt.Count(batch.Done - conflicts)} 項"
-      + (batch.Restored > 0 ? $"，{Fmt.Count(batch.Restored)} 項已還原" : string.Empty)
-      + (conflicts > 0 ? $"，{Fmt.Count(conflicts)} 項還原時有衝突" : string.Empty);
+    var restorable = batch.Done - conflicts;
+    return AppText.Plural("history.restore.available", restorable, ("count", Fmt.Count(restorable)))
+      + (batch.Restored > 0 ? Clause("history.restore.restored", batch.Restored) : string.Empty)
+      + (conflicts > 0 ? Clause("history.restore.conflicts", conflicts) : string.Empty);
   }
 }
