@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FileMergeAssistant.Infrastructure;
 using FileMergeAssistant.Models;
 using FileMergeAssistant.Services;
 using Microsoft.Win32;
@@ -130,7 +131,7 @@ public partial class ScanViewModel : ObservableObject, IDisposable
         DuplicateGroups = duplicates
       };
 
-      var outputDir = "./fma-results/";
+      var outputDir = AppDataPaths.ResultsDirectory;
       var resultPath = Path.Combine(outputDir, "scan-result.json");
       await _scanResultStore.SaveAsync(scanResult, resultPath, _cts.Token);
 

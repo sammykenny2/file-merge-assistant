@@ -2,8 +2,19 @@
 
 File Merge Assistant uses xUnit for the .NET 10 Windows-targeted core library.
 Tests live in `tests/Core.Tests/`, grouped under `Hashing/`, `Reporting/`,
-`Resolution/`, and `Services/`. NSubstitute supplies test doubles; file-operation
+`Resolution/`, `Services/` and `Updates/`. NSubstitute supplies test doubles; file-operation
 fixtures create temporary directories and clean them up after each test.
+
+The app writes its data under `%LOCALAPPDATA%\FileMergeAssistant` (`AppDataPaths`), or
+under `FMA_DATA_DIR` when that is set. `tests/Core.Tests/TestEnvironment.cs` sets
+`FMA_DATA_DIR` to a temporary folder when the test assembly loads, so no test writes to
+the real data folder; `AppDataPathsTests` checks this. The update tests use a fake
+`HttpMessageHandler` and never reach GitHub.
+
+The setup program and its scripts have separate checks, described in
+[deployment.md](deployment.md#testing-the-setup-program):
+`scripts/windows/Test-SetUserPath.ps1` tests the PATH helper against a scratch
+registry key.
 
 ## Running Tests
 
@@ -46,7 +57,8 @@ default:
 
 - `dotnet build file-merge-assistant.sln` succeeds for the Debug configuration.
 - `dotnet test tests/Core.Tests/Core.Tests.csproj` passes all 149 tests; VSTest
-  reports under about a second of test time.
+  reports under about a second of test time. (Later additions are listed under
+  "Changes since this baseline".)
 - `dotnet list file-merge-assistant.sln package --vulnerable --include-transitive`
   reports no vulnerable packages.
 - Smoke check: `fma --help` and `fma scan` on a small folder succeed, and the
@@ -122,6 +134,35 @@ When a test hangs, VSTest writes a sequence attachment under
 - Test tooling was kept at its existing versions (Microsoft.NET.Test.Sdk 17.8.0,
   xunit 2.6.2, xunit.runner.visualstudio 2.5.4, NSubstitute 5.1.0, coverlet 6.0.0).
   They run on .NET 10; updating them is separate work.
+
+### Changes Since This Baseline
+
+- 2026-10-23, setup program and update check (PLAN-001 Tasks 2.1, 7.1, 7.4 to 7.6):
+  - Behavior change: the recycle bin, scan cache and log file moved from
+    `fma-results\` under the working directory to `%LOCALAPPDATA%\FileMergeAssistant`
+    (`recycle-bin`, `cache`, `logs`); the GUI writes scan results to its `results`
+    folder. Files already in an old `fma-results\.recycle-bin` stay there and are no
+    longer listed; restore them with an older build or move them by hand. The CLI's
+    `--output` default (`./fma-results/`) is unchanged.
+  - New tests: `AppDataPathsTests`, `UpdateFeedTests` and `UpdateServiceTests`;
+    `Test-SetUserPath.ps1` for the installer's PATH helper. The suite has 214 tests.
+  - Setup program, checked on 2026-10-23 with the Debug build of 0.1.0 on the
+    development machine:
+    - Silent install with `/CLI`: files, owner markers, Start menu shortcut, registry and
+      Apps & features entry all correct; PATH gained exactly `;<install>\cli` with its
+      REG_EXPAND_SZ kind kept; the installed `fma --version` reports 0.1.0.
+    - The installed app starts and stays responsive.
+    - Setup while the app runs: exit code 2 after 30 seconds, with no file changed.
+    - Update hand-off (`/S /WAITPID=<pid> /RELAUNCH`): setup waited for the app,
+      upgraded it, kept the CLI without duplicating the PATH entry, and restarted the app.
+    - Silent uninstall: folder, shortcut and registry entries removed, and PATH
+      byte-identical to the value saved before the test.
+    - The GUI writes no log at startup, so the data folder appears only once the app logs
+      something; a CLI scan wrote its log to `%LOCALAPPDATA%\FileMergeAssistant\logs` and
+      created nothing in the working directory.
+    - `https://github.com/sammykenny2/file-merge-assistant/releases.atom` answers 404
+      while the repository is private, so the in-app check reports that the release source
+      was not found. That is the only update path verifiable today.
 
 ## Bootstrap Validation
 

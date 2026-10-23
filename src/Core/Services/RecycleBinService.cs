@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using FileMergeAssistant.Infrastructure;
 using FileMergeAssistant.Models;
 using Serilog;
 
@@ -21,7 +22,7 @@ public class RecycleBinService : IRecycleBinService
   public RecycleBinService(ILogger logger, string? recycleBinDir = null)
   {
     _logger = logger;
-    _recycleBinDir = recycleBinDir ?? Path.Combine("fma-results", ".recycle-bin");
+    _recycleBinDir = recycleBinDir ?? AppDataPaths.RecycleBinDirectory;
     _manifestPath = Path.Combine(_recycleBinDir, "manifest.json");
   }
 

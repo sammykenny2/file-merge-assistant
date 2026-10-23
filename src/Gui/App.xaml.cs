@@ -2,6 +2,7 @@ using System.Windows;
 using FileMergeAssistant.Gui.ViewModels;
 using FileMergeAssistant.Infrastructure;
 using FileMergeAssistant.Services;
+using FileMergeAssistant.Updates;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -26,6 +27,11 @@ public partial class App : Application
         services.AddSingleton<Func<ScanViewModel>>(sp => sp.GetRequiredService<ScanViewModel>);
         services.AddSingleton<Func<ResultsViewModel>>(sp => sp.GetRequiredService<ResultsViewModel>);
         services.AddSingleton<Func<ReportsViewModel>>(sp => sp.GetRequiredService<ReportsViewModel>);
+
+        services.AddSingleton<IUpdateService>(_ => UpdateService.CreateDefault());
+        services.AddTransient<UpdateViewModel>();
+        services.AddTransient<UpdateWindow>();
+        services.AddSingleton<Func<UpdateWindow>>(sp => sp.GetRequiredService<UpdateWindow>);
 
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();

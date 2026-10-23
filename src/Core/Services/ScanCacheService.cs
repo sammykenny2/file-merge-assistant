@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using FileMergeAssistant.Infrastructure;
 using FileMergeAssistant.Models;
 using Serilog;
 
@@ -20,7 +21,7 @@ public class ScanCacheService : IScanCacheService
   public ScanCacheService(ILogger logger, string? cacheDirectory = null)
   {
     _logger = logger;
-    _cacheDirectory = cacheDirectory ?? Path.Combine("fma-results", ".cache");
+    _cacheDirectory = cacheDirectory ?? AppDataPaths.CacheDirectory;
   }
 
   public async Task<ScanCache?> LoadCacheAsync(string scannedPath, string algorithm, CancellationToken cancellationToken = default)
