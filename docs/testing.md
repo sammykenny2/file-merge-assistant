@@ -233,6 +233,12 @@ When a test hangs, VSTest writes a sequence attachment under
   - Not testable here: a NAS that reports a different volume serial per share name (the probe covers it), and a
     sector-cloned drive (the volume GUID covers it; the comparison itself is unit-tested).
   - Core.Tests has 358 tests, Gui.Tests 3; all 361 pass, three runs in a row.
+- 2026-10-23, fourth Phase 5 review (OK to merge):
+  - The reviewer re-ran its scenarios (UNC alias, offline recycle area, interrupted run, cross-run undo, `.git` and
+    `node_modules` changes, cancelled and unchecked items, a different file at the source path, a change racing the
+    snapshot with 5,000 and 20,000 files) against temp trees; none lost data.
+  - `PlanExecutorTests` add: a file dated in the future does not block its copy forever.
+  - Core.Tests has 359 tests, Gui.Tests 3; all 362 pass, three runs in a row.
 
 ## Bootstrap Validation
 

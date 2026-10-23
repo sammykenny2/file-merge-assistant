@@ -612,9 +612,23 @@ public sealed class PlanExecutorTests : IDisposable
     var decided = DateTime.UtcNow.AddSeconds(1);
     Assert.DoesNotContain(CopySnapshot.ChangedPrefix, CopySnapshot.Of(_tree.PathOf("copy"), _ => false, decided), StringComparison.Ordinal);
     // Written after the decision (while the snapshot would have been walking).
-    _tree.Write(@"copy\.git\refs\heads\unpushed", "new", DateTime.UtcNow.AddMinutes(1));
+    _tree.Write(@"copy\.git\refs\heads\unpushed", "new", DateTime.UtcNow.AddSeconds(2));
 
     Assert.StartsWith(CopySnapshot.ChangedPrefix, CopySnapshot.Of(_tree.PathOf("copy"), _ => false, decided), StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void A_File_Dated_In_The_Future_Does_Not_Block_Its_Copy_Forever()
+  {
+    _tree.Write(@"copy\a.txt", "a");
+    // A camera with a wrong clock: the file was there long before the decision, but its time is years ahead.
+    _tree.Write(@"copy\photo.jpg", "jpeg", new DateTime(2031, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+    var decided = DateTime.UtcNow.AddSeconds(1);
+
+    var snapshot = CopySnapshot.Of(_tree.PathOf("copy"), _ => false, decided);
+
+    Assert.DoesNotContain(CopySnapshot.ChangedPrefix, snapshot, StringComparison.Ordinal);
+    Assert.Equal(snapshot, CopySnapshot.Of(_tree.PathOf("copy"), _ => false));
   }
 
   [Fact]

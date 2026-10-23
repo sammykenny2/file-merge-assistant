@@ -19,9 +19,10 @@ public static class CopySnapshot
   /// <param name="path">The copy: a folder or a single file.</param>
   /// <param name="skip">Paths that are not the user's (the app's own folders and partial files).</param>
   /// <param name="changedSince">
-  /// When the user decided. A file or folder written at or after it changed while the snapshot was being taken, so the
-  /// snapshot is <see cref="ChangedPrefix"/> and its relative path instead of a baseline (a folder's time moves when
-  /// entries are added, removed or renamed in it).
+  /// When the user decided. A file or folder written between it and now changed while the snapshot was being taken, so
+  /// the snapshot is <see cref="ChangedPrefix"/> and its relative path instead of a baseline (a folder's time moves when
+  /// entries are added, removed or renamed in it). A time later than now (a camera with a wrong clock) is not a change:
+  /// it was there before, and would otherwise block the copy for good.
   /// </param>
   /// <exception cref="IOException">A folder could not be read.</exception>
   /// <exception cref="UnauthorizedAccessException">A folder could not be read.</exception>
@@ -29,7 +30,8 @@ public static class CopySnapshot
   {
     ArgumentNullException.ThrowIfNull(path);
     ArgumentNullException.ThrowIfNull(skip);
-    bool Late(FileSystemInfo entry) => changedSince is { } since && entry.LastWriteTimeUtc >= since;
+    bool Late(FileSystemInfo entry) =>
+      changedSince is { } since && entry.LastWriteTimeUtc >= since && entry.LastWriteTimeUtc <= DateTime.UtcNow.AddSeconds(5);
     var lines = new List<string>();
     var file = new FileInfo(path);
     if (file.Exists)
