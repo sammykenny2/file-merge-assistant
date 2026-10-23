@@ -24,8 +24,9 @@ These important documents live in the project root:
 The GUI is built around multiple scan sources, a persistent index, copies
 reviewed one small "stack" at a time, and explicit file-operation plans. The
 current WPF workbench uses a SQLite index and C# Core. ADR-015 accepts a future
-analysis-engine abstraction with C# and Czkawka implementations; that integration
-has not started. WPF remains in use while cross-platform UI options are reassessed.
+analysis-engine abstraction with C# and Czkawka implementations; adaptation and
+staged implementation are in progress under PLAN-002. WPF remains in use while
+cross-platform UI options are reassessed.
 
 | Document | Status | Purpose |
 |----------|--------|---------|
@@ -34,8 +35,8 @@ has not started. WPF remains in use while cross-platform UI options are reassess
 | [SPEC-001](./specs/SPEC-001-persistent-scan-workbench.md) | Draft | Multi-source scanning, persistent indexing, task states, operation review, and acceptance scenarios |
 | [GUI flow mock](./gui-flow-mock.md) | Draft | Link to the clickable prototype, its stack-by-stack review proposal, assumptions, and open product questions |
 | [PLAN-001](./plans/PLAN-001-batch-consolidation-workbench.md) | Draft | Phased implementation plan with decision gates per ADR, task list, testing strategy, and FR/AC traceability |
-| [SPEC-002](./specs/SPEC-002-pluggable-analysis-engines.md) | Draft | Switchable C# and Czkawka analysis engines, capability contracts, versioned jobs, index compatibility, and acceptance scenarios |
-| [PLAN-002](./plans/PLAN-002-pluggable-analysis-engines.md) | Draft | Native adaptation, C# extraction, FFI, migrations, GUI/CLI integration, and platform-specific validation gates; no implementation yet |
+| [SPEC-002](./specs/SPEC-002-pluggable-analysis-engines.md) | Approved for staged implementation | Switchable C# and Czkawka analysis engines, capability contracts, versioned jobs, index compatibility, and acceptance scenarios |
+| [PLAN-002](./plans/PLAN-002-pluggable-analysis-engines.md) | In progress | Native adaptation, C# extraction, FFI, migrations, GUI/CLI integration, and platform-specific validation gates; see the checklist for completed slices |
 | [ADR-001 to ADR-015](./decisions/README.md) | Mixed | Accepted: 001 to 010 and 013 to 015; 011 proposed; 012 partly accepted. ADR-015 selects the analysis-engine architecture; ADR-009 retains current WPF while future UI choices are reassessed |
 
 ## Development Guides

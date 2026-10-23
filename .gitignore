@@ -41,6 +41,9 @@ project.lock.json
 project.fragment.lock.json
 artifacts/
 
+# Rust build artifacts (Cargo.lock is tracked for reproducible native builds)
+native/**/target/
+
 # === Test Results ===
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*

@@ -57,6 +57,27 @@ coverage using the existing coverlet collector:
 dotnet test tests/Core.Tests/Core.Tests.csproj --collect:"XPlat Code Coverage"
 ```
 
+## Analysis Engine Baseline (2026-10-24)
+
+Before PLAN-002 implementation, commit `a01ba97` passed the full solution suite:
+404 Core and 16 GUI tests, SDK 10.0.402. The new shared known-answer fixture is
+checked independently by `AnalysisBaselineTests` and the native adapter's Rust
+tests. The focused C# baseline test passes; the native adapter has 3 passing tests.
+
+Run Rust checks from `native/fma-czkawka-ffi/` so its pinned Rust 1.99.1 toolchain
+is selected:
+
+```powershell
+cargo test --locked
+cargo fmt --all -- --check
+cargo clippy --locked --all-targets --no-deps -- -D warnings
+```
+
+These checks do not exercise a C ABI or application engine selection yet. The
+existing ImageSharp Debug license warnings remain; this is not Release validation.
+The adaptation evidence is in
+[the research note](research/2026-10-24-pluggable-analysis-engines.md).
+
 ## CI Pause
 
 GitHub Actions CI is temporarily disabled for this repository. The `CI` workflow

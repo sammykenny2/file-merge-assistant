@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "files": [
+    { "id": 101, "path": "primary/original.txt", "content": "abc" },
+    { "id": 102, "path": "backup/renamed.txt", "content": "abc" },
+    { "id": 103, "path": "backup/same-size-different.txt", "content": "xyz" },
+    { "id": 104, "path": "primary/unique.txt", "content": "only-this-file" },
+    { "id": 105, "path": "primary/empty.txt", "content": "" },
+    { "id": 106, "path": "backup/empty-copy.txt", "content": "" },
+    { "id": 107, "path": "primary/相片說明.txt", "content": "abc" }
+  ],
+  "exactGroups": [[101, 102, 107], [105, 106]]
+}

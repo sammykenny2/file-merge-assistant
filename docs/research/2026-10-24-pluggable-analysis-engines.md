@@ -32,3 +32,37 @@ Topic: C# 工作流程搭配可切換的自有分析與 `czkawka_core`。
 Relevance: 支撐 [ADR-015](../decisions/ADR-015-pluggable-analysis-engines.md) 的直接核心介接及版本化雙引擎邊界。
 
 Action Items: 依 [PLAN-002 Phase 0](../plans/PLAN-002-pluggable-analysis-engines.md) 驗證逐檔證據、候選範圍、取消、索引相容與建置；本調查沒有替這些未完成項目作成功宣告。
+
+## Phase 0 適配結果（2026-10-24）
+
+FMA 基準為文件提交 `a01ba97`，.NET SDK 10.0.402；完整基準測試為 Core 404、GUI 16，全部通過。新加的 C# 已知答案測試單獨執行通過。Rust 工具鏈為 1.99.1、host `x86_64-pc-windows-msvc`。
+
+在 FMA 內建立 `native/fma-czkawka-ffi/`，直接從 Git 取得固定上游 commit，產生 Cargo.lock，未更動外部 fork。原生三項測試全數通過；首次含相依編譯耗時約 2 分 51 秒，這不是掃描效能數字。
+
+### 可用 API 與範圍決定
+
+上游 `tools::duplicate::hash_calculation` 是公開的逐檔完整內容分析 API，接收檔案、buffer、HashType、讀取 byte counter 及 stop flag。不必呼叫 `DuplicateFinder.search`：
+
+- FMA 已有完整探索與候選集合；逐檔 API 不再次走訪資料夾，不套用上游的最小檔案、extension 或 hardlink 隱藏預設值。來源範圍及連結政策留在 Core。
+- 所有被提交的候選都能得到 hash、取消或錯誤，不會因為檔案不重複而從回傳中消失。空檔也能得到內容證據。
+- 包裝檢查呼叫前取消，補上空檔在上游沒有 read chunk 時不檢查 stop flag 的行為；呼叫後再檢查取消及 size／mtime／byte counter，避免接受觀察到變動的結果。
+- byte counter 必須等於該檔案大小才接受證據；這證明 API 的邏輯完整讀取範圍，沒有量測實體磁碟 I/O 或承諾取消延遲。
+- 進度可使用該 counter 與逐檔終態，FFI 預計將它們轉成有界的輪詢事件；尚未驗證原生 job 協定。
+
+### 已知答案與證據
+
+共用 fixture 有 7 檔，包含跨資料夾改名副本、相同大小不同內容、唯一檔、Unicode 路徑及兩個空檔。預期群組為 `[101,102,107]`、`[105,106]`，由 fixture 指定，不以另一個引擎的輸出當答案。
+
+Rust 驗證兩個預期群組、`abc` 的 BLAKE3 固定值、200 KB 檔案中段變動、空檔預先取消、missing／directory 錯誤與來源內容不變；C# 既有完整內容指紋符合相同群組且 size／mtime／內容不變。原生證據命名為 `blake3-v1:`，沒有冒用既有 `xxh128:`。
+
+### 索引與執行相容設計
+
+保留 `files.hash` 作目前疊偵測所使用的有型別指紋；新增帶引擎／算法／參數及檔案觀察版本的證據記錄。切換算法後，只在整批結果通過 Core 的範圍與觀察檢查時更新 active hash；不得只改前綴或混比算法。離線、取消及部分失敗不清除其他完整結果。
+
+任務新增不可變的引擎快照。舊 `xxh128:` 可辨識為 legacy C# 證據，舊任務不推定為 Rust；原版本不可用時保留任務並明示重新建立。由 hash 改變而受影響的疊摘要與計畫需重新驗證。`PlanExecutor.CopyVerified` 的 XxHash128 複製驗證獨立保留，歷史及還原不得依賴分析引擎是否存在。
+
+### G0 結論與後續限制
+
+公開 API 能支撐候選優先、逐檔覆蓋及完整內容證據；不需為這個能力修改上游。G0 適配驗證通過，可開始共用契約與 C# 抽離。Windows x64 以外、相似媒體、FFI 記憶體生命週期、持久任務及舊資料遷移仍需後續階段驗證。ImageSharp 的既有 Debug 授權警告仍在，不能由 Rust 適配通過推論 Release 已可發佈。
+
+獨立審閱已確認 G0 可行性，並要求修改時間無法讀取時明確失敗；已修正，Rust test／fmt／clippy 再次通過。審閱也獨立重跑原生 3 個與 C# 基準 1 個測試。後續階段仍須測試執行中取消與檔案觀察競爭條件。

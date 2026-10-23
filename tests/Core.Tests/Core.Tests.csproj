@@ -20,4 +20,8 @@
     <ProjectReference Include="..\..\src\Core\Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\Fixtures\analysis\known-answer.json" Link="Fixtures\analysis\known-answer.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

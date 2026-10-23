@@ -2,9 +2,9 @@
 
 ## 狀態
 
-Accepted（2026-10-24：產品負責人要求將雙引擎策略整理為 ADR、SPEC、PLAN）。接受的是架構方向；目前尚未實作引擎抽象、Rust 包裝或引擎切換。
+Accepted（2026-10-24：產品負責人要求將雙引擎策略整理為 ADR、SPEC、PLAN，後續授權依計畫分片實作）。接受的是架構方向；目前完成範圍以 PLAN-002 的檢查表與驗證紀錄為準。
 
-詳細契約見 [SPEC-002](../specs/SPEC-002-pluggable-analysis-engines.md)，實作順序與驗證閘門見 [PLAN-002](../plans/PLAN-002-pluggable-analysis-engines.md)。兩份文件為 Draft，本次只交付文件。
+詳細契約見 [SPEC-002](../specs/SPEC-002-pluggable-analysis-engines.md)，實作順序與驗證閘門見 [PLAN-002](../plans/PLAN-002-pluggable-analysis-engines.md)。SPEC 已核准分階段實作，PLAN 進行中；實作提交先不 push。
 
 ## 背景
 
