@@ -32,7 +32,7 @@
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
           <Border Style="{StaticResource Chip}" BorderBrush="{StaticResource HintBrush}" CornerRadius="4" Margin="0,0,16,0"
                   Visibility="{Binding IsDemo, Converter={StaticResource BoolToVisibility}}"
-                  ToolTip="{l:T settings.distribution.demo}">
+                  ToolTip="{l:T header.demoTip}">
             <TextBlock Text="{l:T header.demo}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" />
           </Border>
           <Button Content="{l:T settings.title}" Style="{StaticResource NavTab}" Tag="{Binding IsSettingsSelected}"

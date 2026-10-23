@@ -4,7 +4,7 @@ using Xunit;
 
 namespace FileMergeAssistant.Tests.Localization;
 
-public class AppTextTests
+public partial class AppTextTests
 {
   [Fact]
   public void Every_Area_Has_Both_Languages_With_The_Same_Keys_And_Placeholders()
@@ -32,6 +32,32 @@ public class AppTextTests
     var total = AppText.Areas().Values.Sum(tables => tables.English.Count);
     Assert.Equal(total, AppText.Table("en").Count);
     Assert.Equal(total, AppText.Table("zh-TW").Count);
+  }
+
+  [Fact]
+  public void Every_Key_Written_In_The_Code_Exists()
+  {
+    var root = new DirectoryInfo(AppContext.BaseDirectory);
+    while (root is not null && !File.Exists(Path.Combine(root.FullName, "file-merge-assistant.sln")))
+    {
+      root = root.Parent;
+    }
+    Assert.NotNull(root);
+    var missing = new List<string>();
+    foreach (var file in Directory.EnumerateFiles(Path.Combine(root!.FullName, "src"), "*.*", SearchOption.AllDirectories)
+      .Where(f => f.EndsWith(".cs", StringComparison.Ordinal) || f.EndsWith(".xaml", StringComparison.Ordinal))
+      .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+        && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)))
+    {
+      var text = File.ReadAllText(file);
+      foreach (Match match in UsedKey().Matches(text))
+      {
+        var key = match.Groups["key"].Value;
+        var keys = match.Groups["call"].Value == "Plural" ? [key + ".one", key + ".other"] : new[] { key };
+        missing.AddRange(keys.Where(k => !AppText.Has(k)).Select(k => $"{Path.GetFileName(file)}: {k}"));
+      }
+    }
+    Assert.True(missing.Count == 0, string.Join(Environment.NewLine, missing));
   }
 
   [Theory]
@@ -88,4 +114,8 @@ public class AppTextTests
 
   private static string[] Placeholders(string text) =>
     [.. AppText.Placeholder().Matches(text).Select(m => m.Value).Distinct().Order(StringComparer.Ordinal)];
+
+  // AppText.Get("key", ...), AppText.Plural("key", ...), AppText.Format(locale, "key", ...) and {l:T key} in XAML.
+  [GeneratedRegex(@"AppText\.(?<call>Get|Plural)\(""(?<key>[a-z][A-Za-z0-9]*.[A-Za-z0-9.]*[A-Za-z0-9])""\s*[,)]|AppText\.(?<call>Format)\([^,]+,\s*""(?<key>[a-z][A-Za-z0-9]*.[A-Za-z0-9.]*[A-Za-z0-9])""\s*[,)]|\{l:T (?<key>[a-z][A-Za-z0-9]*.[A-Za-z0-9.]*[A-Za-z0-9])\}")]
+  private static partial Regex UsedKey();
 }

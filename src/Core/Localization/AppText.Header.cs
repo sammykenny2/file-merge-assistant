@@ -1,8 +1,7 @@
 namespace FileMergeAssistant.Localization;
 
 // The window header: the section tabs and the index status strip under them. The Workbench and Sources tabs use
-// hub.title and sources.title, the Settings tab settings.title, and the sample-data badge's tooltip
-// settings.distribution.demo.
+// hub.title and sources.title, and the Settings tab settings.title.
 public static partial class AppText
 {
   // i18n:en
@@ -11,6 +10,7 @@ public static partial class AppText
     ["header.nav.pending"] = "Pending",
     ["header.nav.history"] = "History",
     ["header.demo"] = "Sample data",
+    ["header.demoTip"] = "Started with --demo: sample data from the GUI flow mock; your files are not read or changed.",
     ["header.strip.name"] = "Index status",
     ["header.strip.noSources"] = "No sources yet. Folders you add are indexed in the background, and you can keep working meanwhile.",
     ["header.strip.indexed.one"] = "{count} file indexed",
@@ -34,6 +34,7 @@ public static partial class AppText
     ["header.nav.pending"] = "待執行",
     ["header.nav.history"] = "歷史",
     ["header.demo"] = "模擬資料",
+    ["header.demoTip"] = "以 --demo 啟動：用的是 GUI 流程 mock 的模擬資料，不會讀取或改動你的檔案。",
     ["header.strip.name"] = "索引狀態",
     ["header.strip.noSources"] = "還沒有來源。加入資料夾後，會在背景建立索引，這段時間仍可以操作。",
     ["header.strip.indexed.one"] = "已索引 {count} 個檔",
