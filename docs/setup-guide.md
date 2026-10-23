@@ -1,5 +1,21 @@
 # Setup Guide
 
+## Experimental analysis engines
+
+The WPF Settings page now offers exact-content engine/algorithm selection for
+new jobs. Both implementations remain Experimental; the initial choice is still
+managed XxHash128. Changing it does not change queued, paused or resumed jobs.
+Restart creates a new job with the new choice. Missing optional native binaries
+are shown as unavailable rather than falling back to another engine.
+
+The native adapter is loaded from `runtimes/<rid>/native` below the application's
+directory. `scripts/windows/Build-NativeAnalysis.ps1 -Test` builds and checks the
+pinned Windows x64 adapter and its isolated fixtures; it does not yet install the
+DLL into the GUI output. Application staging/installer integration is PLAN-002
+Phase 5. Never copy the deliberately invalid DLLs from `native/test-libraries`
+into an application directory. Release application builds still require a valid
+ImageSharp license; Debug validation is separate.
+
 > Environment setup and installation instructions.
 
 ## Prerequisites

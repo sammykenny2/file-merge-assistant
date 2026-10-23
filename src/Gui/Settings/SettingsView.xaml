@@ -52,6 +52,32 @@
         </StackPanel>
       </Border>
 
+      <Border Style="{StaticResource Section}">
+        <StackPanel>
+          <TextBlock Text="{l:T analysis.settings.title}" Style="{StaticResource H2}" Margin="0,0,0,12" />
+          <Border Style="{StaticResource Row}">
+            <StackPanel>
+              <TextBlock Text="{l:T analysis.settings.choice}" Style="{StaticResource RowLabel}" />
+              <ComboBox ItemsSource="{Binding AnalysisChoices}" SelectedItem="{Binding SelectedAnalysis}"
+                        IsEnabled="{Binding AnalysisChoicesEnabled}" DisplayMemberPath="Label" FontSize="14"
+                        MinWidth="420" HorizontalAlignment="Left" Margin="0,10,0,0"
+                        AutomationProperties.Name="{l:T analysis.settings.choice}">
+                <ComboBox.ItemContainerStyle>
+                  <Style TargetType="ComboBoxItem">
+                    <Setter Property="IsEnabled" Value="{Binding Enabled}" />
+                    <Setter Property="ToolTip" Value="{Binding Detail}" />
+                    <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
+                  </Style>
+                </ComboBox.ItemContainerStyle>
+              </ComboBox>
+              <TextBlock Text="{Binding AnalysisDetail}" Style="{StaticResource RowHint}" />
+              <TextBlock Text="{l:T analysis.settings.hint}" Style="{StaticResource RowHint}" />
+              <TextBlock Text="{Binding AnalysisDiagnostics}" Style="{StaticResource RowHint}" Foreground="{StaticResource WarnInkBrush}" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
       <!-- Startup -->
       <Border Style="{StaticResource Section}">
         <StackPanel>

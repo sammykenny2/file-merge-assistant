@@ -106,8 +106,10 @@ public sealed partial class SourceCardViewModel : ObservableObject
 /// <summary>The job that is running (or pausing, or paused) at the top of the queue.</summary>
 public sealed class RunningJobViewModel
 {
-  public RunningJobViewModel(ScanJobInfo job, DateTimeOffset now, IRelayCommand primary, IRelayCommand cancel)
+  public RunningJobViewModel(ScanJobInfo job, DateTimeOffset now, IRelayCommand primary, IRelayCommand cancel, bool demo = false)
   {
+    Analysis = AnalysisJobText.Summary(job, demo);
+    AnalysisDetails = AnalysisJobText.Details(job);
     Title = job.Title;
     Kind = AppText.Get(job.Kind switch
     {
@@ -173,6 +175,8 @@ public sealed class RunningJobViewModel
   public string? Note { get; }
   public string PrimaryLabel { get; }
   public bool PrimaryEnabled { get; }
+  public string Analysis { get; }
+  public string AnalysisDetails { get; }
   public IRelayCommand Primary { get; }
   public IRelayCommand Cancel { get; }
 
@@ -184,26 +188,39 @@ public sealed class RunningJobViewModel
 public sealed record QueuedJobViewModel(string Position, string Name, string Description, bool IsFirst, bool IsLast,
   IRelayCommand Up, IRelayCommand Down, IRelayCommand Cancel)
 {
+  public string Analysis { get; init; } = string.Empty;
+  public string AnalysisDetails { get; init; } = string.Empty;
   public string UpLabel => AppText.Get("sources.waiting.up", ("name", Name));
   public string DownLabel => AppText.Get("sources.waiting.down", ("name", Name));
 }
 
-public sealed record AttentionJobViewModel(ChipInfo State, string Name, string Description, IReadOnlyList<ActionInfo> Actions);
+public sealed record AttentionJobViewModel(ChipInfo State, string Name, string Description, IReadOnlyList<ActionInfo> Actions)
+{
+  public string Analysis { get; init; } = string.Empty;
+  public string AnalysisDetails { get; init; } = string.Empty;
+}
 
 public sealed partial class FinishedJobViewModel : ObservableObject
 {
   [ObservableProperty]
   private bool _showErrors;
 
-  public FinishedJobViewModel(ScanJobInfo job, string sourceName, DateTimeOffset now, IRelayCommand rescan)
+  public FinishedJobViewModel(ScanJobInfo job, string sourceName, DateTimeOffset now, IRelayCommand rescan, bool demo = false)
   {
-    State = job.Errors > 0
+    Analysis = AnalysisJobText.Summary(job, demo);
+    AnalysisDetails = AnalysisJobText.Details(job);
+    var partial = job.State == ScanJobState.Completed && job.Snapshot is not null && !job.AnalysisComplete;
+    ShowErrors = partial;
+    State = job.State == ScanJobState.Canceled ? new ChipInfo(AppText.Get("analysis.job.canceled"), Tone.Paused)
+      : partial ? new ChipInfo(AppText.Get("analysis.job.partial"), Tone.Warn)
+      : job.Errors > 0
       ? new ChipInfo(AppText.Plural("sources.finished.doneErrors", job.Errors, ("count", Fmt.Count(job.Errors))), Tone.Warn)
       : new ChipInfo(AppText.Get("sources.finished.done"), Tone.Ok);
     Name = sourceName;
     When = job.FinishedAt is { } at ? Fmt.When(at, now) : string.Empty;
     Counts = RunningJobViewModel.CountsText(job);
     Summary = job.ErrorSummary ?? job.Reason;
+    if (partial) { Summary = AppText.Get("analysis.job.partialHint") + " " + Summary; }
     HasErrors = job.Errors > 0;
     ErrorsLabel = AppText.Plural("sources.finished.viewErrors", job.Errors, ("count", Fmt.Count(job.Errors)));
     Rescan = rescan;
@@ -213,6 +230,8 @@ public sealed partial class FinishedJobViewModel : ObservableObject
   public string Name { get; }
   public string When { get; }
   public string Counts { get; }
+  public string Analysis { get; }
+  public string AnalysisDetails { get; }
   public string? Summary { get; }
   public bool HasErrors { get; }
   public string ErrorsLabel { get; }
@@ -291,7 +310,7 @@ public sealed partial class SourcesViewModel : PageViewModel
       ? null
       : new RunningJobViewModel(running, now,
         new AsyncRelayCommand(() => running.State == ScanJobState.Paused ? Store.ResumeJobAsync(running.Id) : Store.PauseJobAsync(running.Id)),
-        new AsyncRelayCommand(() => Store.CancelJobAsync(running.Id)));
+        new AsyncRelayCommand(() => Store.CancelJobAsync(running.Id)), Store.IsDemo);
 
     var queued = Store.Jobs.Where(j => j.State == ScanJobState.Queued).ToList();
     Waiting.Clear();
@@ -304,14 +323,17 @@ public sealed partial class SourcesViewModel : PageViewModel
       Waiting.Add(new QueuedJobViewModel((i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), job.Title,
         description, i == 0, i == queued.Count - 1,
         new RelayCommand(() => Store.MoveJob(job.Id, -1)), new RelayCommand(() => Store.MoveJob(job.Id, 1)),
-        new AsyncRelayCommand(() => Store.CancelJobAsync(job.Id))));
+        new AsyncRelayCommand(() => Store.CancelJobAsync(job.Id)))
+      {
+        Analysis = AnalysisJobText.Summary(job, Store.IsDemo), AnalysisDetails = AnalysisJobText.Details(job),
+      });
     }
 
     Attention.Clear();
     foreach (var job in Store.Jobs.Where(j => j.State is ScanJobState.Interrupted or ScanJobState.WaitingForSource or ScanJobState.WaitingForEngine or ScanJobState.NeedsNewJob or ScanJobState.Failed || (j.State == ScanJobState.Paused && j != running)))
     {
       var cancel = new ActionInfo(AppText.Get("sources.cancel"), new AsyncRelayCommand(() => Store.CancelJobAsync(job.Id)));
-      Attention.Add(job.State switch
+      Attention.Add((job.State switch
       {
         ScanJobState.Interrupted => new AttentionJobViewModel(new ChipInfo(AppText.Get("sources.state.interrupted"), Tone.Warn), job.Title, job.Reason ?? string.Empty,
           [new ActionInfo(AppText.Get("sources.scan.resume"), new AsyncRelayCommand(() => Store.ResumeJobAsync(job.Id)), true),
@@ -327,14 +349,14 @@ public sealed partial class SourcesViewModel : PageViewModel
           job.Reason ?? string.Empty, [new ActionInfo(AppText.Get("sources.attention.restart"), new AsyncRelayCommand(() => Store.RestartJobAsync(job.Id)), true), cancel]),
         _ => new AttentionJobViewModel(new ChipInfo(AppText.Get("sources.job.paused"), Tone.Paused), job.Title, job.Reason ?? string.Empty,
           [new ActionInfo(AppText.Get("sources.job.resume"), new AsyncRelayCommand(() => Store.ResumeJobAsync(job.Id)), true), cancel]),
-      });
+      }) with { Analysis = AnalysisJobText.Summary(job, Store.IsDemo), AnalysisDetails = AnalysisJobText.Details(job) });
     }
 
     Finished.Clear();
-    foreach (var job in Store.Jobs.Where(j => j.State == ScanJobState.Completed))
+    foreach (var job in Store.Jobs.Where(j => j.State is ScanJobState.Completed or ScanJobState.Canceled).OrderByDescending(job => job.FinishedAt).Take(20))
     {
       var name = Store.Sources.FirstOrDefault(s => s.Id == job.SourceId)?.Name ?? job.Title;
-      Finished.Add(new FinishedJobViewModel(job, name, now, new AsyncRelayCommand(() => Store.RescanFailedAsync(job.Id))));
+      Finished.Add(new FinishedJobViewModel(job, name, now, new AsyncRelayCommand(() => Store.RescanFailedAsync(job.Id)), Store.IsDemo));
     }
 
     var open = Store.Stacks.Count(s => s.Status == StackStatus.Open);

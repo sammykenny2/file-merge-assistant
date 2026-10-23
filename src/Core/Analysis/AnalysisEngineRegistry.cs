@@ -17,6 +17,8 @@ public sealed class AnalysisEngineRegistry
 
   public static AnalysisEngineRegistry ManagedOnly() => new([new ManagedAnalysisEngine()]);
 
+  public static AnalysisEngineRegistry CreateDefault() => new([new ManagedAnalysisEngine(), new NativeAnalysisEngine()]);
+
   public AnalysisEngineSnapshot Snapshot(string engineId, AnalysisCapability capability, string algorithm,
     string parametersJson = "{}", string scopeJson = "{}")
   {

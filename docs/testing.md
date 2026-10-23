@@ -153,6 +153,20 @@ cold-start recovery evidence, not a claim that native process aborts are caught.
 All process markers and source files are isolated fixtures; test hosts and native
 fault fixtures must not be included in application packages.
 
+Slice 4a passes 446 Core and 19 GUI tests, zero skips with the native environment
+enabled. Core regressions check persisted future-job selection and corrupt
+settings without hidden fallback. The three new WPF tests cover unavailable
+options, locale changes, preserved queued snapshots, real Rust selection and
+Blake3 results, and demo-mode selection on the UI thread. The independent
+focused run passes Core 10 / GUI 3. The settings view was rendered and visually
+checked at 1440 px; `FMA_SNAPSHOT_DIR` saves `analysis-settings-zh.png`.
+
+The real store saves selection asynchronously and serializes its database/memory
+update; demo selection stays on the caller's UI thread. Original job versions,
+algorithms and frozen scope remain visible after changing the new-job choice.
+These tests cover exact-content UI only; CLI and similar-image acceptance are
+separate Phase 4 work.
+
 ## CI Pause
 
 GitHub Actions CI is temporarily disabled for this repository. The `CI` workflow

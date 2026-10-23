@@ -4,6 +4,7 @@ using FileMergeAssistant.Localization;
 using FileMergeAssistant.Plans;
 using FileMergeAssistant.Sources;
 using FileMergeAssistant.Stacks;
+using FileMergeAssistant.Analysis;
 
 namespace FileMergeAssistant.Workbench;
 
@@ -35,6 +36,18 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
   private SinceLastVisit _since;
   private List<ChangeNotice>? _sinceNotices;
   private int _batchNumber;
+  public AnalysisEngineRegistry Engines { get; } = AnalysisEngineRegistry.ManagedOnly();
+  public AnalysisEngineSnapshot NewJobEngine { get; private set; } = AnalysisEngineRegistry.ManagedOnly()
+    .Snapshot(ManagedAnalysisEngine.EngineId, AnalysisCapability.ExactDuplicates, ContentFingerprints.XxHash128);
+  public string? AnalysisConfigurationError => null;
+
+  public Task SelectNewJobEngineAsync(AnalysisEngineSnapshot snapshot)
+  {
+    Engines.Resolve(snapshot);
+    NewJobEngine = snapshot;
+    Changed?.Invoke(this, WorkbenchChangedEventArgs.Everything);
+    return Task.CompletedTask;
+  }
 
   public DemoWorkbenchStore()
   {

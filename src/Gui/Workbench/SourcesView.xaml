@@ -118,6 +118,7 @@
                     <TextBlock Text="{Binding Title}" Style="{StaticResource H3}" Margin="0,0,10,0" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding Kind}" Style="{StaticResource Small}" VerticalAlignment="Center" />
                   </WrapPanel>
+                  <TextBlock Text="{Binding Analysis}" ToolTip="{Binding AnalysisDetails}" Style="{StaticResource Small}" Margin="0,8,0,0" />
                   <Grid Margin="0,12,0,0">
                     <Grid.ColumnDefinitions>
                       <ColumnDefinition Width="Auto" MinWidth="92" />
@@ -179,6 +180,7 @@
                     <StackPanel VerticalAlignment="Center">
                       <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
                       <TextBlock Text="{Binding Description}" Style="{StaticResource Small}" />
+                      <TextBlock Text="{Binding Analysis}" ToolTip="{Binding AnalysisDetails}" Style="{StaticResource Small}" Margin="0,4,0,0" />
                     </StackPanel>
                   </DockPanel>
                 </Border>
@@ -199,6 +201,7 @@
                       <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
                     </WrapPanel>
                     <TextBlock Text="{Binding Description}" Style="{StaticResource Small}" FontSize="13.5" Margin="0,8,0,10" />
+                    <TextBlock Text="{Binding Analysis}" ToolTip="{Binding AnalysisDetails}" Style="{StaticResource Small}" Margin="0,0,0,10" />
                     <ItemsControl ItemsSource="{Binding Actions}" ItemTemplate="{StaticResource ActionButton}" ItemsPanel="{StaticResource WrapItems}" Focusable="False" />
                   </StackPanel>
                 </Border>
@@ -220,6 +223,7 @@
                       <TextBlock Text="{Binding When}" Style="{StaticResource Small}" VerticalAlignment="Center" />
                     </WrapPanel>
                     <TextBlock Text="{Binding Counts}" Style="{StaticResource Small}" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding Analysis}" ToolTip="{Binding AnalysisDetails}" Style="{StaticResource Small}" Margin="0,5,0,0" />
                     <TextBlock Text="{Binding Summary}" Style="{StaticResource Small}" FontSize="13.5" Foreground="{StaticResource InkBrush}" Margin="0,6,0,0"
                                Visibility="{Binding ShowErrors, Converter={StaticResource BoolToVisibility}}" />
                     <WrapPanel Margin="0,10,0,0" Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibility}}">

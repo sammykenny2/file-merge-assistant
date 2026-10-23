@@ -1,6 +1,7 @@
 using FileMergeAssistant.Plans;
 using FileMergeAssistant.Sources;
 using FileMergeAssistant.Stacks;
+using FileMergeAssistant.Analysis;
 
 namespace FileMergeAssistant.Workbench;
 
@@ -41,6 +42,13 @@ public interface IWorkbenchStore
 
   /// <summary>Running, queued, attention-needing and recently finished jobs, in queue order.</summary>
   IReadOnlyList<ScanJobInfo> Jobs { get; }
+
+  AnalysisEngineRegistry Engines { get; }
+  AnalysisEngineSnapshot NewJobEngine { get; }
+  string? AnalysisConfigurationError { get; }
+
+  /// <summary>Explicit selection for future jobs only; existing snapshots never change.</summary>
+  Task SelectNewJobEngineAsync(AnalysisEngineSnapshot snapshot);
 
   /// <summary>All known stacks, including pending, converged and kept-all ones.</summary>
   IReadOnlyList<Stack> Stacks { get; }

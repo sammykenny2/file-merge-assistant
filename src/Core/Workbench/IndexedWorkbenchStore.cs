@@ -45,7 +45,8 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   private readonly SynchronizationContext? _context;
   private readonly ScanWorker _worker;
   private readonly AnalysisEngineRegistry _engines;
-  private AnalysisEngineSnapshot _newJobEngine;
+  private volatile AnalysisEngineSnapshot _newJobEngine;
+  private readonly object _analysisGate = new();
   private readonly PlanExecutor _executor;
   private readonly RecycleAreaLocator _areas;
   private readonly object _refreshGate = new();
@@ -81,8 +82,9 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     _database = database;
     _volumes = volumes;
     _context = context;
-    _engines = engines ?? AnalysisEngineRegistry.ManagedOnly();
+    _engines = engines ?? AnalysisEngineRegistry.CreateDefault();
     _newJobEngine = _engines.Snapshot(ManagedAnalysisEngine.EngineId, AnalysisCapability.ExactDuplicates, ContentFingerprints.XxHash128);
+    LoadAnalysisSelection();
     _areas = new RecycleAreaLocator(Path.GetDirectoryName(Path.GetFullPath(database.Path))!);
     _executor = new PlanExecutor(_areas);
     ScanWorker.RecoverInterrupted(database);
@@ -132,13 +134,50 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   public AnalysisEngineRegistry Engines => _engines;
   public AnalysisEngineSnapshot NewJobEngine => _newJobEngine;
+  public string? AnalysisConfigurationError { get; private set; }
 
   /// <summary>Changes new jobs only. Existing queued, paused and interrupted snapshots are immutable.</summary>
   public void SelectNewJobEngine(AnalysisEngineSnapshot snapshot)
   {
     _engines.Resolve(snapshot);
     if (snapshot.Capability != AnalysisCapability.ExactDuplicates) { throw new ArgumentException("The scan queue currently accepts exact-content analysis only.", nameof(snapshot)); }
-    _newJobEngine = snapshot with { ScopeJson = "{}" };
+    var selected = snapshot with { ScopeJson = "{}" };
+    lock (_analysisGate)
+    {
+      _database.SetMeta("analysis.default", JsonSerializer.Serialize(selected, AnalysisJson.Options));
+      _newJobEngine = selected;
+      AnalysisConfigurationError = null;
+    }
+    if (_context is not null && SynchronizationContext.Current != _context)
+    {
+      _context.Post(_ => Changed?.Invoke(this, WorkbenchChangedEventArgs.Everything), null);
+    }
+    else { Changed?.Invoke(this, WorkbenchChangedEventArgs.Everything); }
+  }
+
+  public Task SelectNewJobEngineAsync(AnalysisEngineSnapshot snapshot) => Task.Run(() => SelectNewJobEngine(snapshot));
+
+  private void LoadAnalysisSelection()
+  {
+    var json = _database.GetMeta("analysis.default");
+    if (json is null) { return; }
+    try
+    {
+      _newJobEngine = JsonSerializer.Deserialize<AnalysisEngineSnapshot>(json, AnalysisJson.Options)
+        ?? throw new InvalidDataException("The saved analysis selection is missing.");
+      if (string.IsNullOrWhiteSpace(_newJobEngine.EngineId) || _newJobEngine.Capability != AnalysisCapability.ExactDuplicates)
+      {
+        throw new InvalidDataException("The saved analysis selection is invalid.");
+      }
+      _engines.Resolve(_newJobEngine);
+    }
+    catch (AnalysisEngineUnavailableException error) { AnalysisConfigurationError = error.Message; }
+    catch (Exception error) when (error is JsonException or InvalidDataException or ArgumentException)
+    {
+      // An invalid saved choice must stay visibly unavailable, never silently become the default engine.
+      _newJobEngine = new("invalid-configuration", "unknown", null, 1, 0, AnalysisCapability.ExactDuplicates, "unknown", "{}", "{}");
+      AnalysisConfigurationError = error.Message;
+    }
   }
   public IReadOnlyList<Stack> Stacks => _stacks;
   public IReadOnlyList<PlanEntry> Plan => _plan;

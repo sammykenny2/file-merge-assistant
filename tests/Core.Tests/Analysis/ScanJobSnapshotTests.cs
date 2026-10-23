@@ -50,6 +50,49 @@ public sealed class ScanJobSnapshotTests : IDisposable
   }
 
   [Fact]
+  public async Task New_Job_Selection_Persists_Without_Rewriting_Existing_Queued_Snapshots()
+  {
+    string oldId, oldSnapshot;
+    using (var store = Open())
+    {
+      await Add(store, "a");
+      oldId = store.Jobs.Single().Id;
+      oldSnapshot = store.Jobs.Single().Snapshot!.Serialize();
+      store.SelectNewJobEngine(store.Engines.Snapshot(ManagedAnalysisEngine.EngineId, AnalysisCapability.ExactDuplicates, ContentFingerprints.Sha256));
+    }
+    using var reopened = Open();
+    Assert.Equal(ContentFingerprints.Sha256, reopened.NewJobEngine.Algorithm);
+    Assert.Null(reopened.AnalysisConfigurationError);
+    Assert.Equal(oldSnapshot, reopened.Jobs.Single().Snapshot!.Serialize());
+    await Add(reopened, "b");
+    Assert.Equal(ContentFingerprints.Sha256, reopened.Jobs.Single(job => job.Id != oldId).Snapshot!.Engine.Algorithm);
+    Assert.Equal(oldSnapshot, reopened.Jobs.Single(job => job.Id == oldId).Snapshot!.Serialize());
+  }
+
+  [Fact]
+  public async Task Corrupt_Saved_Selection_Is_Diagnosable_And_Never_Silently_Falls_Back()
+  {
+    IndexDatabase.OpenOrCreate(_index).SetMeta("analysis.default", "not-json");
+    using var store = Open();
+    Assert.NotNull(store.AnalysisConfigurationError);
+    Assert.Equal("invalid-configuration", store.NewJobEngine.EngineId);
+    await Add(store, "a");
+    store.StartScanning();
+    await store.WaitForScansAsync(Timeout);
+    store.RefreshNow();
+    var oldId = store.Jobs.Single().Id;
+    Assert.Equal(ScanJobState.WaitingForEngine, store.Jobs.Single().State);
+    Assert.Equal(0L, store.Sources.Single().IndexedFiles);
+    store.SelectNewJobEngine(store.Engines.Snapshot(ManagedAnalysisEngine.EngineId, AnalysisCapability.ExactDuplicates, ContentFingerprints.XxHash128));
+    Assert.Null(store.AnalysisConfigurationError);
+    await store.RestartJobAsync(oldId);
+    await store.WaitForScansAsync(Timeout);
+    store.RefreshNow();
+    Assert.Equal(ScanJobState.Canceled, store.Jobs.Single(job => job.Id == oldId).State);
+    Assert.Equal(ScanJobState.Completed, store.Jobs.Single(job => job.Id != oldId).State);
+  }
+
+  [Fact]
   public async Task Queued_Scope_And_Engine_Stay_Fixed_Across_Settings_Changes_And_Reopen()
   {
     string original, jobId;

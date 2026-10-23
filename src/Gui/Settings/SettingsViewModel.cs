@@ -126,6 +126,7 @@ public sealed partial class SettingsViewModel : PageViewModel, IDisposable
         option.Label = AppText.Get(option.LabelKey);
       }
       Language = _context.Shell.Preferences.Language;
+      RenderAnalysis();
       RenderStartup();
       VersionText = AppText.Get("settings.version", ("version", UpdateService.CurrentVersion.ToString(3)));
       DistributionText = AppText.Get("settings.distribution." + _context.Distribution);

@@ -24,7 +24,7 @@ public sealed class EnginePlanCompatibilityTests : IDisposable
   public void Dispose() => _tree.Dispose();
 
   private IndexedWorkbenchStore Open(AnalysisEngineRegistry? engines = null) =>
-    IndexedWorkbenchStore.Open(_index, new Volumes(), context: null, engines: engines);
+    IndexedWorkbenchStore.Open(_index, new Volumes(), context: null, engines: engines ?? AnalysisEngineRegistry.ManagedOnly());
 
   private async Task Prepare(IndexedWorkbenchStore store)
   {
