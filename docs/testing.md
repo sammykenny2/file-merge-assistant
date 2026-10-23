@@ -20,8 +20,22 @@ coverage using the existing coverlet collector:
 dotnet test tests/Core.Tests/Core.Tests.csproj --collect:"XPlat Code Coverage"
 ```
 
-The current GitHub Actions workflow validates required files and YAML; it does
-not run this .NET test suite.
+## CI Pause
+
+GitHub Actions CI is temporarily disabled for this repository. The `CI` workflow
+is disabled in GitHub, and `.github/workflows/ci.yaml` retains only the manual
+`workflow_dispatch` event. Pushes and pull requests do not automatically trigger
+CI. Existing workflow history is preserved.
+
+To permit manual runs again, explicitly re-enable the workflow:
+
+```powershell
+gh workflow enable ci.yaml --repo sammykenny2/file-merge-assistant
+```
+
+Automatic CI also requires restoring the `push` and `pull_request` events in the
+workflow file. Re-enable it only when requested. Its jobs validate required files
+and YAML; they do not run this .NET test suite.
 
 ## Known Baseline Issues
 
