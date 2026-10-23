@@ -194,19 +194,21 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     ArgumentNullException.ThrowIfNull(paths);
     ArgumentNullException.ThrowIfNull(options);
     // Resolving real locations can wait on a slow or disconnected network drive; never on the interface thread.
-    var problems = await Task.Run(() => AddSources(paths, options, startScan)).ConfigureAwait(true);
+    // Only sources known to be online are asked for their identity; an unplugged network drive would stall every check.
+    var online = _onlineRoots.Values.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var problems = await Task.Run(() => AddSources(paths, options, startScan, online)).ConfigureAwait(true);
     _worker.Wake();
     Apply(Build(detect: false, probe: false));
     return problems;
   }
 
-  private List<string> AddSources(IReadOnlyList<string> paths, SourceOptions options, bool startScan)
+  private List<string> AddSources(IReadOnlyList<string> paths, SourceOptions options, bool startScan, HashSet<string> online)
   {
     var problems = new List<string>();
     using (var connection = _database.Open())
     {
       // Compare real locations: a junction, subst drive or mapped drive must not add the same folder twice (ADR-010).
-      var existing = ReadSourceRoots(connection).Select(e => (Root: PathIdentity.Resolve(e.Root), e.Name)).ToList();
+      var existing = ReadSourceRoots(connection);
       var appData = PathIdentity.Resolve(_areas.AppDataRoot);
       foreach (var raw in paths)
       {
@@ -237,9 +239,11 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         string? clash = null;
         foreach (var e in existing)
         {
-          var same = LocationSuggester.Same(e.Root, real) || (self is not null && PathIdentity.Identify(e.Root) == self);
-          var inside = !same && (LocationSuggester.Inside(real, e.Root) || PathIdentity.SameOrInside(path, e.Root) == true);
-          var around = !same && !inside && (LocationSuggester.Inside(e.Root, real) || PathIdentity.SameOrInside(e.Root, path) == true);
+          var known = online.Contains(e.Root);
+          var same = LocationSuggester.Same(e.Root, real)
+            || (known && self is { } mine && PathIdentity.Identify(e.Root) is { } theirs && theirs.SameAs(mine));
+          var inside = !same && (LocationSuggester.Inside(real, e.Root) || (known && PathIdentity.SameOrInside(path, e.Root) == true));
+          var around = !same && !inside && (LocationSuggester.Inside(e.Root, real) || (known && PathIdentity.SameOrInside(e.Root, path) == true));
           clash = same ? $"已經是來源「{e.Name}」（{e.Root}）。"
             : inside ? $"已經包含在來源「{e.Name}」（{e.Root}）裡。"
             : around ? $"包含已加入的來源「{e.Name}」（{e.Root}）。同一個檔不能屬於兩個來源，請改加其他資料夾或先移除那個來源。"
@@ -272,6 +276,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
           ("$serial", volume?.Serial), ("$label", volume?.Label), ("$kind", volume?.Describe() ?? "磁碟"),
           ("$at", Stamp(Now)), ("$position", position));
         existing.Add((real, name));
+        online.Add(real);
         if (startScan)
         {
           QueueJob(connection, id, name, ScanJobKind.FirstScan, "第一次掃描");
@@ -723,21 +728,43 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   /// </summary>
   private string? RetryRefused(BatchItem item)
   {
-    if (item.Kind == PlanItemKind.Recycle && item.KeeperPath is { } keeper && !File.Exists(keeper) && !Directory.Exists(keeper))
+    if (item.Kind != PlanItemKind.Recycle || item.OriginalPath is not { } original)
     {
-      return $"正本 {keeper} 已經不在原處，所以沒有重試。請重新比對這疊。";
+      return null;
     }
-    if (item.Kind == PlanItemKind.Recycle && item.OriginalPath is { } original)
+    if (item.KeeperPath is not { } keeper)
     {
-      List<string> keepers;
-      lock (_stateGate)
-      {
-        keepers = _decisions.Values.Where(d => d.Status is Pending or Reopened).Select(d => CopyPath(d.Decision.KeeperCopyId))
-          .Where(p => p is not null).Select(p => p!).ToList();
-      }
-      if (keepers.Any(k => LocationSuggester.Same(k, original) || LocationSuggester.Inside(k, original) || LocationSuggester.Inside(original, k)))
+      return "這一項沒有記錄正本，所以沒有重試。請重新比對這疊。";
+    }
+    if (!File.Exists(keeper) && !(Directory.Exists(keeper) && Directory.EnumerateFileSystemEntries(keeper).Any()))
+    {
+      return $"正本 {keeper} 已經不在原處或是空的，所以沒有重試。請重新比對這疊。";
+    }
+    List<StoredDecision> decisions;
+    lock (_stateGate)
+    {
+      decisions = [.. _decisions.Values];
+    }
+    foreach (var d in decisions)
+    {
+      var keeperPath = CopyPath(d.Decision.KeeperCopyId);
+      if (d.Status is Pending or Reopened && keeperPath is not null
+        && (LocationSuggester.Same(keeperPath, original) || LocationSuggester.Inside(keeperPath, original) || LocationSuggester.Inside(original, keeperPath)))
       {
         return "這份現在是另一個決定裡的正本，所以沒有重試。";
+      }
+      var copyId = d.CopyIds.FirstOrDefault(id => CopyPath(id) is { } p && LocationSuggester.Same(p, original));
+      if (copyId is null)
+      {
+        continue;
+      }
+      if (d.Status == KeptAll)
+      {
+        return "你之後選了這疊全部保留，所以沒有重試。";
+      }
+      if (d.Decision.AlsoKeep.Contains(copyId))
+      {
+        return "你之後選了保留這份，所以沒有重試。";
       }
     }
     return null;
@@ -765,7 +792,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       {
         try
         {
-          snapshots[copy.Id] = CopySnapshot.Of(copy.Path, IsAppOwned);
+          snapshots[copy.Id] = CopySnapshot.Of(copy.Path, IsAppOwned, stored.At.UtcDateTime);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
@@ -1286,6 +1313,10 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     {
       return $"沒有{who}（{copy.Path}）在你決定時的完整紀錄，所以先不移動。請再確認一次這疊。";
     }
+    if (snapshot.StartsWith(CopySnapshot.ChangedPrefix, StringComparison.Ordinal))
+    {
+      return $"你決定的時候，{who}（{copy.Path}）裡的 {snapshot[CopySnapshot.ChangedPrefix.Length..]} 正在變動（或時間在決定之後），所以先不移動。請再確認一次這疊。";
+    }
     string now;
     try
     {
@@ -1430,6 +1461,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   private bool IsAppOwned(string fullPath) =>
     _areas.IsInsideArea(fullPath) || fullPath.EndsWith(ScanFilter.PartialSuffix, StringComparison.OrdinalIgnoreCase)
+    || Path.GetFileName(fullPath).StartsWith(PathIdentity.ProbePrefix, StringComparison.Ordinal)
     || LocationSuggester.Inside(fullPath, _areas.AppDataRoot);
 
   private static List<IndexedFolder> ReadFolders(SqliteConnection connection, string sql)

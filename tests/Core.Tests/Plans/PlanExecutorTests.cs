@@ -1,4 +1,5 @@
 using FileMergeAssistant.Plans;
+using FileMergeAssistant.Sources;
 using FileMergeAssistant.Stacks;
 using FileMergeAssistant.Tests.Scanning;
 using Xunit;
@@ -558,6 +559,62 @@ public sealed class PlanExecutorTests : IDisposable
 
     Assert.Equal("source", File.ReadAllText(destination));
     Assert.False(File.Exists(destination + ".fma-partial"));
+  }
+
+  [Fact]
+  public void Undoing_A_Copy_Is_Refused_When_Another_File_Now_Sits_Where_Its_Source_Was()
+  {
+    var entry = Plan(BuildStack());
+    var copy = Run(Only(entry, i => i.Kind != PlanItemKind.Recycle)).Items.Single(i => i.Kind == PlanItemKind.Copy);
+    _executor.Execute("b2", Now, [Only(entry, i => i.Kind == PlanItemKind.Recycle && i.SourcePath.EndsWith("backup", StringComparison.Ordinal))],
+      (_, _) => null, _ => { }, CancellationToken.None);
+    // A different file with the same name appears where the recycled source was.
+    _tree.Write(@"backup\only-backup.txt", "an unrelated file", new DateTime(2026, 10, 23, 10, 0, 0, DateTimeKind.Utc));
+
+    var outcome = _executor.Restore("b1", copy, Now);
+
+    Assert.Equal(BatchItemState.Done, outcome.Item.State);
+    Assert.Equal("only here", File.ReadAllText(_tree.PathOf(@"keeper\only-backup.txt")));
+  }
+
+  [Fact]
+  public void A_Probe_Shows_Up_Under_Every_Name_Of_Its_Folder_And_Is_Gone_Afterwards()
+  {
+    _tree.Write(@"real\sub\a.txt", "a");
+    _tree.Write(@"other\b.txt", "b");
+    CreateJunction(_tree.PathOf("alias"), _tree.PathOf("real"));
+
+    Assert.Equal(0, PathIdentity.ProbeSeenAt(_tree.PathOf("real"), [_tree.PathOf("alias")]));
+    Assert.Equal(1, PathIdentity.ProbeSeenAt(_tree.PathOf("real"), PathIdentity.SelfAndAncestors(_tree.PathOf(@"alias\sub"))));
+    Assert.Equal(-1, PathIdentity.ProbeSeenAt(_tree.PathOf("real"), PathIdentity.SelfAndAncestors(_tree.PathOf("other"))));
+    Assert.Empty(Directory.EnumerateFiles(_tree.PathOf("real"), PathIdentity.ProbePrefix + "*"));
+    Directory.Delete(_tree.PathOf("alias"));
+  }
+
+  [Fact]
+  public void A_Cloned_Drive_Is_Not_The_Same_Volume_Even_With_The_Same_Serial_And_Ids()
+  {
+    var original = new FileIdentity(0x1234ABCD, 42, "Volume{11111111-1111-1111-1111-111111111111}");
+    var clone = original with { VolumeGuid = "Volume{22222222-2222-2222-2222-222222222222}" };
+    var throughShare = original with { VolumeGuid = null };
+
+    Assert.False(original.SameAs(clone));
+    Assert.True(original.SameAs(throughShare));
+    Assert.True(PathIdentity.Identify(_tree.Root) is { VolumeGuid: not null });
+  }
+
+  [Fact]
+  public void A_Snapshot_Taken_While_The_Copy_Changes_Is_Not_A_Baseline()
+  {
+    _tree.Write(@"copy\a.txt", "a");
+    _tree.Write(@"copy\.git\refs\heads\main", "old");
+    // The folders above were just created; the decision comes after them.
+    var decided = DateTime.UtcNow.AddSeconds(1);
+    Assert.DoesNotContain(CopySnapshot.ChangedPrefix, CopySnapshot.Of(_tree.PathOf("copy"), _ => false, decided), StringComparison.Ordinal);
+    // Written after the decision (while the snapshot would have been walking).
+    _tree.Write(@"copy\.git\refs\heads\unpushed", "new", DateTime.UtcNow.AddMinutes(1));
+
+    Assert.StartsWith(CopySnapshot.ChangedPrefix, CopySnapshot.Of(_tree.PathOf("copy"), _ => false, decided), StringComparison.Ordinal);
   }
 
   [Fact]

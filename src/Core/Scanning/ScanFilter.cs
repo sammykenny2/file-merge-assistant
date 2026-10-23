@@ -93,7 +93,7 @@ public sealed class ScanFilter
       }
       return SourceScanner.IsExcluded(sourceRelative, directory.Name, _source.Exclusions) ? EntryKind.Skip : EntryKind.Index;
     }
-    if (entry.Name.EndsWith(PartialSuffix, StringComparison.OrdinalIgnoreCase))
+    if (entry.Name.EndsWith(PartialSuffix, StringComparison.OrdinalIgnoreCase) || entry.Name.StartsWith(PathIdentity.ProbePrefix, StringComparison.Ordinal))
     {
       return EntryKind.Skip;
     }

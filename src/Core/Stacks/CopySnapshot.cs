@@ -13,24 +13,42 @@ namespace FileMergeAssistant.Stacks;
 /// </summary>
 public static class CopySnapshot
 {
+  /// <summary>Prefix of a snapshot that found something changed at or after the decision.</summary>
+  public const string ChangedPrefix = "changed:";
+
   /// <param name="path">The copy: a folder or a single file.</param>
   /// <param name="skip">Paths that are not the user's (the app's own folders and partial files).</param>
+  /// <param name="changedSince">
+  /// When the user decided. A file or folder written at or after it changed while the snapshot was being taken, so the
+  /// snapshot is <see cref="ChangedPrefix"/> and its relative path instead of a baseline (a folder's time moves when
+  /// entries are added, removed or renamed in it).
+  /// </param>
   /// <exception cref="IOException">A folder could not be read.</exception>
   /// <exception cref="UnauthorizedAccessException">A folder could not be read.</exception>
-  public static string Of(string path, Func<string, bool> skip)
+  public static string Of(string path, Func<string, bool> skip, DateTime? changedSince = null)
   {
     ArgumentNullException.ThrowIfNull(path);
     ArgumentNullException.ThrowIfNull(skip);
+    bool Late(FileSystemInfo entry) => changedSince is { } since && entry.LastWriteTimeUtc >= since;
     var lines = new List<string>();
     var file = new FileInfo(path);
     if (file.Exists)
     {
+      if (Late(file))
+      {
+        return ChangedPrefix + file.Name;
+      }
       lines.Add(Line(file.Name, file));
     }
     else if (Directory.Exists(path))
     {
+      var top = new DirectoryInfo(path);
+      if (Late(top))
+      {
+        return ChangedPrefix + top.Name;
+      }
       var pending = new Stack<(string Relative, DirectoryInfo Folder)>();
-      pending.Push((string.Empty, new DirectoryInfo(path)));
+      pending.Push((string.Empty, top));
       while (pending.Count > 0)
       {
         var (relative, folder) = pending.Pop();
@@ -40,6 +58,10 @@ public static class CopySnapshot
           if (skip(entry.FullName))
           {
             continue;
+          }
+          if (Late(entry))
+          {
+            return ChangedPrefix + child;
           }
           if (ScanFilter.IsLink(entry))
           {

@@ -223,6 +223,16 @@ When a test hangs, VSTest writes a sequence attachment under
   - With the identity check switched off, the junction and app-folder tests fail and the UNC test is still
     stopped by the after-move backstop; with the snapshot check switched off, the `.git` test fails.
   - Core.Tests has 352 tests, Gui.Tests 3; all 355 pass, three runs in a row.
+- 2026-10-23, fixes from the third Phase 5 review:
+  - `PlanExecutorTests` add: undoing a copy is refused when another file now sits where its source was; a probe
+    shows up under every name of its folder (a junction) and is gone afterwards; a cloned drive is not the same
+    volume even with the same serial and ids; a snapshot taken while the copy changes is not a baseline.
+  - `IndexedWorkbenchStoreTests` add: a retry is refused once the keeper is empty; a change right after deciding
+    keeps the copy even before the background snapshot is done.
+  - With the source-stamp check or the snapshot time cut-off switched off, their tests fail.
+  - Not testable here: a NAS that reports a different volume serial per share name (the probe covers it), and a
+    sector-cloned drive (the volume GUID covers it; the comparison itself is unit-tested).
+  - Core.Tests has 358 tests, Gui.Tests 3; all 361 pass, three runs in a row.
 
 ## Bootstrap Validation
 

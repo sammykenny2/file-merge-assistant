@@ -519,6 +519,43 @@ public sealed class IndexedWorkbenchStoreTests : IDisposable
   }
 
   [Fact]
+  public async Task A_Retry_Is_Refused_Once_The_Keeper_Is_Empty()
+  {
+    using var store = await ScannedStore();
+    var folder = store.Stacks.Single(s => s.Kind == StackKind.Folder);
+    store.Decide(StackDecision.Suggested(folder).WithChoice("receipt.html", ConflictChoice.Both));
+    ExecutionBatch batch;
+    using (new FileStream(_tree.PathOf(@"desk\invoice-tool - 複製\src\module01.ts"), FileMode.Open, FileAccess.Read, FileShare.None))
+    {
+      batch = await store.ExecutePlanAsync(CancellationToken.None);
+    }
+    await store.WaitForScansAsync(Timeout);
+    Directory.Delete(_tree.PathOf(@"work\invoice-tool"), recursive: true);
+    Directory.CreateDirectory(_tree.PathOf(@"work\invoice-tool"));
+
+    await store.RetryFailedAsync(batch.Id);
+
+    Assert.Contains("正本", store.History.Single(b => b.Id == batch.Id).Items.Single(i => i.State == BatchItemState.Failed).FailureReason,
+      StringComparison.Ordinal);
+    Assert.True(File.Exists(_tree.PathOf(@"desk\invoice-tool - 複製\src\module01.ts")));
+  }
+
+  [Fact]
+  public async Task A_Change_Right_After_Deciding_Keeps_The_Copy_Even_Before_The_Snapshot_Is_Done()
+  {
+    using var store = await ScannedStore();
+    var folder = store.Stacks.Single(s => s.Kind == StackKind.Folder);
+    store.Decide(StackDecision.Suggested(folder).WithChoice("receipt.html", ConflictChoice.Both));
+    // No waiting for the background snapshot: the change races it.
+    _tree.Write(@"desk\invoice-tool - 複製\.git\refs\heads\unpushed-work", "0123456789abcdef", DateTime.UtcNow.AddSeconds(1));
+
+    var batch = await store.ExecutePlanAsync(CancellationToken.None);
+
+    Assert.Equal(BatchItemState.Skipped, batch.Items.Single(i => i.OriginalPath == _tree.PathOf(@"desk\invoice-tool - 複製")).State);
+    Assert.True(File.Exists(_tree.PathOf(@"desk\invoice-tool - 複製\.git\refs\heads\unpushed-work")));
+  }
+
+  [Fact]
   public async Task Unchecked_Items_Keep_The_Stack_From_Counting_As_Done()
   {
     using var store = await ScannedStore();

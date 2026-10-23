@@ -585,9 +585,29 @@ public sealed partial class PlanExecutor
   /// </summary>
   private void RequireSeparate(string copy, string keeper, string slotFolder)
   {
-    if (PathIdentity.SameOrInside(keeper, copy) is not false || PathIdentity.SameOrInside(copy, keeper) is not false)
+    const string Same = "這份和正本可能是同一個位置（同一個資料夾的另一個名稱，或其中一個包含另一個），所以沒有移動。";
+    var keeperInCopy = PathIdentity.SameOrInside(keeper, copy);
+    var copyInKeeper = PathIdentity.SameOrInside(copy, keeper);
+    if (keeperInCopy == true || copyInKeeper == true)
     {
-      throw new InvalidOperationException("無法確認這份和正本是不同的位置（可能是同一個資料夾的另一個名稱，或其中一個包含另一個），沒有移動。");
+      throw new InvalidOperationException(Same);
+    }
+    if (keeperInCopy is null || copyInKeeper is null || PathIdentity.IsNetwork(copy) || PathIdentity.IsNetwork(keeper))
+    {
+      // Ids cannot be trusted here (a network share, or a file system without ids): ask the disk. A probe written into
+      // the copy must not show up at the keeper or above it; for a single file, not in the keeper's own folder.
+      var isFolder = Directory.Exists(copy);
+      var seen = isFolder
+        ? PathIdentity.ProbeSeenAt(copy, PathIdentity.SelfAndAncestors(keeper))
+        : PathIdentity.ProbeSeenAt(Path.GetDirectoryName(copy)!, [Path.GetDirectoryName(keeper)!]);
+      if (seen is null)
+      {
+        throw new InvalidOperationException("無法確認這份和正本是不同的位置（這裡不能寫入確認用的暫存檔），所以沒有移動。");
+      }
+      if (seen >= 0 && (isFolder || string.Equals(Path.GetFileName(copy), Path.GetFileName(keeper), StringComparison.OrdinalIgnoreCase)))
+      {
+        throw new InvalidOperationException(Same);
+      }
     }
     if (PathIdentity.SameOrInside(_areas.AppDataRoot, copy) is not false)
     {
@@ -625,9 +645,11 @@ public sealed partial class PlanExecutor
   /// recycle area, to be lost when that is emptied.
   /// </summary>
   private static string? SourceMissing(BatchItem item) =>
-    item.SourcePath is { } source && !File.Exists(source)
-      ? $"這個檔的來源 {source} 現在不在原處（可能還在回收區）。先還原那一份，再還原這一項。"
-      : null;
+    item.SourcePath is not { } source ? null
+    : !File.Exists(source) ? $"這個檔的來源 {source} 現在不在原處（可能還在回收區）。先還原那一份，再還原這一項。"
+    : item.SourceStamp is { } stamp && Stamp(source) != stamp
+      ? $"{source} 已經不是當初複製的那個檔（之後被修改或換成了別的檔）。撤銷會讓當初的版本只剩在回收區，所以沒有還原；需要的話請自己處理。"
+    : null;
 
   /// <summary>Every file under a folder as <c>relative|size|ticks</c> lines, without following links.</summary>
   private static string BuildManifest(string folder)
