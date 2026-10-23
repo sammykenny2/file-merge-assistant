@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO.Hashing;
 using System.Text;
 using System.Text.RegularExpressions;
+using FileMergeAssistant.Localization;
 
 namespace FileMergeAssistant.Stacks;
 
@@ -293,7 +294,7 @@ public static partial class StackDetector
         files.Count == 0 ? null : Local(files.Max(f => f.ModifiedTicks)))
       {
         IndexedAt = source.IsOffline ? source.IndexedAt : null,
-        Notes = context.IsProject(m.SourceId, m.RelativePath) ? ["程式碼專案"] : [],
+        Notes = context.IsProject(m.SourceId, m.RelativePath) ? [AppText.Get("detect.note.project")] : [],
         Digest = CopyDigest.Of(contents[i].Select(kv => (kv.Key, kv.Value.Size, kv.Value.ModifiedTicks))),
       };
     }).ToList();
@@ -308,10 +309,10 @@ public static partial class StackDetector
     var stack = new Stack(StackId("d", copies), Path.GetFileName(copies[keeper].Path), StackKind.Folder, copies, rows, keeper, StackAction.KeepKeeperOnly)
     {
       SameFileCount = same,
-      Regenerable = regenerableNames.Count == 0 ? null : new RegenerableSummary(string.Join("、", regenerableNames), regenerable),
+      Regenerable = regenerableNames.Count == 0 ? null : new RegenerableSummary(string.Join(AppText.Get("detect.listSeparator"), regenerableNames), regenerable),
       Block = BlockOf(context, copies),
-      Evidence = $"比對方式：{group.Matched.ToString("N0", CultureInfo.InvariantCulture)} 個檔的相對路徑與內容指紋都相同，才判定為同一份資料夾。"
-        + (regenerableNames.Count > 0 ? "可重建的資料夾只比大小，不逐檔比對。" : string.Empty),
+      Evidence = AppText.Plural(regenerableNames.Count > 0 ? "detect.evidence.folderRegenerable" : "detect.evidence.folder", group.Matched,
+        ("count", group.Matched.ToString("N0", CultureInfo.InvariantCulture))),
       UpdatedAt = copies.Max(c => c.LastModified) ?? DateTimeOffset.MinValue,
     };
     return stack with { SuggestedAction = SuggestAction(stack) };
@@ -349,9 +350,9 @@ public static partial class StackDetector
       copies[keeper] = copies[keeper] with { SuggestReason = reason };
       yield return new Stack(StackId("f", copies), Path.GetFileName(copies[keeper].Path), StackKind.File, copies, [], keeper, StackAction.KeepKeeperOnly)
       {
-        SameLabel = "檔案內容",
+        SameLabel = AppText.Get("detect.sameLabel.file"),
         Block = BlockOf(context, copies),
-        Evidence = $"比對方式：內容指紋相同（每份 {SizeText(files[0].Size)}）。檔名不同不影響判定。",
+        Evidence = AppText.Get("detect.evidence.file", ("size", SizeText(files[0].Size))),
         UpdatedAt = copies.Max(c => c.LastModified) ?? DateTimeOffset.MinValue,
       };
     }
@@ -379,25 +380,26 @@ public static partial class StackDetector
     var reasons = new List<string>();
     if (best.Copy.IsProtected)
     {
-      reasons.Add("在受保護的位置");
+      reasons.Add(AppText.Get("detect.keeper.protected"));
     }
     if (!LooksLikeCopy(name(best.Copy)) && copies.Any(c => LooksLikeCopy(name(c))))
     {
-      reasons.Add("名稱沒有備份或複製的字樣");
+      reasons.Add(AppText.Get("detect.keeper.plainName"));
     }
     if (copies.Count(c => c.FileCount == best.Copy.FileCount) == 1 && copies.All(c => c.FileCount <= best.Copy.FileCount))
     {
-      reasons.Add("檔案最完整");
+      reasons.Add(AppText.Get("detect.keeper.mostComplete"));
     }
     if (copies.All(c => c.LastModified <= best.Copy.LastModified) && copies.Any(c => c.LastModified < best.Copy.LastModified))
     {
-      reasons.Add("最近修改");
+      reasons.Add(AppText.Get("detect.keeper.mostRecent"));
     }
     if (reasons.Count == 0)
     {
-      reasons.Add("排在第一個來源，內容和其他份相同");
+      reasons.Add(AppText.Get("detect.keeper.firstSource"));
     }
-    return (best.Index, string.Join("，", reasons) + "。");
+    // Each reason stands on its own, so the list only needs each language's separator and closing punctuation.
+    return (best.Index, AppText.Get("detect.keeper.reasons", ("reasons", string.Join(AppText.Get("detect.keeper.separator"), reasons))));
   }
 
   private static StackAction SuggestAction(Stack stack)

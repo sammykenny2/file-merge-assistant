@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO.Hashing;
 using System.Text;
 using System.Text.RegularExpressions;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Scanning;
 using FileMergeAssistant.Sources;
 
@@ -96,24 +97,24 @@ public sealed partial class PlanExecutor
       {
         if (cancellationToken.IsCancellationRequested)
         {
-          Add(Skipped(entry, item, "執行已取消，這一項沒有執行。"));
+          Add(Skipped(entry, item, AppText.Get("run.skip.canceled")));
           continue;
         }
         if (!item.Enabled)
         {
-          Add(Skipped(entry, item, "你取消勾選了這一項，這次沒有執行。"));
+          Add(Skipped(entry, item, AppText.Get("run.skip.unchecked")));
           continue;
         }
         slot++;
         if (item.Check == PlanCheck.Changed)
         {
-          Add(Skipped(entry, item, item.ChangeDetail ?? "決定之後有變動"));
+          Add(Skipped(entry, item, item.ChangeDetail ?? AppText.Get("run.skip.changed")));
           copyIncomplete |= item.IsCopyLike;
           continue;
         }
         if (!item.IsCopyLike && copyIncomplete)
         {
-          Add(Skipped(entry, item, "同一疊有檔還沒複製進正本，所以這份先不移入回收區，以免只在這份裡的檔跟著被移走。"));
+          Add(Skipped(entry, item, AppText.Get("run.skip.copyIncomplete")));
           continue;
         }
         string? changed;
@@ -125,7 +126,7 @@ public sealed partial class PlanExecutor
         catch (Exception e)
 #pragma warning restore CA1031
         {
-          changed = $"執行前無法確認現況：{e.Message}";
+          changed = AppText.Get("run.skip.checkFailed", ("error", e.Message));
         }
         if (changed is not null)
         {
@@ -187,7 +188,7 @@ public sealed partial class PlanExecutor
       {
         if (item.SourceStamp is not null && Stamp(source) != item.SourceStamp)
         {
-          return item with { FailureReason = $"{source} 在整理之後被修改過，沒有重試。請重新比對這疊。" };
+          return item with { FailureReason = AppText.Get("run.retry.modified", ("path", source)) };
         }
         CopyVerified(source, created);
         return item with { State = BatchItemState.Done, FailureReason = null, FailedFiles = 0, Retried = true };
@@ -197,7 +198,7 @@ public sealed partial class PlanExecutor
         // A single file that could not move (in use): it moves now only if it is still exactly what was checked.
         if (item.SourceStamp is null || Stamp(file) != item.SourceStamp)
         {
-          return item with { FailureReason = $"{file} 在整理之後被修改過，沒有重試。請重新比對這疊。" };
+          return item with { FailureReason = AppText.Get("run.retry.modified", ("path", file)) };
         }
         var target = item.RecycledPath ?? FreeName(Path.Combine(SlotFolder(file, batchId, "retry-" + Safe(item.Id)), Path.GetFileName(file)));
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
@@ -253,7 +254,10 @@ public sealed partial class PlanExecutor
         var left = MoveFiles(item.RecycledPath!, item.OriginalPath!, null, out _);
         return left == 0
           ? new RestoreOutcome(item with { State = BatchItemState.Restored, FailureReason = null }, null)
-          : new RestoreOutcome(item with { FailureReason = $"{left} 個檔的原位置已經有檔案，那些檔留在回收區。" }, null);
+          : new RestoreOutcome(item with
+          {
+            FailureReason = AppText.Plural("run.restore.occupied", left, ("count", left.ToString(CultureInfo.InvariantCulture))),
+          }, null);
       }
       case PlanItemKind.Recycle:
       {
@@ -318,10 +322,14 @@ public sealed partial class PlanExecutor
     var name = Path.GetFileName(conflict.OriginalPath.TrimEnd('\\'));
     var target = choice == RestoreConflictChoice.OtherFolder
       ? FreeName(Path.Combine(folder ?? throw new ArgumentNullException(nameof(folder)), name))
-      : FreeName(WithSuffix(conflict.OriginalPath, string.Create(CultureInfo.InvariantCulture, $" (還原 {now:MM-dd})")));
+      : FreeName(WithSuffix(conflict.OriginalPath, " " + RestoredSuffix(now)));
     PutBack(recycled, target);
     return target;
   }
+
+  /// <summary>The name suffix of an item restored next to what now occupies its place: 「(還原 10-23)」.</summary>
+  public static string RestoredSuffix(DateTimeOffset now) =>
+    AppText.Get("run.restore.suffix", ("date", now.ToString("MM-dd", CultureInfo.InvariantCulture)));
 
   /// <summary>
   /// Permanently deletes what this batch's finished items left in the recycle areas. Partly moved or interrupted items
@@ -401,7 +409,7 @@ public sealed partial class PlanExecutor
   {
     if (File.Exists(destination) || Directory.Exists(destination))
     {
-      throw new IOException($"{destination} 已經存在，不會覆寫。");
+      throw new IOException(AppText.Get("run.copy.exists", ("path", destination)));
     }
     var directory = Path.GetDirectoryName(destination);
     if (!string.IsNullOrEmpty(directory))
@@ -434,7 +442,7 @@ public sealed partial class PlanExecutor
       var expected = SourceScanner.HashPrefix + Convert.ToHexStringLower(hasher.GetCurrentHash());
       if (SourceScanner.Fingerprint(partial, CancellationToken.None) != expected)
       {
-        throw new IOException($"複製 {source} 之後內容不一致，已放棄這次複製。");
+        throw new IOException(AppText.Get("run.copy.mismatch", ("path", source)));
       }
       File.SetLastWriteTimeUtc(partial, modified);
       File.Move(partial, destination, overwrite: false);
@@ -509,7 +517,7 @@ public sealed partial class PlanExecutor
   {
     if (entry.Keeper.IsProtected)
     {
-      throw new InvalidOperationException("正本受保護，不會被覆寫。");
+      throw new InvalidOperationException(AppText.Get("run.replace.protected"));
     }
     var destination = intent.CreatedPath!;
     RequireInside(destination, entry.Keeper.Path);
@@ -529,7 +537,7 @@ public sealed partial class PlanExecutor
       catch (Exception back) when (back is IOException or UnauthorizedAccessException)
       {
         // The keeper's own version stays recorded in the recycle area; restoring this item puts it back.
-        return intent with { State = BatchItemState.Failed, FailureReason = $"{e.Message} 正本原本的版本在回收區，還原這一項可以放回去。" };
+        return intent with { State = BatchItemState.Failed, FailureReason = AppText.Get("run.replace.keeperInArea", ("error", e.Message)) };
       }
     }
     return intent with { State = BatchItemState.Done };
@@ -538,19 +546,19 @@ public sealed partial class PlanExecutor
   private BatchItem Recycle(PlanEntry entry, PlanItem item, BatchItem intent)
   {
     var copy = entry.Stack.Copies.FirstOrDefault(c => c.Id == item.CopyId)
-      ?? throw new InvalidOperationException("這份已經不在這疊裡。");
+      ?? throw new InvalidOperationException(AppText.Get("run.recycle.copyMissing"));
     if (copy.IsProtected)
     {
-      throw new InvalidOperationException("受保護的來源不會被移入回收區。");
+      throw new InvalidOperationException(AppText.Get("run.recycle.protected"));
     }
     if (copy.Id == entry.Keeper.Id || !string.Equals(copy.Path, item.SourcePath, StringComparison.OrdinalIgnoreCase))
     {
-      throw new InvalidOperationException("計畫與這疊的內容不一致，沒有執行。");
+      throw new InvalidOperationException(AppText.Get("run.recycle.planMismatch"));
     }
     var target = intent.RecycledPath!;
     if (!File.Exists(copy.Path) && !Directory.Exists(copy.Path))
     {
-      return intent with { State = BatchItemState.Failed, FailureReason = "這份已經不在原位置，沒有移動任何檔案。", RecycledPath = null };
+      return intent with { State = BatchItemState.Failed, FailureReason = AppText.Get("run.recycle.gone"), RecycledPath = null };
     }
     RequireSeparate(copy.Path, entry.Keeper.Path, Path.GetDirectoryName(target)!);
     if (File.Exists(copy.Path))
@@ -585,12 +593,11 @@ public sealed partial class PlanExecutor
   /// </summary>
   private void RequireSeparate(string copy, string keeper, string slotFolder)
   {
-    const string Same = "這份和正本可能是同一個位置（同一個資料夾的另一個名稱，或其中一個包含另一個），所以沒有移動。";
     var keeperInCopy = PathIdentity.SameOrInside(keeper, copy);
     var copyInKeeper = PathIdentity.SameOrInside(copy, keeper);
     if (keeperInCopy == true || copyInKeeper == true)
     {
-      throw new InvalidOperationException(Same);
+      throw new InvalidOperationException(AppText.Get("run.separate.same"));
     }
     if (keeperInCopy is null || copyInKeeper is null || PathIdentity.IsNetwork(copy) || PathIdentity.IsNetwork(keeper))
     {
@@ -602,20 +609,20 @@ public sealed partial class PlanExecutor
         : PathIdentity.ProbeSeenAt(Path.GetDirectoryName(copy)!, [Path.GetDirectoryName(keeper)!]);
       if (seen is null)
       {
-        throw new InvalidOperationException("無法確認這份和正本是不同的位置（這裡不能寫入確認用的暫存檔），所以沒有移動。");
+        throw new InvalidOperationException(AppText.Get("run.separate.unknown"));
       }
       if (seen >= 0 && (isFolder || string.Equals(Path.GetFileName(copy), Path.GetFileName(keeper), StringComparison.OrdinalIgnoreCase)))
       {
-        throw new InvalidOperationException(Same);
+        throw new InvalidOperationException(AppText.Get("run.separate.same"));
       }
     }
     if (PathIdentity.SameOrInside(_areas.AppDataRoot, copy) is not false)
     {
-      throw new InvalidOperationException("這份裡面有 File Merge Assistant 自己的資料夾，或無法確認沒有，所以沒有移動。");
+      throw new InvalidOperationException(AppText.Get("run.separate.appFolder"));
     }
     if (PathIdentity.Identify(copy) is not { } from || PathIdentity.Identify(slotFolder) is not { } to || from.VolumeSerial != to.VolumeSerial)
     {
-      throw new InvalidOperationException("這份實際上在另一顆磁碟上（經由連結、掛載點或網路路徑），不會跨磁碟搬移。");
+      throw new InvalidOperationException(AppText.Get("run.separate.otherDrive"));
     }
   }
 
@@ -633,7 +640,7 @@ public sealed partial class PlanExecutor
     return done with
     {
       State = BatchItemState.Failed,
-      FailureReason = "移走這份之後正本也不見了，表示兩者是同一個位置；已經立刻放回原處。",
+      FailureReason = AppText.Get("run.recycle.keeperVanished"),
       RecycledPath = null,
       FailedFiles = done.FileCount,
     };
@@ -646,9 +653,8 @@ public sealed partial class PlanExecutor
   /// </summary>
   private static string? SourceMissing(BatchItem item) =>
     item.SourcePath is not { } source ? null
-    : !File.Exists(source) ? $"這個檔的來源 {source} 現在不在原處（可能還在回收區）。先還原那一份，再還原這一項。"
-    : item.SourceStamp is { } stamp && Stamp(source) != stamp
-      ? $"{source} 已經不是當初複製的那個檔（之後被修改或換成了別的檔）。撤銷會讓當初的版本只剩在回收區，所以沒有還原；需要的話請自己處理。"
+    : !File.Exists(source) ? AppText.Get("run.restore.sourceMissing", ("path", source))
+    : item.SourceStamp is { } stamp && Stamp(source) != stamp ? AppText.Get("run.restore.sourceReplaced", ("path", source))
     : null;
 
   /// <summary>Every file under a folder as <c>relative|size|ticks</c> lines, without following links.</summary>
@@ -690,7 +696,7 @@ public sealed partial class PlanExecutor
     foreach (var link in WalkLinks(from))
     {
       left++;
-      reason ??= $"{link} 是連結（junction 或捷徑），沒有移動。";
+      reason ??= AppText.Get("run.move.link", ("path", link));
     }
     foreach (var (relative, file) in WalkFiles(from).ToList())
     {
@@ -698,7 +704,7 @@ public sealed partial class PlanExecutor
         || stamp != string.Create(CultureInfo.InvariantCulture, $"{file.Length}|{file.LastWriteTimeUtc.Ticks}")))
       {
         left++;
-        reason ??= $"{relative} 是整理開始之後才新增或修改的檔，沒有移動。";
+        reason ??= AppText.Get("run.move.newer", ("path", relative));
         continue;
       }
       var target = Path.Combine(to, relative);
@@ -710,7 +716,7 @@ public sealed partial class PlanExecutor
       catch (Exception e) when (e is IOException or UnauthorizedAccessException)
       {
         left++;
-        reason ??= $"{Path.GetFileName(relative)} 正在被其他程式使用、無法移動，或目的地已經有同名的檔，所以還在原處。";
+        reason ??= AppText.Get("run.move.inUse", ("name", Path.GetFileName(relative)));
       }
     }
     RemoveEmptyFolders(from);
@@ -845,7 +851,7 @@ public sealed partial class PlanExecutor
     {
       return true;
     }
-    why = $"{created} 在整理之後被修改過，所以沒有移走；需要的話請自己處理。";
+    why = AppText.Get("run.restore.createdChanged", ("path", created));
     return false;
   }
 
@@ -931,7 +937,7 @@ public sealed partial class PlanExecutor
     var root = Path.GetFullPath(folder).TrimEnd('\\') + "\\";
     if (!Path.GetFullPath(path).StartsWith(root, StringComparison.OrdinalIgnoreCase))
     {
-      throw new InvalidOperationException($"{path} 不在正本 {folder} 裡，沒有執行。");
+      throw new InvalidOperationException(AppText.Get("run.require.inside", ("path", path), ("folder", folder)));
     }
   }
 
@@ -939,7 +945,7 @@ public sealed partial class PlanExecutor
   {
     if (_areas.IsInsideArea(path))
     {
-      throw new InvalidOperationException($"{path} 在回收區裡；回收區裡的東西不會被當成正本或複本處理。");
+      throw new InvalidOperationException(AppText.Get("run.require.outsideArea", ("path", path)));
     }
   }
 
