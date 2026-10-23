@@ -23,7 +23,7 @@ public class ScreenRenderingTests
     var errors = WpfHost.Run(() =>
     {
       var store = new DemoWorkbenchStore { StepDelay = TimeSpan.Zero };
-      var main = new MainViewModel(store, () => throw new InvalidOperationException());
+      var main = new MainViewModel(store, TestSettings.Create());
       var shell = new ShellView { DataContext = main };
       void Snap(string name)
       {
@@ -91,6 +91,11 @@ public class ScreenRenderingTests
       Snap("14-plan-empty");
       main.ShowHub();
       Snap("15-hub-after");
+
+      main.ShowSettings();
+      Assert.IsType<FileMergeAssistant.Gui.Settings.SettingsViewModel>(main.CurrentPage);
+      Assert.True(main.IsSettingsSelected);
+      Snap("16-settings");
     });
 
     Assert.Empty(errors);

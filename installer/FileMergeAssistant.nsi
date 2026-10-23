@@ -28,6 +28,9 @@ SetCompressor /SOLID lzma
 !define OWNER_MARKER ".installed-by-file-merge-assistant-setup"
 !define REG_APP "Software\FileMergeAssistant"
 !define REG_UNINSTALL "Software\Microsoft\Windows\CurrentVersion\Uninstall\FileMergeAssistant"
+; The app writes this value when "Start File Merge Assistant when you sign in" is on (StartupRegistration.cs).
+!define REG_RUN "Software\Microsoft\Windows\CurrentVersion\Run"
+!define RUN_VALUE "FileMergeAssistant"
 !define POWERSHELL "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
 !if "${CONFIGURATION}" == "Release"
   !define DISPLAY_NAME "${APP_NAME}"
@@ -80,8 +83,8 @@ LangString SEC_DESKTOP_NAME ${LANG_ENGLISH} "Desktop shortcut"
 LangString SEC_DESKTOP_NAME ${LANG_TRADCHINESE} "桌面捷徑"
 LangString SEC_DESKTOP_DESC ${LANG_ENGLISH} "Adds a shortcut to your desktop."
 LangString SEC_DESKTOP_DESC ${LANG_TRADCHINESE} "在桌面加入捷徑。"
-LangString MSG_RUNNING ${LANG_ENGLISH} "File Merge Assistant or fma is running. Close it, then select Retry."
-LangString MSG_RUNNING ${LANG_TRADCHINESE} "File Merge Assistant 或 fma 正在執行。請先關閉它，再按「重試」。"
+LangString MSG_RUNNING ${LANG_ENGLISH} "File Merge Assistant or fma is running. Close it (File Merge Assistant may be in the tray: right-click its icon and select Exit), then select Retry."
+LangString MSG_RUNNING ${LANG_TRADCHINESE} "File Merge Assistant 或 fma 正在執行。請先關閉它（File Merge Assistant 可能在系統匣：在圖示上按右鍵，選「結束 File Merge Assistant」），再按「重試」。"
 LangString MSG_STILL_RUNNING ${LANG_ENGLISH} "File Merge Assistant or fma is still running, so nothing was changed."
 LangString MSG_STILL_RUNNING ${LANG_TRADCHINESE} "File Merge Assistant 或 fma 仍在執行，所以沒有做任何變更。"
 LangString MSG_FOREIGN ${LANG_ENGLISH} "$INSTDIR\$R9 already exists and was not installed by this setup program, so nothing was changed. Choose another installation folder."
@@ -394,6 +397,8 @@ Section "Uninstall"
   ${If} $R8 = 1
     Delete "$SMPROGRAMS\${APP_NAME}.lnk"
     Delete "$DESKTOP\${APP_NAME}.lnk"
+    ; The app's start-at-sign-in entry (ADR-014); Windows' own Startup apps switch for it is Windows' to keep.
+    DeleteRegValue HKCU "${REG_RUN}" "${RUN_VALUE}"
     ; When another program kept a file in app\ locked, the marker may already be gone. The registry entries then
     ; stay, so the next setup still recognizes the folder as this program's and can replace it.
     ${IfNot} ${FileExists} "$INSTDIR\app\*.*"

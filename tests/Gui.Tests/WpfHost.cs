@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using FileMergeAssistant.Infrastructure;
+using FileMergeAssistant.Localization;
 
 namespace FileMergeAssistant.Gui.Tests;
 
@@ -25,6 +26,8 @@ internal static class WpfHost
   {
     Environment.SetEnvironmentVariable(AppDataPaths.DataDirectoryVariable,
       Path.Combine(Path.GetTempPath(), $"fma-gui-test-data-{Environment.ProcessId}"));
+    // The screens the tests check are in Traditional Chinese, whatever language this Windows uses.
+    AppText.Apply("zh-TW", []);
   }
 
   /// <summary>Runs an action on the WPF thread and returns the binding errors WPF reported while it ran.</summary>

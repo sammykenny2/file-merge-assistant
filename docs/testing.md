@@ -5,10 +5,17 @@ Tests live in `tests/Core.Tests/`, grouped under `Hashing/`, `Reporting/`,
 `Resolution/`, `Services/`, `Stacks/`, `Updates/` and `Workbench/`. NSubstitute supplies test
 doubles; file-operation fixtures create temporary directories and clean them up after each test.
 
+`tests/Core.Tests/Localization/AppTextTests.cs` checks the language catalogs ([i18n.md](i18n.md)): both
+languages of every area have the same keys and placeholders. `Infrastructure/HostPreferencesTests` and
+`StartupRegistrationTests` cover `host-preferences.json` and start at sign-in against in-memory registry keys; no
+test reads or writes the real Run or StartupApproved keys.
+
 `tests/Gui.Tests/` checks the WPF workbench. `ScreenRenderingTests` walks through every screen
 with the demo data on one STA thread (`WpfHost`), renders the whole window body at 1440 px wide
 with `RenderTargetBitmap`, and fails on any WPF binding error. `RealIndexRenderingTests` does the
-same over the real index after scanning a throwaway tree under `%TEMP%`.
+same over the real index after scanning a throwaway tree under `%TEMP%`. `ShellTests` covers the tray menu, the
+three startup switches, the update states and switching the display language; it runs in the non-parallel
+`Display language` collection. Both test assemblies pin the display language to `zh-TW` when they load.
 
 The scanner and real-store tests (`Scanning/`, `Workbench/IndexedWorkbenchStoreTests`) build folder
 trees under `%TEMP%` (`TempTree`) and an index under `FMA_DATA_DIR`. No test scans or reads the real
@@ -17,7 +24,7 @@ also runs while the session is locked. Set `FMA_SNAPSHOT_DIR` to a folder to sav
 a PNG:
 
 ```powershell
-$env:FMA_SNAPSHOT_DIR = "$env:TEMPma-shots"; dotnet test tests/Gui.Tests/Gui.Tests.csproj
+$env:FMA_SNAPSHOT_DIR = "$env:TEMP\fma-shots"; dotnet test tests/Gui.Tests/Gui.Tests.csproj
 ```
 
 The app writes its data under `%LOCALAPPDATA%\FileMergeAssistant` (`AppDataPaths`), or
