@@ -194,6 +194,20 @@ When a test hangs, VSTest writes a sequence attachment under
     copy refused, a locked file left behind and moved on retry, restore, a restore conflict settled by
     renaming, and emptying. Store tests run, restore and empty end to end, and the real-index GUI test runs
     the plan from the plan screen. Core.Tests has 319 tests, Gui.Tests 3; all 322 pass.
+- 2026-10-23, fixes from the Phase 5 reviews:
+  - `PlanExecutorTests` add: every item journalled as running with its paths before it acts; a partly moved
+    folder never emptied and put back file by file; retry moving only files unchanged since the run; a copy
+    retry refused when its source was edited; restore leaving a copied file the user edited; emptying a
+    recycled folder that holds a junction without touching the junction's target; a folder gone before its
+    move failing without moving anything; replace and its restore.
+  - `IndexedWorkbenchStoreTests` add: a copy whose files changed after the decision going back for another
+    look (and staying out of the plan after a restart); a keeper emptied after the decision stopping the whole
+    stack; a copy edited right before the run skipped although the index is stale; convergence only when
+    every item finished (after a retry); a pending decision with an offline keeper waiting without errors;
+    another disk under the same letter not scanned; a junction to a source refused as a second source; the
+    app's own folder, recycle areas and partial files never scanned; a crashed run settled from the disk on
+    the next start; a copy not undone while its source is still recycled.
+  - Core.Tests has 337 tests, Gui.Tests 3; all 340 pass, three runs in a row.
 
 ## Bootstrap Validation
 

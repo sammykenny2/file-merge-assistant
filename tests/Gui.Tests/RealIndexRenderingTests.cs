@@ -59,7 +59,8 @@ public sealed class RealIndexRenderingTests : IDisposable
 
     var errors = WpfHost.Run(() =>
     {
-      using var store = IndexedWorkbenchStore.Open(Path.Combine(_root, "index.db"));
+      // The index (the app data folder) sits beside the scanned folders, never around them.
+      using var store = IndexedWorkbenchStore.Open(Path.Combine(_root, "data", "index.db"));
       var problems = WpfHost.Wait(store.AddSourcesAsync([Path.Combine(_root, "source"), Path.Combine(_root, "backup")],
         new SourceOptions(true, true, [Path.Combine(_root, "source")]), startScan: true));
       Assert.Empty(problems);

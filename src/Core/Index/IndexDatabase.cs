@@ -105,8 +105,16 @@ public sealed class IndexDatabase
     );
     """,
 
-    // Version 2: runs of the plan, each item's journal (where things went), and restore conflicts.
+    // Version 2: runs of the plan, each item's journal (where things went), restore conflicts, and per-source counts
+    // kept by the scanner so the interface never counts the files table.
     """
+    ALTER TABLE sources ADD COLUMN indexed_files INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE sources ADD COLUMN cloud_files INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE sources ADD COLUMN regenerable_files INTEGER NOT NULL DEFAULT 0;
+    UPDATE sources SET
+      indexed_files = (SELECT COUNT(*) FROM files f WHERE f.source_id = sources.id AND f.cloud_only = 0),
+      cloud_files = (SELECT COUNT(*) FROM files f WHERE f.source_id = sources.id AND f.cloud_only = 1),
+      regenerable_files = (SELECT COALESCE(SUM(files), 0) FROM regenerable_dirs r WHERE r.source_id = sources.id);
     CREATE TABLE batches (
       id TEXT PRIMARY KEY,
       ran_at TEXT NOT NULL,
@@ -131,6 +139,9 @@ public sealed class IndexDatabase
       recycled_path TEXT,
       created_path TEXT,
       source_path TEXT,
+      source_stamp TEXT,
+      undone_path TEXT,
+      manifest TEXT,
       PRIMARY KEY (batch_id, id)
     );
     CREATE TABLE restore_conflicts (

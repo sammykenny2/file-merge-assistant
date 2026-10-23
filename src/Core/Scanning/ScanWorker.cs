@@ -16,7 +16,8 @@ public sealed class ScanWorker : IDisposable
 
   private readonly IndexDatabase _database;
   private readonly SourceScanner _scanner;
-  private readonly Func<IReadOnlyDictionary<string, string>> _onlineRoots;
+  private readonly IVolumeInfoProvider _volumes;
+  private readonly IReadOnlyList<string> _excludedRoots;
   private readonly SemaphoreSlim _signal = new(0);
   private readonly CancellationTokenSource _shutdown = new();
   private readonly object _gate = new();
@@ -25,11 +26,15 @@ public sealed class ScanWorker : IDisposable
   private CancellationTokenSource? _jobCancel;
   private bool _pauseRequested;
 
-  public ScanWorker(IndexDatabase database, Func<IReadOnlyDictionary<string, string>> onlineRoots)
+  /// <param name="database">The index.</param>
+  /// <param name="volumes">Checks that a source's folder is on the volume it was added from (ADR-010).</param>
+  /// <param name="excludedRoots">Folders never scanned, such as the app's data folder with its recycle area.</param>
+  public ScanWorker(IndexDatabase database, IVolumeInfoProvider volumes, IReadOnlyList<string> excludedRoots)
   {
     _database = database;
     _scanner = new SourceScanner(database);
-    _onlineRoots = onlineRoots;
+    _volumes = volumes;
+    _excludedRoots = excludedRoots;
   }
 
   /// <summary>Raised on the worker thread when a job's progress or state changes; <c>true</c> when the job ended.</summary>
@@ -112,7 +117,7 @@ public sealed class ScanWorker : IDisposable
           await _signal.WaitAsync(_shutdown.Token).ConfigureAwait(false);
           continue;
         }
-        Run(job.Value.JobId, job.Value.Source);
+        Run(job.Value.JobId, job.Value.Source, job.Value.Serial);
       }
       catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
       {
@@ -134,26 +139,71 @@ public sealed class ScanWorker : IDisposable
     }
   }
 
-  private (string JobId, ScanSource Source)? NextJob()
+  /// <summary>
+  /// Claims the next queued job in one statement, so two workers can never run the same job. A paused job holds the
+  /// queue until it is resumed or cancelled.
+  /// </summary>
+  private (string JobId, ScanSource Source, string? Serial)? NextJob()
   {
     using var connection = _database.Open();
+    if (IndexDatabase.Scalar<long>(connection, "SELECT COUNT(*) FROM jobs WHERE state IN ('Paused', 'Pausing', 'Running')") > 0)
+    {
+      return null;
+    }
+    var jobId = IndexDatabase.Scalar<string>(connection,
+      """
+      UPDATE jobs SET state = 'Running', phase = 'Discover'
+      WHERE id = (SELECT id FROM jobs WHERE state = 'Queued' ORDER BY position, queued_at LIMIT 1) AND state = 'Queued'
+      RETURNING id
+      """);
+    if (jobId is null)
+    {
+      return null;
+    }
+    lock (_gate)
+    {
+      _runningJob = jobId;
+    }
     using var command = IndexDatabase.Command(connection,
       """
-      SELECT j.id, s.id, s.root, s.skip_regenerable, s.skip_cloud, s.regenerable_names, s.exclusions
-      FROM jobs j JOIN sources s ON s.id = j.source_id
-      WHERE j.state = 'Queued' ORDER BY j.position, j.queued_at LIMIT 1
-      """);
+      SELECT s.id, s.root, s.skip_regenerable, s.skip_cloud, s.regenerable_names, s.exclusions, s.volume_serial
+      FROM jobs j JOIN sources s ON s.id = j.source_id WHERE j.id = $id
+      """, ("$id", jobId));
     using var reader = command.ExecuteReader();
     if (!reader.Read())
     {
       return null;
     }
-    var source = new ScanSource(reader.GetString(1), reader.GetString(2), reader.GetInt64(3) != 0, reader.GetInt64(4) != 0,
-      SplitLines(reader.GetString(5)), SplitLines(reader.GetString(6)));
-    return (reader.GetString(0), source);
+    var source = new ScanSource(reader.GetString(0), reader.GetString(1), reader.GetInt64(2) != 0, reader.GetInt64(3) != 0,
+      SplitLines(reader.GetString(4)), SplitLines(reader.GetString(5)))
+    {
+      ExcludedRoots = _excludedRoots,
+    };
+    return (jobId, source, reader.IsDBNull(6) ? null : reader.GetString(6));
   }
 
-  private void Run(string jobId, ScanSource source)
+  /// <summary>True when the folder exists and is on the same volume it was added from.</summary>
+  private bool IsOnline(string root, string? serial) =>
+    Directory.Exists(root) && (serial is null || _volumes.Describe(root)?.Serial is not { } current || current == serial);
+
+  /// <summary>Roots of every source that is online now, read fresh at the start of each job.</summary>
+  private Dictionary<string, string> OnlineRoots()
+  {
+    var roots = new Dictionary<string, string>(StringComparer.Ordinal);
+    using var connection = _database.Open();
+    using var command = IndexDatabase.Command(connection, "SELECT id, root, volume_serial FROM sources");
+    using var reader = command.ExecuteReader();
+    while (reader.Read())
+    {
+      if (IsOnline(reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetString(2)))
+      {
+        roots[reader.GetString(0)] = reader.GetString(1);
+      }
+    }
+    return roots;
+  }
+
+  private void Run(string jobId, ScanSource source, string? serial)
   {
     var cancel = CancellationTokenSource.CreateLinkedTokenSource(_shutdown.Token);
     lock (_gate)
@@ -162,17 +212,28 @@ public sealed class ScanWorker : IDisposable
       _jobCancel = cancel;
       _pauseRequested = false;
     }
-
-    using var connection = _database.Open();
-    if (!Directory.Exists(source.Root))
+    try
     {
-      SetState(connection, jobId, "WaitingForSource", "硬碟離線，更新工作先保留在這裡。接上後會先確認是同一顆硬碟，再開始。");
+      RunClaimed(jobId, source, serial, cancel);
+    }
+    finally
+    {
       Finish(cancel);
       JobChanged?.Invoke(this, true);
+    }
+  }
+
+  private void RunClaimed(string jobId, ScanSource source, string? serial, CancellationTokenSource cancel)
+  {
+    using var connection = _database.Open();
+    if (!IsOnline(source.Root, serial))
+    {
+      // Missing, or another disk under the same letter: never index it as this source.
+      SetState(connection, jobId, "WaitingForSource", Directory.Exists(source.Root)
+        ? "這個位置現在是另一顆硬碟（磁碟區序號不同），所以沒有掃描。接上原本那顆後再試。"
+        : "硬碟離線，更新工作先保留在這裡。接上後會先確認是同一顆硬碟，再開始。");
       return;
     }
-
-    IndexDatabase.Execute(connection, "UPDATE jobs SET state = 'Running', phase = 'Discover' WHERE id = $id", ("$id", jobId));
     JobChanged?.Invoke(this, false);
 
     var lastSave = Stopwatch.StartNew();
@@ -193,7 +254,10 @@ public sealed class ScanWorker : IDisposable
     string? failure = null;
     try
     {
-      stop = _scanner.Run(source, jobId, _onlineRoots(), Report, () =>
+      var roots = OnlineRoots();
+      // This job's own root passed the volume check just now, whatever the snapshot says.
+      roots[source.Id] = source.Root;
+      stop = _scanner.Run(source, jobId, roots, Report, () =>
       {
         lock (_gate)
         {
@@ -217,6 +281,7 @@ public sealed class ScanWorker : IDisposable
     {
       SaveProgress(connection, jobId, last);
     }
+    SaveCounts(connection, source.Id);
     var now = DateTimeOffset.Now.ToString("o", CultureInfo.InvariantCulture);
     if (_shutdown.IsCancellationRequested)
     {
@@ -246,8 +311,6 @@ public sealed class ScanWorker : IDisposable
       IndexDatabase.Execute(connection, "DELETE FROM jobs WHERE source_id = $s AND state = 'Completed' AND id <> $id",
         ("$s", source.Id), ("$id", jobId));
     }
-    Finish(cancel);
-    JobChanged?.Invoke(this, true);
   }
 
   private void Finish(CancellationTokenSource cancel)
@@ -260,6 +323,18 @@ public sealed class ScanWorker : IDisposable
     }
     cancel.Dispose();
   }
+
+  /// <summary>Stores a source's counts for the interface (one pass over the source's rows, after a scan stops).</summary>
+  private static void SaveCounts(SqliteConnection connection, string sourceId) =>
+    IndexDatabase.Execute(connection,
+      """
+      UPDATE sources SET
+        indexed_files = (SELECT COUNT(*) FROM files f WHERE f.source_id = $s AND f.cloud_only = 0),
+        cloud_files = (SELECT COUNT(*) FROM files f WHERE f.source_id = $s AND f.cloud_only = 1),
+        regenerable_files = (SELECT COALESCE(SUM(files), 0) FROM regenerable_dirs r WHERE r.source_id = $s)
+      WHERE id = $s
+      """,
+      ("$s", sourceId));
 
   private static void SetState(SqliteConnection connection, string jobId, string state, string reason) =>
     IndexDatabase.Execute(connection, "UPDATE jobs SET state = $state, reason = $reason, saved = discovered WHERE id = $id",

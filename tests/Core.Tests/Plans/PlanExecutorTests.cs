@@ -58,8 +58,32 @@ public sealed class PlanExecutorTests : IDisposable
   private static PlanEntry Plan(Stack stack, StackDecision? decision = null) =>
     PlanBuilder.Build(new StackReview(stack, decision ?? StackDecision.Suggested(stack)), Now);
 
-  private ExecutionBatch Run(PlanEntry entry, Func<PlanEntry, PlanItem, string?>? check = null) =>
-    _executor.Execute("b1", Now, [entry], check ?? ((_, _) => null), CancellationToken.None);
+  private ExecutionBatch Run(PlanEntry entry, Func<PlanEntry, PlanItem, string?>? check = null, Action<BatchItem>? record = null) =>
+    _executor.Execute("b1", Now, [entry], check ?? ((_, _) => null), record ?? (_ => { }), CancellationToken.None);
+
+  private PlanEntry KeepKeeperOnly()
+  {
+    var stack = BuildStack();
+    return Plan(stack, StackDecision.Suggested(stack).WithAction(StackAction.KeepKeeperOnly));
+  }
+
+  private static BatchItem Desk(ExecutionBatch batch) =>
+    batch.Items.Single(i => i.OriginalPath?.EndsWith("desk", StringComparison.Ordinal) == true);
+
+  private static void CreateJunction(string junctionPath, string targetPath)
+  {
+    using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+    {
+      FileName = "cmd.exe",
+      ArgumentList = { "/c", "mklink", "/J", junctionPath, targetPath },
+      UseShellExecute = false,
+      CreateNoWindow = true,
+      RedirectStandardOutput = true,
+      RedirectStandardError = true,
+    })!;
+    process.WaitForExit();
+    Assert.True(process.ExitCode == 0 && Directory.Exists(junctionPath), "Could not create a test junction with mklink /J.");
+  }
 
   [Fact]
   public void Merge_Copies_Into_The_Keeper_Then_Moves_The_Other_Copies_To_The_Recycle_Area()
@@ -201,6 +225,183 @@ public sealed class PlanExecutorTests : IDisposable
 
     Assert.False(Directory.Exists(Path.Combine(_appData, "recycle-areas", "b1")));
     Assert.True(File.Exists(_tree.PathOf(@"keeper\a.txt")));
+  }
+
+  [Fact]
+  public void Every_Item_Is_Journalled_With_Its_Paths_Before_It_Acts()
+  {
+    var entry = Plan(BuildStack());
+    var journal = new List<(BatchItem Item, bool OriginalThere, bool CreatedThere)>();
+
+    var batch = Run(entry, record: item => journal.Add((item,
+      item.OriginalPath is { } o && (File.Exists(o) || Directory.Exists(o)),
+      item.CreatedPath is { } c && File.Exists(c))));
+
+    foreach (var done in batch.Items)
+    {
+      // The first record of every item that ran is "Running", written while nothing has moved yet.
+      var first = journal.First(j => j.Item.Id == done.Id);
+      Assert.Equal(BatchItemState.Running, first.Item.State);
+      if (done.Kind == PlanItemKind.Recycle)
+      {
+        Assert.True(first.OriginalThere);
+        Assert.Equal(done.RecycledPath, first.Item.RecycledPath);
+      }
+      else
+      {
+        Assert.False(first.CreatedThere);
+        Assert.Equal(done.CreatedPath, first.Item.CreatedPath);
+        Assert.NotNull(first.Item.SourceStamp);
+      }
+      Assert.Equal(BatchItemState.Done, journal.Last(j => j.Item.Id == done.Id).Item.State);
+    }
+  }
+
+  [Fact]
+  public void A_Partly_Moved_Folder_Is_Never_Emptied_And_Can_Be_Put_Back()
+  {
+    var entry = KeepKeeperOnly();
+    BatchItem desk;
+    ExecutionBatch batch;
+    using (new FileStream(_tree.PathOf(@"desk\sub\b.txt"), FileMode.Open, FileAccess.Read, FileShare.None))
+    {
+      batch = Run(entry);
+      desk = Desk(batch);
+    }
+    Assert.Equal(BatchItemState.Failed, desk.State);
+    Assert.True(desk.CanRestore);
+    var moved = Path.Combine(desk.RecycledPath!, "a.txt");
+    Assert.True(File.Exists(moved));
+
+    var (emptied, complete) = _executor.Empty(batch);
+
+    Assert.False(complete);
+    Assert.DoesNotContain(desk.Id, emptied);
+    Assert.True(File.Exists(moved));
+
+    var restored = _executor.Restore("b1", desk, Now);
+
+    Assert.Equal(BatchItemState.Restored, restored.Item.State);
+    Assert.Equal("same a", File.ReadAllText(_tree.PathOf(@"desk\a.txt")));
+    Assert.True(File.Exists(_tree.PathOf(@"desk\sub\b.txt")));
+  }
+
+  [Fact]
+  public void Retry_Moves_Only_Files_That_Are_Still_Exactly_As_They_Were()
+  {
+    var entry = KeepKeeperOnly();
+    BatchItem desk;
+    using (new FileStream(_tree.PathOf(@"desk\sub\b.txt"), FileMode.Open, FileAccess.Read, FileShare.None))
+    {
+      desk = Desk(Run(entry));
+    }
+    // After the run, the user edits the file that stayed behind and saves a new one next to it.
+    _tree.Write(@"desk\sub\b.txt", "edited after the run", new DateTime(2026, 10, 23, 8, 0, 0, DateTimeKind.Utc));
+    _tree.Write(@"desk\new.txt", "made after the run");
+
+    var retried = PlanExecutor.Retry(desk);
+
+    Assert.Equal(BatchItemState.Failed, retried.State);
+    Assert.Equal(2, retried.FailedFiles);
+    Assert.Equal("edited after the run", File.ReadAllText(_tree.PathOf(@"desk\sub\b.txt")));
+    Assert.True(File.Exists(_tree.PathOf(@"desk\new.txt")));
+    Assert.False(File.Exists(Path.Combine(desk.RecycledPath!, "new.txt")));
+  }
+
+  [Fact]
+  public void Retry_Of_A_Copy_Refuses_A_Source_Edited_Since()
+  {
+    var entry = Plan(BuildStack());
+    _tree.Write(@"keeper\only-backup.txt", "in the way");
+    var copy = Run(entry).Items.Single(i => i.Kind == PlanItemKind.Copy);
+    Assert.Equal(BatchItemState.Failed, copy.State);
+    File.Delete(_tree.PathOf(@"keeper\only-backup.txt"));
+    _tree.Write(@"backup\only-backup.txt", "edited after the run", new DateTime(2026, 10, 23, 8, 0, 0, DateTimeKind.Utc));
+
+    var retried = PlanExecutor.Retry(copy);
+
+    Assert.Equal(BatchItemState.Failed, retried.State);
+    Assert.False(File.Exists(_tree.PathOf(@"keeper\only-backup.txt")));
+  }
+
+  [Fact]
+  public void Restore_Leaves_A_Copied_File_The_User_Edited_Afterwards()
+  {
+    var batch = Run(Plan(BuildStack()));
+    var copy = batch.Items.Single(i => i.Kind == PlanItemKind.Copy);
+    _tree.Write(@"keeper\only-backup.txt", "the user kept working on it", new DateTime(2026, 10, 23, 9, 0, 0, DateTimeKind.Utc));
+
+    var outcome = _executor.Restore("b1", copy, Now);
+
+    Assert.Equal(BatchItemState.Done, outcome.Item.State);
+    Assert.NotNull(outcome.Item.FailureReason);
+    Assert.Equal("the user kept working on it", File.ReadAllText(_tree.PathOf(@"keeper\only-backup.txt")));
+  }
+
+  [Fact]
+  public void Emptying_Removes_A_Junction_Without_Touching_What_It_Points_To()
+  {
+    _tree.Write(@"elsewhere\precious.txt", "not part of any copy");
+    var entry = KeepKeeperOnly();
+    CreateJunction(_tree.PathOf(@"desk\link"), _tree.PathOf("elsewhere"));
+    var batch = Run(entry);
+    Assert.Equal(BatchItemState.Done, Desk(batch).State);
+
+    var (_, complete) = _executor.Empty(batch);
+
+    Assert.True(complete);
+    Assert.Equal("not part of any copy", File.ReadAllText(_tree.PathOf(@"elsewhere\precious.txt")));
+    Assert.False(Directory.Exists(Desk(batch).RecycledPath));
+  }
+
+  [Fact]
+  public void A_Folder_That_Vanished_Before_Its_Move_Fails_Without_Moving_Anything()
+  {
+    var entry = KeepKeeperOnly();
+
+    var batch = Run(entry, (_, item) =>
+    {
+      if (item.SourcePath.EndsWith("desk", StringComparison.Ordinal) && Directory.Exists(item.SourcePath))
+      {
+        Directory.Move(item.SourcePath, item.SourcePath + "-renamed");
+      }
+      return null;
+    });
+
+    var desk = Desk(batch);
+    Assert.Equal(BatchItemState.Failed, desk.State);
+    Assert.False(desk.CanRestore);
+    Assert.True(File.Exists(_tree.PathOf(@"desk-renamed\a.txt")));
+  }
+
+  [Fact]
+  public void Replace_Keeps_The_Keepers_Version_In_The_Recycle_Area_And_Restore_Brings_It_Back()
+  {
+    foreach (var copy in new[] { "keeper", "backup" })
+    {
+      _tree.Write($@"{copy}\same.txt", "same");
+    }
+    _tree.Write(@"keeper\report.txt", "keeper's older report", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+    _tree.Write(@"backup\report.txt", "backup's newer report", new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc));
+    var stack = new Stack("stack", "project", StackKind.Folder,
+      [Copy("keeper", _tree.PathOf("keeper")), Copy("backup", _tree.PathOf("backup"))],
+      [new StackRow("report.txt", [new FileVersion("k", Now.AddDays(-30), 21), new FileVersion("b", Now, 21)])],
+      0, StackAction.Merge) { SameFileCount = 1 };
+    var entry = Plan(stack, StackDecision.Suggested(stack).WithChoice("report.txt", ConflictChoice.Theirs));
+    Assert.Contains(entry.Items, i => i.Kind == PlanItemKind.Replace);
+
+    var batch = Run(entry);
+
+    var replace = batch.Items.Single(i => i.Kind == PlanItemKind.Replace);
+    Assert.Equal(BatchItemState.Done, replace.State);
+    Assert.Equal("backup's newer report", File.ReadAllText(_tree.PathOf(@"keeper\report.txt")));
+    Assert.Equal("keeper's older report", File.ReadAllText(replace.RecycledPath!));
+
+    var restored = _executor.Restore("b1", replace, Now);
+
+    Assert.Equal(BatchItemState.Restored, restored.Item.State);
+    Assert.Equal("keeper's older report", File.ReadAllText(_tree.PathOf(@"keeper\report.txt")));
+    Assert.Equal("backup's newer report", File.ReadAllText(restored.Item.UndonePath!));
   }
 
   [Fact]

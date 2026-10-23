@@ -1,8 +1,10 @@
 using System.Buffers;
 using System.Globalization;
 using System.IO.Hashing;
+using System.Text;
+using System.Text.RegularExpressions;
 using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Stacks;
+using FileMergeAssistant.Sources;
 
 namespace FileMergeAssistant.Plans;
 
@@ -13,8 +15,6 @@ namespace FileMergeAssistant.Plans;
 /// </summary>
 public sealed class RecycleAreaLocator
 {
-  public const string VolumeFolderName = ".fma-recycle";
-
   private readonly string _appDataRoot;
 
   public RecycleAreaLocator(string appDataRoot)
@@ -22,12 +22,15 @@ public sealed class RecycleAreaLocator
     _appDataRoot = Path.GetFullPath(appDataRoot);
   }
 
+  /// <summary>The app's data folder; never scanned and never a source of copies.</summary>
+  public string AppDataRoot => _appDataRoot;
+
   public string AreaFor(string path)
   {
     var volume = Volume(path);
     return string.Equals(volume, Volume(_appDataRoot), StringComparison.OrdinalIgnoreCase)
       ? Path.Combine(_appDataRoot, "recycle-areas")
-      : Path.Combine(volume, VolumeFolderName);
+      : Path.Combine(volume, ScanFilter.RecycleFolderName);
   }
 
   /// <summary>True when <paramref name="path"/> is inside a recycle area this app manages.</summary>
@@ -35,7 +38,8 @@ public sealed class RecycleAreaLocator
   {
     var full = Path.GetFullPath(path);
     var area = AreaFor(full).TrimEnd('\\') + "\\";
-    return full.StartsWith(area, StringComparison.OrdinalIgnoreCase);
+    return full.StartsWith(area, StringComparison.OrdinalIgnoreCase)
+      || full.Contains("\\" + ScanFilter.RecycleFolderName + "\\", StringComparison.OrdinalIgnoreCase);
   }
 
   public static string Volume(string path) => Path.GetPathRoot(Path.GetFullPath(path)) ?? string.Empty;
@@ -50,12 +54,11 @@ public sealed record RestoreOutcome(BatchItem Item, RestoreConflict? Conflict);
 /// overwritten. If any copy of a stack fails or changed, that stack's recycling does not run. Recycling moves a copy
 /// into the recycle area of its own volume; a folder that cannot move as a whole moves file by file, and what is still
 /// in use stays for a retry. Protected copies are never recycled or overwritten. Every item is re-checked just before it
-/// runs. Nothing is ever deleted except when the recycle areas are emptied.
+/// runs and is journalled before it acts and after. Nothing is ever deleted except when the recycle areas are emptied,
+/// and emptying never follows links and never touches a partly moved item.
 /// </summary>
-public sealed class PlanExecutor
+public sealed partial class PlanExecutor
 {
-  private const string PartialSuffix = ".fma-partial";
-
   private readonly RecycleAreaLocator _areas;
 
   public PlanExecutor(RecycleAreaLocator areas)
@@ -68,13 +71,22 @@ public sealed class PlanExecutor
   /// <param name="ranAt">When the run started.</param>
   /// <param name="plan">The pending plan, already re-checked.</param>
   /// <param name="checkNow">Re-checks one item right before it runs; returns why it changed, or null.</param>
+  /// <param name="record">Journals each item: once as <see cref="BatchItemState.Running"/> before it acts, then its result.</param>
   /// <param name="cancellationToken">Stops before the next item; finished items stay recorded.</param>
   public ExecutionBatch Execute(string batchId, DateTimeOffset ranAt, IReadOnlyList<PlanEntry> plan, Func<PlanEntry, PlanItem, string?> checkNow,
-    CancellationToken cancellationToken)
+    Action<BatchItem> record, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(plan);
     ArgumentNullException.ThrowIfNull(checkNow);
+    ArgumentNullException.ThrowIfNull(record);
+    RequireBatchId(batchId);
     var results = new List<BatchItem>();
+    void Add(BatchItem item)
+    {
+      results.Add(item);
+      record(item);
+    }
+
     var slot = 0;
     foreach (var entry in plan)
     {
@@ -88,45 +100,67 @@ public sealed class PlanExecutor
         slot++;
         if (item.Check == PlanCheck.Changed)
         {
-          results.Add(Skipped(entry, item, item.ChangeDetail ?? "決定之後有變動"));
+          Add(Skipped(entry, item, item.ChangeDetail ?? "決定之後有變動"));
           copyIncomplete |= item.IsCopyLike;
           continue;
         }
         if (!item.IsCopyLike && copyIncomplete)
         {
-          results.Add(Skipped(entry, item, "同一疊有檔還沒複製進正本，所以這份先不移入回收區，以免只在這份裡的檔跟著被移走。"));
+          Add(Skipped(entry, item, "同一疊有檔還沒複製進正本，所以這份先不移入回收區，以免只在這份裡的檔跟著被移走。"));
           continue;
         }
-        var changed = checkNow(entry, item);
+        string? changed;
+        try
+        {
+          changed = checkNow(entry, item);
+        }
+#pragma warning disable CA1031 // Any failure to check means the item does not run.
+        catch (Exception e)
+#pragma warning restore CA1031
+        {
+          changed = $"執行前無法確認現況：{e.Message}";
+        }
         if (changed is not null)
         {
-          results.Add(Skipped(entry, item, changed));
+          Add(Skipped(entry, item, changed));
           copyIncomplete |= item.IsCopyLike;
           continue;
         }
 
+        BatchItem intent;
         BatchItem result;
         try
         {
+          intent = Intent(entry, item, batchId, slot);
+          record(intent);
           result = item.Kind switch
           {
-            PlanItemKind.Copy or PlanItemKind.SaveAs => Copy(entry, item),
-            PlanItemKind.Replace => Replace(entry, item, batchId, slot),
-            _ => Recycle(entry, item, batchId, slot),
+            PlanItemKind.Copy or PlanItemKind.SaveAs => Copy(entry, intent),
+            PlanItemKind.Replace => Replace(entry, intent),
+            _ => Recycle(entry, item, intent),
           };
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
+#pragma warning disable CA1031 // Whatever goes wrong, the item is journalled as failed with its paths, never lost.
+        catch (Exception e)
+#pragma warning restore CA1031
         {
           result = Base(entry, item, BatchItemState.Failed) with { FailureReason = e.Message, FailedFiles = item.FileCount };
+          if (TryIntent(entry, item, batchId, slot) is { } planned)
+          {
+            result = planned with { State = BatchItemState.Failed, FailureReason = e.Message, FailedFiles = item.FileCount };
+          }
         }
-        results.Add(result);
+        Add(result);
         copyIncomplete |= item.IsCopyLike && result.State != BatchItemState.Done;
       }
     }
     return new ExecutionBatch(batchId, ranAt, results);
   }
 
-  /// <summary>Retries a failed item: a copy is attempted again; a partly recycled folder moves its remaining files.</summary>
+  /// <summary>
+  /// Retries a failed item: a copy runs again if its source is unchanged; a partly recycled folder moves only the remaining
+  /// files that are still exactly as they were when the run started.
+  /// </summary>
   public static BatchItem Retry(BatchItem item)
   {
     ArgumentNullException.ThrowIfNull(item);
@@ -138,12 +172,17 @@ public sealed class PlanExecutor
     {
       if (item.Kind is PlanItemKind.Copy or PlanItemKind.SaveAs && item.SourcePath is { } source && item.CreatedPath is { } created)
       {
+        if (item.SourceStamp is not null && Stamp(source) != item.SourceStamp)
+        {
+          return item with { FailureReason = $"{source} 在整理之後被修改過，沒有重試。請重新比對這疊。" };
+        }
         CopyVerified(source, created);
         return item with { State = BatchItemState.Done, FailureReason = null, FailedFiles = 0, Retried = true };
       }
-      if (item.Kind == PlanItemKind.Recycle && item.OriginalPath is { } original && item.RecycledPath is { } recycled)
+      if (item.Kind == PlanItemKind.Recycle && item.OriginalPath is { } original && item.RecycledPath is { } recycled && item.Manifest is { } manifest)
       {
-        var failed = MoveRemaining(original, recycled, out var reason);
+        var allowed = ParseManifest(manifest);
+        var failed = MoveFiles(original, recycled, allowed, out var reason);
         return failed == 0
           ? item with { State = BatchItemState.Done, FailureReason = null, FailedFiles = 0, Retried = true }
           : item with { FailedFiles = failed, FailureReason = reason };
@@ -157,18 +196,28 @@ public sealed class PlanExecutor
   }
 
   /// <summary>
-  /// Undoes one item: a recycled copy goes back to where it was; a file this run created in the keeper goes to the recycle
-  /// area; a replaced keeper file gets its old version back. Nothing at the original place is ever overwritten.
+  /// Undoes one item: a recycled copy goes back to where it was (file by file for a partly moved one); a file this run
+  /// created in the keeper goes to the recycle area if it is still exactly what was copied; a replaced keeper file gets
+  /// its old version back. Nothing at the original place is ever overwritten.
   /// </summary>
   public RestoreOutcome Restore(string batchId, BatchItem item, DateTimeOffset now)
   {
     ArgumentNullException.ThrowIfNull(item);
-    if (item.State != BatchItemState.Done)
+    RequireBatchId(batchId);
+    if (!item.CanRestore)
     {
       return new RestoreOutcome(item, null);
     }
     switch (item.Kind)
     {
+      case PlanItemKind.Recycle when item.State == BatchItemState.Failed:
+      {
+        // A partly moved folder: put back what moved, file by file, never over something already there.
+        var left = MoveFiles(item.RecycledPath!, item.OriginalPath!, null, out _);
+        return left == 0
+          ? new RestoreOutcome(item with { State = BatchItemState.Restored, FailureReason = null }, null)
+          : new RestoreOutcome(item with { FailureReason = $"{left} 個檔的原位置已經有檔案，那些檔留在回收區。" }, null);
+      }
       case PlanItemKind.Recycle:
       {
         var original = item.OriginalPath!;
@@ -181,21 +230,31 @@ public sealed class PlanExecutor
         return new RestoreOutcome(item with { State = BatchItemState.Restored }, null);
       }
       case PlanItemKind.Copy or PlanItemKind.SaveAs:
-        RecycleCreated(batchId, item);
-        return new RestoreOutcome(item with { State = BatchItemState.Restored }, null);
+      {
+        if (!CreatedUnchanged(item, out var why))
+        {
+          return new RestoreOutcome(item with { FailureReason = why }, null);
+        }
+        var undone = RecycleCreated(batchId, item);
+        return new RestoreOutcome(item with { State = BatchItemState.Restored, UndonePath = undone }, null);
+      }
       default:
       {
         // Replace: the copied-in version goes to the recycle area, then the keeper's own version comes back.
-        RecycleCreated(batchId, item);
-        if (item.RecycledPath is { } old && item.OriginalPath is { } original)
+        if (item.State == BatchItemState.Done && !CreatedUnchanged(item, out var why))
+        {
+          return new RestoreOutcome(item with { FailureReason = why }, null);
+        }
+        var undone = item.State == BatchItemState.Done ? RecycleCreated(batchId, item) : null;
+        if (item.RecycledPath is { } old && item.OriginalPath is { } original && File.Exists(old))
         {
           if (File.Exists(original))
           {
-            return new RestoreOutcome(item, Conflict(batchId, item, original, old));
+            return new RestoreOutcome(item with { UndonePath = undone }, Conflict(batchId, item, original, old));
           }
           PutBack(old, original);
         }
-        return new RestoreOutcome(item with { State = BatchItemState.Restored }, null);
+        return new RestoreOutcome(item with { State = BatchItemState.Restored, UndonePath = undone }, null);
       }
     }
   }
@@ -206,8 +265,8 @@ public sealed class PlanExecutor
   {
     ArgumentNullException.ThrowIfNull(conflict);
     ArgumentNullException.ThrowIfNull(item);
-    var recycled = item.Kind == PlanItemKind.Recycle || item.Kind == PlanItemKind.Replace ? item.RecycledPath : null;
-    if (choice == RestoreConflictChoice.KeepInRecycleArea || recycled is null)
+    var recycled = item.Kind is PlanItemKind.Recycle or PlanItemKind.Replace ? item.RecycledPath : null;
+    if (choice == RestoreConflictChoice.KeepInRecycleArea || recycled is null || (!File.Exists(recycled) && !Directory.Exists(recycled)))
     {
       return null;
     }
@@ -219,26 +278,61 @@ public sealed class PlanExecutor
     return target;
   }
 
-  /// <summary>Permanently deletes what this batch left in the recycle areas. Only paths inside recycle areas are touched.</summary>
-  public void Empty(ExecutionBatch batch)
+  /// <summary>
+  /// Permanently deletes what this batch's finished items left in the recycle areas. Partly moved or interrupted items
+  /// are left alone (they can still be restored or retried); links are removed, never followed; only paths inside
+  /// recycle areas are touched.
+  /// </summary>
+  /// <returns>The items whose recycle-area content is gone now, and whether nothing of the batch is left there.</returns>
+  public (IReadOnlySet<string> Emptied, bool Complete) Empty(ExecutionBatch batch)
   {
     ArgumentNullException.ThrowIfNull(batch);
-    foreach (var path in batch.Items.Select(i => i.RecycledPath).Where(p => p is not null).Select(p => p!))
+    RequireBatchId(batch.Id);
+    var emptied = new HashSet<string>(StringComparer.Ordinal);
+    var complete = true;
+    foreach (var item in batch.Items)
     {
-      if (!_areas.IsInsideArea(path))
+      if (item.State is BatchItemState.Failed or BatchItemState.Running && item.Kind is PlanItemKind.Recycle or PlanItemKind.Replace
+        && item.RecycledPath is not null)
       {
+        // Partly moved or interrupted: it can still be restored, so it is never deleted here.
+        complete = false;
         continue;
       }
-      DeleteTree(path);
-    }
-    foreach (var volume in batch.Items.Select(i => i.OriginalPath ?? i.CreatedPath).Where(p => p is not null).Select(p => RecycleAreaLocator.Volume(p!)).Distinct(StringComparer.OrdinalIgnoreCase))
-    {
-      var folder = Path.Combine(_areas.AreaFor(volume), batch.Id);
-      if (Directory.Exists(folder))
+      var paths = new List<string>();
+      if (item.State == BatchItemState.Done && item.Kind is PlanItemKind.Recycle or PlanItemKind.Replace && item.RecycledPath is { } recycled)
       {
-        DeleteTree(folder);
+        paths.Add(recycled);
+      }
+      if (item.UndonePath is { } undone)
+      {
+        paths.Add(undone);
+      }
+      try
+      {
+        foreach (var path in paths)
+        {
+          if (_areas.IsInsideArea(path) && path.Contains("\\" + batch.Id + "\\", StringComparison.OrdinalIgnoreCase))
+          {
+            DeleteWithoutFollowingLinks(path);
+          }
+        }
+        if (paths.Count > 0)
+        {
+          emptied.Add(item.Id);
+        }
+      }
+      catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+      {
+        complete = false;
       }
     }
+    foreach (var area in batch.Items.SelectMany(i => new[] { i.RecycledPath, i.UndonePath }).Where(p => p is not null)
+      .Select(p => _areas.AreaFor(p!)).Distinct(StringComparer.OrdinalIgnoreCase))
+    {
+      RemoveEmptyFolders(Path.Combine(area, batch.Id));
+    }
+    return (emptied, complete);
   }
 
   /// <summary>Copies a file through a temporary file, verifies the bytes by fingerprint, then moves it into place.</summary>
@@ -253,7 +347,8 @@ public sealed class PlanExecutor
     {
       Directory.CreateDirectory(directory);
     }
-    var partial = destination + PartialSuffix;
+    var partial = destination + ScanFilter.PartialSuffix;
+    var created = false;
     var hasher = new XxHash128();
     var buffer = ArrayPool<byte>.Shared.Rent(1 << 20);
     DateTime modified;
@@ -263,6 +358,7 @@ public sealed class PlanExecutor
       using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16, FileOptions.SequentialScan))
       using (var output = new FileStream(partial, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1 << 16))
       {
+        created = true;
         int read;
         while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
         {
@@ -272,64 +368,111 @@ public sealed class PlanExecutor
         output.Flush(flushToDisk: true);
         modified = File.GetLastWriteTimeUtc(source);
       }
-    }
-    catch
-    {
-      TryDeletePartial(partial);
-      throw;
+
+      var expected = SourceScanner.HashPrefix + Convert.ToHexStringLower(hasher.GetCurrentHash());
+      if (SourceScanner.Fingerprint(partial, CancellationToken.None) != expected)
+      {
+        throw new IOException($"複製 {source} 之後內容不一致，已放棄這次複製。");
+      }
+      File.SetLastWriteTimeUtc(partial, modified);
+      File.Move(partial, destination, overwrite: false);
+      created = false;
     }
     finally
     {
       ArrayPool<byte>.Shared.Return(buffer);
+      if (created)
+      {
+        TryDeletePartial(partial);
+      }
     }
-
-    var expected = SourceScanner.HashPrefix + Convert.ToHexStringLower(hasher.GetCurrentHash());
-    if (SourceScanner.Fingerprint(partial, CancellationToken.None) != expected)
-    {
-      TryDeletePartial(partial);
-      throw new IOException($"複製 {source} 之後內容不一致，已放棄這次複製。");
-    }
-    File.SetLastWriteTimeUtc(partial, modified);
-    File.Move(partial, destination, overwrite: false);
   }
 
-  private static BatchItem Copy(PlanEntry entry, PlanItem item)
+  /// <summary>Size and time of a file as <c>size|ticks</c>.</summary>
+  public static string Stamp(string path)
   {
-    RequireInside(item.DestinationPath, entry.Keeper.Path);
-    CopyVerified(item.SourcePath, item.DestinationPath);
-    return Base(entry, item, BatchItemState.Done) with { CreatedPath = item.DestinationPath };
+    var file = new FileInfo(path);
+    return file.Exists ? string.Create(CultureInfo.InvariantCulture, $"{file.Length}|{file.LastWriteTimeUtc.Ticks}") : "missing";
   }
 
-  private BatchItem Replace(PlanEntry entry, PlanItem item, string batchId, int slot)
+  private BatchItem Intent(PlanEntry entry, PlanItem item, string batchId, int slot)
+  {
+    var intent = Base(entry, item, BatchItemState.Running);
+    RequireOutsideArea(entry.Keeper.Path);
+    RequireOutsideArea(item.SourcePath);
+    switch (item.Kind)
+    {
+      case PlanItemKind.Copy or PlanItemKind.SaveAs:
+        return intent with { SourceStamp = Stamp(item.SourcePath) };
+      case PlanItemKind.Replace:
+        return intent with
+        {
+          SourceStamp = Stamp(item.SourcePath),
+          OriginalPath = item.DestinationPath,
+          RecycledPath = Path.Combine(SlotFolder(item.DestinationPath, batchId, slot), Path.GetFileName(item.DestinationPath)),
+          RecycleVolume = RecycleAreaLocator.Volume(item.DestinationPath),
+        };
+      default:
+        return intent with
+        {
+          OriginalPath = item.SourcePath,
+          RecycledPath = Path.Combine(SlotFolder(item.SourcePath, batchId, slot), Path.GetFileName(item.SourcePath.TrimEnd('\\'))),
+        };
+    }
+  }
+
+  private BatchItem? TryIntent(PlanEntry entry, PlanItem item, string batchId, int slot)
+  {
+    try
+    {
+      return Intent(entry, item, batchId, slot);
+    }
+#pragma warning disable CA1031 // Best effort: a failed item keeps whatever paths can still be worked out.
+    catch (Exception)
+#pragma warning restore CA1031
+    {
+      return null;
+    }
+  }
+
+  private static BatchItem Copy(PlanEntry entry, BatchItem intent)
+  {
+    RequireInside(intent.CreatedPath!, entry.Keeper.Path);
+    CopyVerified(intent.SourcePath!, intent.CreatedPath!);
+    return intent with { State = BatchItemState.Done };
+  }
+
+  private static BatchItem Replace(PlanEntry entry, BatchItem intent)
   {
     if (entry.Keeper.IsProtected)
     {
       throw new InvalidOperationException("正本受保護，不會被覆寫。");
     }
-    RequireInside(item.DestinationPath, entry.Keeper.Path);
-    var folder = SlotFolder(item.DestinationPath, batchId, slot);
-    var old = Path.Combine(folder, Path.GetFileName(item.DestinationPath));
-    File.Move(item.DestinationPath, old, overwrite: false);
+    var destination = intent.CreatedPath!;
+    RequireInside(destination, entry.Keeper.Path);
+    var old = intent.RecycledPath!;
+    File.Move(destination, old, overwrite: false);
     try
     {
-      CopyVerified(item.SourcePath, item.DestinationPath);
+      CopyVerified(intent.SourcePath!, destination);
     }
-    catch
+    catch (Exception e) when (e is IOException or UnauthorizedAccessException)
     {
-      // Put the keeper's own version back before reporting the failure.
-      File.Move(old, item.DestinationPath, overwrite: false);
-      throw;
+      try
+      {
+        File.Move(old, destination, overwrite: false);
+        return intent with { State = BatchItemState.Failed, FailureReason = e.Message, RecycledPath = null, OriginalPath = null };
+      }
+      catch (Exception back) when (back is IOException or UnauthorizedAccessException)
+      {
+        // The keeper's own version stays recorded in the recycle area; restoring this item puts it back.
+        return intent with { State = BatchItemState.Failed, FailureReason = $"{e.Message} 正本原本的版本在回收區，還原這一項可以放回去。" };
+      }
     }
-    return Base(entry, item, BatchItemState.Done) with
-    {
-      CreatedPath = item.DestinationPath,
-      OriginalPath = item.DestinationPath,
-      RecycledPath = old,
-      RecycleVolume = RecycleAreaLocator.Volume(item.DestinationPath),
-    };
+    return intent with { State = BatchItemState.Done };
   }
 
-  private BatchItem Recycle(PlanEntry entry, PlanItem item, string batchId, int slot)
+  private BatchItem Recycle(PlanEntry entry, PlanItem item, BatchItem intent)
   {
     var copy = entry.Stack.Copies.FirstOrDefault(c => c.Id == item.CopyId)
       ?? throw new InvalidOperationException("這份已經不在這疊裡。");
@@ -341,22 +484,26 @@ public sealed class PlanExecutor
     {
       throw new InvalidOperationException("計畫與這疊的內容不一致，沒有執行。");
     }
-    var target = Path.Combine(SlotFolder(copy.Path, batchId, slot), Path.GetFileName(copy.Path.TrimEnd('\\')));
-    var result = Base(entry, item, BatchItemState.Done) with
+    var target = intent.RecycledPath!;
+    var area = _areas.AreaFor(copy.Path);
+    if (!string.Equals(RecycleAreaLocator.Volume(PathIdentity.Resolve(copy.Path)), RecycleAreaLocator.Volume(PathIdentity.Resolve(area)),
+      StringComparison.OrdinalIgnoreCase))
     {
-      OriginalPath = copy.Path,
-      RecycledPath = target,
-      RecycleVolume = RecycleAreaLocator.Volume(copy.Path),
-    };
+      throw new InvalidOperationException("這份實際上在另一顆磁碟上（經由連結或掛載點），不會跨磁碟搬移。");
+    }
     if (File.Exists(copy.Path))
     {
       File.Move(copy.Path, target, overwrite: false);
-      return result;
+      return intent with { State = BatchItemState.Done };
+    }
+    if (!Directory.Exists(copy.Path))
+    {
+      return intent with { State = BatchItemState.Failed, FailureReason = "這份已經不在原位置，沒有移動任何檔案。", RecycledPath = null };
     }
     try
     {
       Directory.Move(copy.Path, target);
-      return result;
+      return intent with { State = BatchItemState.Done };
     }
     catch (IOException)
     {
@@ -366,48 +513,149 @@ public sealed class PlanExecutor
     {
       // Same as above.
     }
-    var failed = MoveRemaining(copy.Path, target, out var reason);
-    return failed == 0 ? result : result with { State = BatchItemState.Failed, FailedFiles = failed, FailureReason = reason };
+    var manifest = BuildManifest(copy.Path);
+    var failed = MoveFiles(copy.Path, target, ParseManifest(manifest), out var reason);
+    return failed == 0
+      ? intent with { State = BatchItemState.Done }
+      : intent with { State = BatchItemState.Failed, FailedFiles = failed, FailureReason = reason, Manifest = manifest };
   }
 
-  /// <summary>Moves every file still under <paramref name="from"/> to the same relative place under <paramref name="to"/>.</summary>
-  /// <returns>How many files could not move.</returns>
-  private static int MoveRemaining(string from, string to, out string? reason)
+  /// <summary>Every file under a folder as <c>relative|size|ticks</c> lines, without following links.</summary>
+  private static string BuildManifest(string folder)
+  {
+    var lines = new StringBuilder();
+    foreach (var (relative, file) in WalkFiles(folder))
+    {
+      lines.Append(relative).Append('|').Append(file.Length.ToString(CultureInfo.InvariantCulture)).Append('|')
+        .Append(file.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture)).Append('\n');
+    }
+    return lines.ToString();
+  }
+
+  private static Dictionary<string, string> ParseManifest(string manifest)
+  {
+    var entries = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var line in manifest.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+    {
+      var cut = line.IndexOf('|', StringComparison.Ordinal);
+      entries[line[..cut]] = line[(cut + 1)..];
+    }
+    return entries;
+  }
+
+  /// <summary>
+  /// Moves files under <paramref name="from"/> to the same relative place under <paramref name="to"/>, never overwriting
+  /// and never following links. With <paramref name="allowed"/>, only files listed there with the same size and time move.
+  /// </summary>
+  /// <returns>How many files (and links) stayed behind.</returns>
+  private static int MoveFiles(string from, string to, Dictionary<string, string>? allowed, out string? reason)
   {
     reason = null;
     if (!Directory.Exists(from))
     {
       return 0;
     }
-    var failed = 0;
-    var options = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = false };
-    foreach (var file in Directory.EnumerateFiles(from, "*", options).ToList())
+    var left = 0;
+    foreach (var link in WalkLinks(from))
     {
-      var target = Path.Combine(to, Path.GetRelativePath(from, file));
+      left++;
+      reason ??= $"{link} 是連結（junction 或捷徑），沒有移動。";
+    }
+    foreach (var (relative, file) in WalkFiles(from).ToList())
+    {
+      if (allowed is not null && (!allowed.TryGetValue(relative, out var stamp)
+        || stamp != string.Create(CultureInfo.InvariantCulture, $"{file.Length}|{file.LastWriteTimeUtc.Ticks}")))
+      {
+        left++;
+        reason ??= $"{relative} 是整理開始之後才新增或修改的檔，沒有移動。";
+        continue;
+      }
+      var target = Path.Combine(to, relative);
       try
       {
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-        File.Move(file, target, overwrite: false);
+        File.Move(file.FullName, target, overwrite: false);
       }
       catch (Exception e) when (e is IOException or UnauthorizedAccessException)
       {
-        failed++;
-        reason ??= $"{Path.GetFileName(file)} 正在被其他程式使用或無法移動，所以還在原處。關閉它之後再重試。";
+        left++;
+        reason ??= $"{Path.GetFileName(relative)} 正在被其他程式使用、無法移動，或目的地已經有同名的檔，所以還在原處。";
       }
     }
     RemoveEmptyFolders(from);
-    return failed;
+    return left;
   }
 
-  /// <summary>Removes folders left empty after file-by-file moves, deepest first, never following links.</summary>
+  /// <summary>Files under a folder with their relative paths; links (junctions, symbolic links) are not entered.</summary>
+  private static IEnumerable<(string Relative, FileInfo File)> WalkFiles(string root)
+  {
+    var pending = new Stack<string>();
+    pending.Push(string.Empty);
+    while (pending.Count > 0)
+    {
+      var relative = pending.Pop();
+      var folder = relative.Length == 0 ? root : Path.Combine(root, relative);
+      foreach (var entry in new DirectoryInfo(folder).EnumerateFileSystemInfos().ToList())
+      {
+        var child = relative.Length == 0 ? entry.Name : Path.Combine(relative, entry.Name);
+        if (ScanFilter.IsLink(entry))
+        {
+          continue;
+        }
+        if (entry is DirectoryInfo)
+        {
+          pending.Push(child);
+        }
+        else
+        {
+          yield return (child, (FileInfo)entry);
+        }
+      }
+    }
+  }
+
+  private static IEnumerable<string> WalkLinks(string root)
+  {
+    var pending = new Stack<string>();
+    pending.Push(root);
+    while (pending.Count > 0)
+    {
+      foreach (var entry in new DirectoryInfo(pending.Pop()).EnumerateFileSystemInfos().ToList())
+      {
+        if (ScanFilter.IsLink(entry))
+        {
+          yield return entry.FullName;
+        }
+        else if (entry is DirectoryInfo)
+        {
+          pending.Push(entry.FullName);
+        }
+      }
+    }
+  }
+
+  /// <summary>Removes folders left empty, deepest first, never following links.</summary>
   private static void RemoveEmptyFolders(string root)
   {
     if (!Directory.Exists(root))
     {
       return;
     }
-    var options = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = true };
-    foreach (var folder in Directory.EnumerateDirectories(root, "*", options).OrderByDescending(f => f.Length).Append(root))
+    var folders = new List<string> { root };
+    var pending = new Stack<string>();
+    pending.Push(root);
+    while (pending.Count > 0)
+    {
+      foreach (var directory in new DirectoryInfo(pending.Pop()).EnumerateDirectories())
+      {
+        if (!ScanFilter.IsLink(directory))
+        {
+          folders.Add(directory.FullName);
+          pending.Push(directory.FullName);
+        }
+      }
+    }
+    foreach (var folder in folders.OrderByDescending(f => f.Length))
     {
       try
       {
@@ -423,16 +671,65 @@ public sealed class PlanExecutor
     }
   }
 
-  private void RecycleCreated(string batchId, BatchItem item)
+  /// <summary>Deletes a file or folder tree; a link inside is removed as a link, its target is never entered or changed.</summary>
+  private static void DeleteWithoutFollowingLinks(string path)
+  {
+    var info = File.Exists(path) ? (FileSystemInfo)new FileInfo(path) : new DirectoryInfo(path);
+    if (!info.Exists)
+    {
+      return;
+    }
+    if (ScanFilter.IsLink(info) || info is FileInfo)
+    {
+      if (info is FileInfo && !ScanFilter.IsLink(info))
+      {
+        info.Attributes = FileAttributes.Normal;
+      }
+      if (info is DirectoryInfo)
+      {
+        Directory.Delete(path, recursive: false);
+      }
+      else
+      {
+        File.Delete(path);
+      }
+      return;
+    }
+    foreach (var entry in ((DirectoryInfo)info).EnumerateFileSystemInfos().ToList())
+    {
+      DeleteWithoutFollowingLinks(entry.FullName);
+    }
+    info.Attributes = FileAttributes.Directory;
+    Directory.Delete(path, recursive: false);
+  }
+
+  private static bool CreatedUnchanged(BatchItem item, out string? why)
+  {
+    why = null;
+    if (item.CreatedPath is not { } created || !File.Exists(created) || item.SourceStamp is null)
+    {
+      return true;
+    }
+    if (Stamp(created) == item.SourceStamp)
+    {
+      return true;
+    }
+    why = $"{created} 在整理之後被修改過，所以沒有移走；需要的話請自己處理。";
+    return false;
+  }
+
+  private string? RecycleCreated(string batchId, BatchItem item)
   {
     if (item.CreatedPath is not { } created || !File.Exists(created))
     {
-      return;
+      return null;
     }
     // Item ids contain ':' and '#', which are not allowed (or not wise) in folder names.
     var safe = new string(item.Id.Select(c => char.IsAsciiLetterOrDigit(c) ? c : '-').ToArray());
     var folder = SlotFolder(created, batchId, "restore-" + safe);
-    File.Move(created, FreeName(Path.Combine(folder, Path.GetFileName(created))), overwrite: false);
+    var target = FreeName(Path.Combine(folder, Path.GetFileName(created)));
+    File.Move(created, target, overwrite: false);
+    return target;
   }
 
   private static void PutBack(string recycled, string original)
@@ -474,7 +771,7 @@ public sealed class PlanExecutor
     var created = !Directory.Exists(area);
     var folder = Path.Combine(area, batchId, slot);
     Directory.CreateDirectory(folder);
-    if (created && Path.GetFileName(area) == RecycleAreaLocator.VolumeFolderName)
+    if (created && Path.GetFileName(area) == ScanFilter.RecycleFolderName)
     {
       File.SetAttributes(area, File.GetAttributes(area) | FileAttributes.Hidden);
     }
@@ -505,6 +802,25 @@ public sealed class PlanExecutor
     }
   }
 
+  private void RequireOutsideArea(string path)
+  {
+    if (_areas.IsInsideArea(path))
+    {
+      throw new InvalidOperationException($"{path} 在回收區裡；回收區裡的東西不會被當成正本或複本處理。");
+    }
+  }
+
+  private static void RequireBatchId(string batchId)
+  {
+    if (!BatchIdPattern().IsMatch(batchId))
+    {
+      throw new ArgumentException($"'{batchId}' is not a run id.", nameof(batchId));
+    }
+  }
+
+  [GeneratedRegex(@"^b\d{8}-\d{6}-[0-9a-f]{4}$|^b[0-9a-z-]{1,40}$", RegexOptions.CultureInvariant)]
+  private static partial Regex BatchIdPattern();
+
   private static string WithSuffix(string path, string suffix)
   {
     var trimmed = path.TrimEnd('\\');
@@ -533,26 +849,6 @@ public sealed class PlanExecutor
     }
   }
 
-  private static void DeleteTree(string path)
-  {
-    if (File.Exists(path))
-    {
-      File.SetAttributes(path, FileAttributes.Normal);
-      File.Delete(path);
-      return;
-    }
-    if (!Directory.Exists(path))
-    {
-      return;
-    }
-    var options = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = 0, IgnoreInaccessible = true };
-    foreach (var file in Directory.EnumerateFiles(path, "*", options))
-    {
-      File.SetAttributes(file, FileAttributes.Normal);
-    }
-    Directory.Delete(path, recursive: true);
-  }
-
   private static void TryDeletePartial(string partial)
   {
     try
@@ -564,7 +860,7 @@ public sealed class PlanExecutor
     }
     catch (Exception e) when (e is IOException or UnauthorizedAccessException)
     {
-      // Our own partial file; it is ignored by scans and removed on the next attempt.
+      // Our own partial file; scans never index *.fma-partial, and the next attempt replaces it.
     }
   }
 }

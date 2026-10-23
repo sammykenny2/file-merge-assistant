@@ -243,6 +243,7 @@ public sealed partial class StackViewModel : PageViewModel
   private readonly HashSet<string> _visited = new(StringComparer.Ordinal);
   private Stack _stack = null!;
   private StackDecision _decision = null!;
+  private bool _keeperUnavailable;
   private StackReview _review = null!;
 
   [ObservableProperty]
@@ -454,7 +455,12 @@ public sealed partial class StackViewModel : PageViewModel
   private void Load(string stackId, bool keepToast = false)
   {
     _stack = Store.Stacks.First(s => s.Id == stackId);
-    _decision = Store.DecisionFor(stackId) ?? StackDecision.Suggested(_stack);
+    var stored = Store.DecisionFor(stackId);
+    _keeperUnavailable = stored is not null && (_stack.IndexOf(stored.KeeperCopyId) is not (>= 0 and var keeper) || !StackReview.CanBeKeeper(_stack.Copies[keeper]));
+    // A stored decision whose keeper is offline or gone keeps its other choices; the keeper falls back to the suggestion.
+    _decision = stored is null ? StackDecision.Suggested(_stack)
+      : _keeperUnavailable ? stored.WithKeeper(StackDecision.Suggested(_stack).KeeperCopyId)
+      : stored;
     if (!keepToast)
     {
       Toast = null;
@@ -508,9 +514,20 @@ public sealed partial class StackViewModel : PageViewModel
     HiddenCopiesText = active.Count > MaxColumns
       ? $"還有 {Fmt.Count(active.Count - MaxColumns)} 份沒有列在表格裡；選的做法會套用到這疊的全部 {Fmt.Count(active.Count)} 份。"
       : null;
-    ReopenedText = _stack.NewCopyIds.Count == 0
-      ? null
-      : $"你決定之後，這疊出現了新的複本：{string.Join("、", _stack.Copies.Where(c => _stack.NewCopyIds.Contains(c.Id)).Select(c => c.Path))}。原本的選擇已經帶入，請再確認一次。";
+    var reasons = new List<string>();
+    if (_stack.ChangedCopyIds.Count > 0)
+    {
+      reasons.Add($"你決定之後，這些位置裡的檔有新增、刪除或修改：{string.Join("、", _stack.Copies.Where(c => _stack.ChangedCopyIds.Contains(c.Id)).Select(c => c.Path))}。下面的比較是現在的內容。");
+    }
+    if (_stack.NewCopyIds.Count > 0)
+    {
+      reasons.Add($"你決定之後，這疊出現了新的複本：{string.Join("、", _stack.Copies.Where(c => _stack.NewCopyIds.Contains(c.Id)).Select(c => c.Path))}。");
+    }
+    if (_keeperUnavailable)
+    {
+      reasons.Add("你原本選的正本現在離線或已經不在這疊裡，先改用建議的正本。");
+    }
+    ReopenedText = reasons.Count == 0 ? null : string.Join(string.Empty, reasons) + "原本的選擇已經帶入，請再確認一次。";
 
     Title = _stack.Title;
     Group = StackText.GroupTitle(summary.Group);

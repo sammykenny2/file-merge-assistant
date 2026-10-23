@@ -25,7 +25,9 @@ public static class StackText
   {
     ArgumentNullException.ThrowIfNull(summary);
     var detail = PlainDetail(summary);
-    return summary.Stack.NewCopyIds.Count == 0 ? detail : $"出現新的複本，請再確認一次。{detail}";
+    return summary.Stack.ChangedCopyIds.Count > 0 ? $"你決定之後內容有變動，請再確認一次。{detail}"
+      : summary.Stack.NewCopyIds.Count > 0 ? $"出現新的複本，請再確認一次。{detail}"
+      : detail;
   }
 
   private static string PlainDetail(StackSummary summary)

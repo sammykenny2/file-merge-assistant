@@ -82,6 +82,9 @@ public sealed record StackCopy(
   /// <summary>Why this copy is the suggested keeper; only set on the suggested keeper.</summary>
   public string? SuggestReason { get; init; }
 
+  /// <summary>Fingerprint of the copy's file list as indexed (<see cref="CopyDigest"/>); compared with the decision's.</summary>
+  public string? Digest { get; init; }
+
   public long TotalBytes => SizeBytes + RegenerableBytes;
 }
 
@@ -156,6 +159,9 @@ public sealed record Stack(
 
   /// <summary>Copy ids that appeared after the stack was last decided (ADR-006).</summary>
   public IReadOnlyList<string> NewCopyIds { get; init; } = [];
+
+  /// <summary>Copy ids whose files changed after the stack was last decided (ADR-006).</summary>
+  public IReadOnlyList<string> ChangedCopyIds { get; init; } = [];
 
   public StackCopy SuggestedKeeperCopy => Copies[SuggestedKeeper];
 

@@ -12,6 +12,8 @@ namespace FileMergeAssistant.Gui;
 public partial class App : Application
 {
   private readonly IHost _host;
+  // Held for the life of the process; Windows releases it when the process ends.
+  private static Mutex? _instance;
 
   public App()
   {
@@ -25,7 +27,7 @@ public partial class App : Application
         // when started with --demo. It is created on the UI thread, so its change notifications arrive there.
         services.AddSingleton<IWorkbenchStore>(_ => UseDemoData
           ? new DemoWorkbenchStore()
-          : IndexedWorkbenchStore.Open(AppDataPaths.IndexPath));
+          : IndexedWorkbenchStore.Open(AppDataPaths.IndexPath, detectNow: false));
 
         services.AddSingleton<IUpdateService>(_ => UpdateService.CreateDefault());
         services.AddTransient<UpdateViewModel>();
@@ -44,6 +46,19 @@ public partial class App : Application
   protected override void OnStartup(StartupEventArgs e)
   {
     base.OnStartup(e);
+    if (!UseDemoData)
+    {
+      // Two windows over one index would run plans and scans side by side; the second one stops here.
+      _instance = new Mutex(initiallyOwned: true, @"Local\FileMergeAssistant.Workbench", out var first);
+      if (!first)
+      {
+        _instance.Dispose();
+        _instance = null;
+        MessageBox.Show("File Merge Assistant 已經開著了。請切換到已開啟的視窗。", "File Merge Assistant", MessageBoxButton.OK, MessageBoxImage.Information);
+        Shutdown(0);
+        return;
+      }
+    }
     // A failing command must not close the window with the user's work in it; report it and keep going.
     DispatcherUnhandledException += (_, args) =>
     {
@@ -59,9 +74,11 @@ public partial class App : Application
     {
       viewModel = _host.Services.GetRequiredService<MainViewModel>();
     }
-    catch (Exception error) when (error is InvalidOperationException or System.IO.IOException or UnauthorizedAccessException
-      or Microsoft.Data.Sqlite.SqliteException)
+#pragma warning disable CA1031 // Whatever stops the index from opening is reported; the app cannot start without it.
+    catch (Exception error)
+#pragma warning restore CA1031
     {
+      _host.Services.GetService<Serilog.ILogger>()?.Error(error, "Could not open the index");
       MessageBox.Show($"無法開啟索引：{error.Message}{Environment.NewLine}{Environment.NewLine}索引位置：{AppDataPaths.IndexPath}", "File Merge Assistant",
         MessageBoxButton.OK, MessageBoxImage.Error);
       Shutdown(1);
@@ -75,7 +92,9 @@ public partial class App : Application
   protected override async void OnExit(ExitEventArgs e)
   {
     await _host.StopAsync();
+    // Disposing the host disposes the store, which stops the scan worker before the next instance may start.
     _host.Dispose();
+    _instance?.Dispose();
     base.OnExit(e);
   }
 }
