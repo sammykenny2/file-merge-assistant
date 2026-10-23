@@ -4,7 +4,7 @@
 
 | 欄位 | 值 |
 |------|----|
-| Status | Draft：Phase 0 進行中；其他階段等相關 ADR 決定後才開始 |
+| Status | Draft：Phase 0 只剩 Task 0.5（ImageSharp 授權金鑰）；其他階段等相關 ADR 決定後才開始 |
 | Owner | 待指定（建議在 Phase 1 前指派 Conductor，負責任務分派與 README 的 Current Status） |
 | Assigned To | 待指定 |
 | Reviewer | 產品負責人審閱計畫；各階段程式碼由非作者的 agent 或人審閱 |
@@ -60,7 +60,7 @@
 - [x] Task 0.1：修正 [testing.md](../testing.md) 記錄的 CA1716（`IWatchService.Stop()`）與 CA1859（`PreviewStatisticsService.BuildDirectoryBreakdown()`），讓 `TreatWarningsAsErrors` 下也能建置。實作時另外發現並修正：GUI 的 CA1305，以及 ImageSharp 2.1.13 的 NuGet 稽核錯誤（升級到 4.1.3）。
 - [x] Task 0.2：找出並修正 `EmptyDirectoryServiceTests.Cleanup_DryRun_Does_Not_Delete` 卡住的原因：dry run 時目錄不會被刪掉，迴圈永遠不會結束。這是產品程式的錯誤，不只是測試的問題。獨立審閱另外發現清理會跟著 junction 走到 root 之外刪除空目錄（改動前就存在），一併修正。
 - [x] Task 0.3：在 testing.md 記錄全部通過的基準：SDK 版本、測試數與耗時。
-- [ ] Task 0.4：把所有專案的 `TargetFramework` 升級到 `net10.0-windows`，更新套件，重新跑完整測試。一併處理 testing.md 列出的間接相依漏洞（System.Text.Json、System.Net.Http、System.Text.RegularExpressions）。
+- [x] Task 0.4：把所有專案的 `TargetFramework` 升級到 `net10.0-windows`，更新套件，重新跑完整測試。一併處理 testing.md 列出的間接相依漏洞（System.Text.Json、System.Net.Http、System.Text.RegularExpressions）：.NET 10 SDK 會略過框架已提供的套件，這三個不再被引用。
 - [ ] Task 0.5：向 Six Labors 申請 ImageSharp 授權金鑰，放在 repo 之外（環境變數或 `SixLaborsLicenseFile`）。沒有金鑰時 Release 建置會失敗；這是 Phase 7 的前置條件。
 
 **Deliverables**：在 .NET 10 上全部通過的測試套件，並記錄在 testing.md。
@@ -170,7 +170,7 @@
 
 | 檔案 | 動作 | 說明 |
 |------|------|------|
-| `Directory.Build.props`、各 `*.csproj` | Modify | 升級到 `net10.0-windows` 並更新套件 |
+| `Directory.Build.props`、`global.json`、各 `*.csproj` | Modify | 升級到 `net10.0-windows` 並更新套件（Phase 0 已完成） |
 | `src/Core/Services/IWatchService.cs`、`WatchService.cs`、`PreviewStatisticsService.cs`、`src/Gui/ViewModels/ScannedFileViewModel.cs` | Modify | 修正 CA1716、CA1859、CA1305（Phase 0 已完成） |
 | `src/Core/Services/EmptyDirectoryService.cs`、`tests/Core.Tests/Services/EmptyDirectoryServiceTests.cs` | Modify | 修正 dry run 無窮迴圈，並且不再跟隨 junction（Phase 0 已完成） |
 | `src/Core/Core.csproj`、`.gitignore` | Modify | ImageSharp 升級到 4.1.3；Git 忽略 `sixlabors.lic`（Phase 0 已完成） |
@@ -265,6 +265,7 @@
 |------|------|
 | 2026-10-23 | 建立草稿；等待 ADR 決定後再開始 Phase 0 以外的工作 |
 | 2026-10-23 | 完成 Task 0.1 至 0.3：solution 建置通過，測試全部通過；新增 Task 0.5（ImageSharp 授權金鑰）。依獨立審閱修正 junction 問題後，測試增為 149 個 |
+| 2026-10-23 | 產品負責人指示升級 .NET 10；完成 Task 0.4：`net10.0-windows` 上建置與 149 個測試通過，沒有已知漏洞的套件 |
 
 ---
 

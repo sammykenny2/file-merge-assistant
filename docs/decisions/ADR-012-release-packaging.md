@@ -2,7 +2,7 @@
 
 ## 狀態
 
-Proposed（草稿，待產品負責人決定）
+Proposed（草稿，待產品負責人決定）。其中「升級到 .NET 10」已由產品負責人在 2026-10-23 指示執行，並已完成；發佈格式、資料位置與程式碼簽章仍待決定。
 
 ## 背景
 
@@ -14,7 +14,7 @@ Proposed（草稿，待產品負責人決定）
   - `ScanOptions` 的預設輸出目錄。
   - GUI 的 `ScanViewModel`。
 - [產品需求](../requirements.md) 的 D-06 列出三種候選：免安裝、NSIS 安裝檔、MSIX。
-- 所有專案都以 .NET 8 為目標。依 [.NET Blog 的公告](https://devblogs.microsoft.com/dotnet/dotnet-8-9-end-of-support/)，.NET 8 在 2026-11-10 結束支援，之後不再有安全性更新；.NET 10 是 LTS 版本，支援到 2028 年 11 月。
+- 撰寫本 ADR 時，所有專案都以 .NET 8 為目標（2026-10-23 已升級到 `net10.0-windows`）。依 [.NET Blog 的公告](https://devblogs.microsoft.com/dotnet/dotnet-8-9-end-of-support/)，.NET 8 在 2026-11-10 結束支援，之後不再有安全性更新；.NET 10 是 LTS 版本，支援到 2028 年 11 月。
 
 ## 決策（提議）
 
