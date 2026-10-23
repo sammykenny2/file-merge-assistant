@@ -24,12 +24,15 @@ These important documents live in the project root:
 The next GUI is being defined around multiple scan sources, a persistent index,
 reviewable duplicate groups, and explicit file-operation plans. These are draft
 requirements, not delivered features. Layout and technology choices remain open.
+A first clickable mock proposes reviewing copies one small "stack" at a time;
+that proposal awaits product review.
 
 | Document | Status | Purpose |
 |----------|--------|---------|
 | [GUI design brief](./ux-design-brief.md) | Draft | Start here for user tasks, required information, interaction states, and layout deliverables |
 | [Product requirements](./requirements.md) | Draft | Product scope, implementation gaps, priorities, and decisions to resolve |
 | [SPEC-001](./specs/SPEC-001-persistent-scan-workbench.md) | Draft | Multi-source scanning, persistent indexing, task states, operation review, and acceptance scenarios |
+| [GUI flow mock](./gui-flow-mock.md) | Draft | Link to the clickable prototype, its stack-by-stack review proposal, assumptions, and open product questions |
 
 ## Development Guides
 

@@ -69,6 +69,7 @@ See [docs/](./docs/) for detailed documentation:
 - [GUI Design Brief](./docs/ux-design-brief.md) — user tasks and handoff for the next layout design
 - [Product Requirements](./docs/requirements.md) — current gaps and proposed scope
 - [GUI Workflow Specification](./docs/specs/SPEC-001-persistent-scan-workbench.md) — draft workflow and acceptance scenarios
+- [GUI Flow Mock](./docs/gui-flow-mock.md) — clickable prototype link, stack-by-stack review proposal, and open questions
 
 The next GUI's multi-source queue, persistent index, and reviewed operation plans
 are draft requirements. They are not implemented by the current preview; see the
