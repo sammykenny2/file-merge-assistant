@@ -2,8 +2,18 @@
 
 File Merge Assistant uses xUnit for the .NET 10 Windows-targeted core library.
 Tests live in `tests/Core.Tests/`, grouped under `Hashing/`, `Reporting/`,
-`Resolution/`, `Services/` and `Updates/`. NSubstitute supplies test doubles; file-operation
-fixtures create temporary directories and clean them up after each test.
+`Resolution/`, `Services/`, `Stacks/`, `Updates/` and `Workbench/`. NSubstitute supplies test
+doubles; file-operation fixtures create temporary directories and clean them up after each test.
+
+`tests/Gui.Tests/` checks the WPF workbench. `ScreenRenderingTests` walks through every screen
+with the demo data on one STA thread (`WpfHost`), renders the whole window body at 1440 px wide
+with `RenderTargetBitmap`, and fails on any WPF binding error. It needs no visible desktop, so it
+also runs while the session is locked. Set `FMA_SNAPSHOT_DIR` to a folder to save each screen as
+a PNG:
+
+```powershell
+$env:FMA_SNAPSHOT_DIR = "$env:TEMPma-shots"; dotnet test tests/Gui.Tests/Gui.Tests.csproj
+```
 
 The app writes its data under `%LOCALAPPDATA%\FileMergeAssistant` (`AppDataPaths`), or
 under `FMA_DATA_DIR` when that is set. `tests/Core.Tests/TestEnvironment.cs` sets
@@ -22,7 +32,7 @@ Run from the repository root on Windows with the .NET 10 SDK installed
 (`global.json` selects the latest installed 10.0 feature band):
 
 ```powershell
-dotnet test tests/Core.Tests/Core.Tests.csproj --verbosity minimal
+dotnet test file-merge-assistant.sln --verbosity minimal
 ```
 
 After dependencies have already been restored, add `--no-restore`. To collect
@@ -163,6 +173,11 @@ When a test hangs, VSTest writes a sequence attachment under
     - `https://github.com/sammykenny2/file-merge-assistant/releases.atom` answers 404
       while the repository is private, so the in-app check reports that the release source
       was not found. That is the only update path verifiable today.
+
+- 2026-10-23, workbench screens on demo data (PLAN-001, see the 2026-10-23 progress log entry):
+  - New tests: `StackReviewTests`, `PlanBuilderTests`, `StackTriageTests` and
+    `DemoWorkbenchStoreTests` in Core.Tests (270 tests in total), and the new Gui.Tests project
+    with 2 tests. All 272 pass.
 
 ## Bootstrap Validation
 

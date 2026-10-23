@@ -7,7 +7,15 @@
 - 連結：<https://claude.ai/artifact/FXZ2xndreQu6ZeesmASTcX>
 - 存取：預設只有擁有者能開啟。其他審閱者需要擁有者從頁面的 Share 選單分享後才能看。
 - 資料：全部是模擬資料，路徑都在 `C:\Users\demo` 底下，每個畫面都標示「模擬資料」。
-- 範圍：這是設計提案，不代表功能已實作，也沒有修改 [SPEC-001](specs/SPEC-001-persistent-scan-workbench.md) 的內容。
+- 範圍：這是設計提案，也沒有修改 [SPEC-001](specs/SPEC-001-persistent-scan-workbench.md) 的內容。
+
+## 實作狀態
+
+2026-10-23 起，WPF 程式已依這份 mock 做出 7 個畫面（`src/Gui/Workbench/`），取代原本的 Scan、Results、Reports 分頁；舊畫面暫時放在頂端的「舊版掃描」。
+
+- 畫面只透過 `IWorkbenchStore` 讀寫資料。目前接的是 `DemoWorkbenchStore`，內容就是這份 mock 的模擬資料，頂端會標示「模擬資料」，不會讀取或改動真正的檔案。
+- 一疊的比對規則是真的程式邏輯（`src/Core/Stacks/StackReview.cs`）：換正本會重算、受保護的正本不能被取代、有衝突沒選就不能加入待執行、只保留正本會列出一起回收的檔。待執行的項目由 `PlanBuilder` 依決定產生。
+- 下一步是以真實的分段掃描、SQLite 索引與疊偵測取代示範資料（PLAN-001 Phase 2 至 4），之後才是會改動檔案的執行與還原（Phase 5）。
 
 ## 核心提案：一次整理一疊
 

@@ -1,51 +1,103 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FileMergeAssistant.Models;
+using FileMergeAssistant.Gui.Workbench;
+using FileMergeAssistant.Sources;
+using FileMergeAssistant.Stacks;
 using FileMergeAssistant.Updates;
+using FileMergeAssistant.Workbench;
 
 namespace FileMergeAssistant.Gui.ViewModels;
 
-public partial class MainViewModel : ObservableObject
+public enum NavSection
 {
-  private readonly Func<ScanViewModel> _scanViewModelFactory;
-  private readonly Func<ResultsViewModel> _resultsViewModelFactory;
-  private readonly Func<ReportsViewModel> _reportsViewModelFactory;
+  Hub,
+  Sources,
+  Plan,
+  History,
+  Legacy,
+}
+
+/// <summary>How an item of the status strip under the header is drawn.</summary>
+public enum StripTone
+{
+  Plain,
+  Busy,
+  Offline,
+}
+
+public sealed record StripItem(string Text, StripTone Tone);
+
+/// <summary>The window shell: header navigation, the index status strip and the current screen.</summary>
+public partial class MainViewModel : ObservableObject, INavigator
+{
+  private readonly IWorkbenchStore _store;
   private readonly Func<UpdateWindow> _updateWindowFactory;
-
-  private ScanViewModel? _scanViewModel;
-  private ResultsViewModel? _resultsViewModel;
-  private ReportsViewModel? _reportsViewModel;
+  private readonly Func<LegacyScanViewModel> _legacyFactory;
+  private LegacyScanViewModel? _legacy;
 
   [ObservableProperty]
-  private object? _currentView;
+  private object? _currentPage;
 
   [ObservableProperty]
-  private bool _isScanSelected = true;
+  private NavSection _section;
 
   [ObservableProperty]
-  private bool _isResultsSelected;
+  private int _pendingCount;
 
-  [ObservableProperty]
-  private bool _isReportsSelected;
-
-  public MainViewModel(
-    Func<ScanViewModel> scanViewModelFactory,
-    Func<ResultsViewModel> resultsViewModelFactory,
-    Func<ReportsViewModel> reportsViewModelFactory,
-    Func<UpdateWindow> updateWindowFactory)
+  public MainViewModel(IWorkbenchStore store, Func<UpdateWindow> updateWindowFactory, Func<LegacyScanViewModel> legacyFactory)
   {
-    _scanViewModelFactory = scanViewModelFactory;
-    _resultsViewModelFactory = resultsViewModelFactory;
-    _reportsViewModelFactory = reportsViewModelFactory;
+    ArgumentNullException.ThrowIfNull(store);
+    _store = store;
     _updateWindowFactory = updateWindowFactory;
+    _legacyFactory = legacyFactory;
+    _store.Changed += (_, _) => OnStoreChanged();
 
-    _scanViewModel = _scanViewModelFactory();
-    _scanViewModel.ScanCompleted += OnScanCompleted;
-    CurrentView = _scanViewModel;
+    RefreshHeader();
+    if (_store.Sources.Count == 0)
+    {
+      ShowAddSources();
+    }
+    else
+    {
+      ShowHub();
+    }
   }
 
-  public string VersionText { get; } = $"Version {UpdateService.CurrentVersion.ToString(3)}";
+  public bool IsDemo => _store.IsDemo;
+
+  public string VersionText { get; } = $"版本 {UpdateService.CurrentVersion.ToString(3)}";
+
+  public ObservableCollection<StripItem> Strip { get; } = [];
+
+  public bool IsHubSelected => Section == NavSection.Hub;
+
+  public bool IsSourcesSelected => Section == NavSection.Sources;
+
+  public bool IsPlanSelected => Section == NavSection.Plan;
+
+  public bool IsHistorySelected => Section == NavSection.History;
+
+  public bool IsLegacySelected => Section == NavSection.Legacy;
+
+  public bool HasPending => PendingCount > 0;
+
+  public void ShowHub() => Show(NavSection.Hub, new HubViewModel(_store, this));
+
+  public void ShowSources() => Show(NavSection.Sources, new SourcesViewModel(_store, this));
+
+  public void ShowAddSources() => Show(NavSection.Sources, new AddSourcesViewModel(_store, this));
+
+  public void ShowStack(string stackId) => Show(NavSection.Hub, new StackViewModel(_store, this, stackId));
+
+  public void ShowPlan() => Show(NavSection.Plan, new PlanViewModel(_store, this));
+
+  public void ShowHistory(string? batchId = null) => Show(NavSection.History, new HistoryViewModel(_store, this, batchId));
+
+  public void ShowSince() => Show(NavSection.Hub, new SinceViewModel(_store, this));
+
+  private void ShowLegacy() => Show(NavSection.Legacy, _legacy ??= _legacyFactory());
 
   [RelayCommand]
   private void CheckForUpdates()
@@ -56,48 +108,89 @@ public partial class MainViewModel : ObservableObject
   }
 
   [RelayCommand]
-  private void Navigate(string target)
+  private void Navigate(NavSection section)
   {
-    switch (target)
+    switch (section)
     {
-      case "Scan":
-        _scanViewModel ??= _scanViewModelFactory();
-        _scanViewModel.ScanCompleted -= OnScanCompleted;
-        _scanViewModel.ScanCompleted += OnScanCompleted;
-        CurrentView = _scanViewModel;
-        IsScanSelected = true;
-        IsResultsSelected = false;
-        IsReportsSelected = false;
+      case NavSection.Sources:
+        ShowSources();
         break;
-
-      case "Results":
-        CurrentView = _resultsViewModel ?? _resultsViewModelFactory();
-        IsScanSelected = false;
-        IsResultsSelected = true;
-        IsReportsSelected = false;
+      case NavSection.Plan:
+        ShowPlan();
         break;
-
-      case "Reports":
-        if (_reportsViewModel != null)
-        {
-          _reportsViewModel.ScanResult = _resultsViewModel?.ScanResult;
-        }
-        CurrentView = _reportsViewModel ?? _reportsViewModelFactory();
-        IsScanSelected = false;
-        IsResultsSelected = false;
-        IsReportsSelected = true;
+      case NavSection.History:
+        ShowHistory();
+        break;
+      case NavSection.Legacy:
+        ShowLegacy();
+        break;
+      default:
+        ShowHub();
         break;
     }
   }
 
-  private void OnScanCompleted(object? sender, ScanResult result)
+  partial void OnSectionChanged(NavSection value)
   {
-    _resultsViewModel = _resultsViewModelFactory();
-    _resultsViewModel.LoadScanResult(result);
-
-    _reportsViewModel = _reportsViewModelFactory();
-    _reportsViewModel.ScanResult = result;
-
-    Navigate("Results");
+    OnPropertyChanged(nameof(IsHubSelected));
+    OnPropertyChanged(nameof(IsSourcesSelected));
+    OnPropertyChanged(nameof(IsPlanSelected));
+    OnPropertyChanged(nameof(IsHistorySelected));
+    OnPropertyChanged(nameof(IsLegacySelected));
   }
+
+  partial void OnPendingCountChanged(int value) => OnPropertyChanged(nameof(HasPending));
+
+  private void Show(NavSection section, object page)
+  {
+    Section = section;
+    CurrentPage = page;
+  }
+
+  private void OnStoreChanged()
+  {
+    RefreshHeader();
+    (CurrentPage as PageViewModel)?.Refresh();
+  }
+
+  private void RefreshHeader()
+  {
+    PendingCount = _store.Plan.Count;
+    Strip.Clear();
+    if (_store.Sources.Count == 0)
+    {
+      Strip.Add(new StripItem("還沒有來源。加入資料夾後，會在背景建立索引，這段時間仍可以操作。", StripTone.Plain));
+      return;
+    }
+
+    Strip.Add(new StripItem($"已索引 {Fmt.Count(_store.Sources.Sum(s => s.IndexedFiles))} 個檔", StripTone.Plain));
+    var active = _store.Jobs.FirstOrDefault(j => j.IsActive);
+    if (active is not null)
+    {
+      Strip.Add(new StripItem($"{active.Title}：{JobProgress(active)}", StripTone.Busy));
+    }
+    var next = _store.Jobs.FirstOrDefault(j => j.State == ScanJobState.Queued);
+    if (next is not null)
+    {
+      Strip.Add(new StripItem($"下一個：{next.Title}", StripTone.Plain));
+    }
+    foreach (var source in _store.Sources.Where(s => s.State == SourceState.Offline))
+    {
+      Strip.Add(new StripItem($"{source.RootPath} {source.Name}離線", StripTone.Offline));
+    }
+    var open = _store.Stacks.Count(s => s.Status == StackStatus.Open);
+    if (open > 0)
+    {
+      Strip.Add(new StripItem($"待整理 {Fmt.Count(open)} 疊", StripTone.Plain));
+    }
+  }
+
+  internal static string JobProgress(ScanJobInfo job) => job.State switch
+  {
+    ScanJobState.Pausing => "正在暫停",
+    ScanJobState.Paused => "已暫停",
+    _ => job.Phase == ScanPhase.Discover
+      ? $"探索中，已找到 {Fmt.Count(job.Discovered)} 個檔"
+      : $"確認內容中，已處理 {Fmt.Count(job.Hashed)} 個",
+  };
 }

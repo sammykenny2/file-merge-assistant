@@ -1,0 +1,31 @@
+<UserControl x:Class="FileMergeAssistant.Gui.Views.LegacyScanView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:FileMergeAssistant.Gui.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:LegacyScanViewModel}"
+             FontSize="12" Background="White">
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="180" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <Border Grid.Column="0" Background="#F0F0F0" BorderBrush="#CCCCCC" BorderThickness="0,0,1,0">
+      <StackPanel Margin="0,20,0,0">
+        <TextBlock Text="舊版掃描" FontSize="14" FontWeight="Bold" Margin="16,0,16,6" />
+        <TextBlock Text="依檔案內容分組的舊流程。新介面接上真實掃描之前，仍可以用它掃描。" Foreground="#555555" TextWrapping="Wrap" Margin="16,0,16,16" />
+        <RadioButton Content="Scan" Style="{StaticResource NavButtonStyle}" IsChecked="{Binding IsScanSelected}"
+                     Command="{Binding NavigateCommand}" CommandParameter="Scan" />
+        <RadioButton Content="Results" Style="{StaticResource NavButtonStyle}" IsChecked="{Binding IsResultsSelected}"
+                     Command="{Binding NavigateCommand}" CommandParameter="Results" />
+        <RadioButton Content="Reports" Style="{StaticResource NavButtonStyle}" IsChecked="{Binding IsReportsSelected}"
+                     Command="{Binding NavigateCommand}" CommandParameter="Reports" />
+      </StackPanel>
+    </Border>
+
+    <ContentControl Grid.Column="1" Content="{Binding CurrentView}" Margin="16" />
+  </Grid>
+</UserControl>
