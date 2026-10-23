@@ -15,9 +15,21 @@ These important documents live in the project root:
 
 | Document | Status | Description |
 |----------|--------|-------------|
-| [requirements.md](./requirements.md) | Template | Requirements specification |
+| [requirements.md](./requirements.md) | Draft | GUI product requirements, current gaps, priorities, and open decisions |
 | [architecture.md](./architecture.md) | Template | System architecture |
 | [api.md](./api.md) | Template | API specification (REST/WebSocket) |
+
+## GUI Product and Design
+
+The next GUI is being defined around multiple scan sources, a persistent index,
+reviewable duplicate groups, and explicit file-operation plans. These are draft
+requirements, not delivered features. Layout and technology choices remain open.
+
+| Document | Status | Purpose |
+|----------|--------|---------|
+| [GUI design brief](./ux-design-brief.md) | Draft | Start here for user tasks, required information, interaction states, and layout deliverables |
+| [Product requirements](./requirements.md) | Draft | Product scope, implementation gaps, priorities, and decisions to resolve |
+| [SPEC-001](./specs/SPEC-001-persistent-scan-workbench.md) | Draft | Multi-source scanning, persistent indexing, task states, operation review, and acceptance scenarios |
 
 ## Development Guides
 

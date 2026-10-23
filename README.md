@@ -66,6 +66,13 @@ See [docs/](./docs/) for detailed documentation:
 - [Contributing](./CONTRIBUTING.md)
 - [Script Standards](./docs/SCRIPT-STANDARDS.md)
 - [Research Log](./docs/research/)
+- [GUI Design Brief](./docs/ux-design-brief.md) — user tasks and handoff for the next layout design
+- [Product Requirements](./docs/requirements.md) — current gaps and proposed scope
+- [GUI Workflow Specification](./docs/specs/SPEC-001-persistent-scan-workbench.md) — draft workflow and acceptance scenarios
+
+The next GUI's multi-source queue, persistent index, and reviewed operation plans
+are draft requirements. They are not implemented by the current preview; see the
+requirements baseline before treating existing feature checkboxes as GUI readiness.
 
 ## Project Structure
 
