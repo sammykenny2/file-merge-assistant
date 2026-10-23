@@ -9,7 +9,7 @@
 
   <!-- Product identity. The installer, the release workflow and the in-app update check read these values. -->
   <PropertyGroup>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Product>File Merge Assistant</Product>
     <Company>sammykenny2</Company>
     <Authors>sammykenny2</Authors>
