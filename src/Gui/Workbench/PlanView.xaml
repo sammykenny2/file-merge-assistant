@@ -172,6 +172,10 @@
             <Button Content="{Binding ExecuteLabel}" Style="{StaticResource PrimaryButton}" MinHeight="48" HorizontalAlignment="Stretch" Margin="0,14,0,0"
                     Command="{Binding ExecuteCommand}" IsEnabled="{Binding CanExecute}" />
             <TextBlock Text="執行中…" Style="{StaticResource Small}" Margin="0,6,0,0" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+            <Border Background="{StaticResource StripBrush}" CornerRadius="6" Padding="10,8" Margin="0,8,0,0"
+                    Visibility="{Binding UnavailableReason, Converter={StaticResource NullToVisibility}}">
+              <TextBlock Text="{Binding UnavailableReason}" Style="{StaticResource Small}" FontSize="13" />
+            </Border>
             <Button Content="返回工作台" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Stretch" Margin="0,10,0,0" Command="{Binding GoToHubCommand}" />
           </StackPanel>
         </Border>

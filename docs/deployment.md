@@ -13,9 +13,18 @@ File Merge Assistant ships as a Windows x64 setup program built with NSIS. Decis
 - Registry: `HKCU\Software\FileMergeAssistant` (`InstallDir`, `Version`, `CliInstalled`) and the
   Apps & features entry under `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\FileMergeAssistant`.
 
-User data is not part of the installation. The app keeps its recycle bin, cache, logs and scan results in
+User data is not part of the installation. The app keeps its index, recycle bin, cache, logs and scan results in
 `%LOCALAPPDATA%\FileMergeAssistant` (`FMA_DATA_DIR` overrides the location), and neither setup nor uninstall touches
-it. Setup and uninstall remove only what this program owns:
+it:
+
+- `index.db` (with `index.db-wal` and `index.db-shm` while the app runs): the workbench's local index of sources,
+  files, content fingerprints, scan jobs and decisions (ADR-008). It records paths, sizes, times and fingerprints, never
+  file contents. Before a schema upgrade the app saves the old index as `index.db.v<N>.bak`.
+- To start over, close the app and delete `index.db` and its `-wal` and `-shm` files; the sources and decisions go
+  with them, and the user's own files are not affected.
+- Starting the GUI with `--demo` uses the GUI flow mock's simulated data instead and does not open the index.
+
+Setup and uninstall remove only what this program owns:
 
 - `app\` and `cli\fma.exe`, when their folder carries the marker file `.installed-by-file-merge-assistant-setup`
   (setup writes it before copying anything, so an interrupted copy is still recognized), or when the registry

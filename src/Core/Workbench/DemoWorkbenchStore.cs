@@ -29,7 +29,7 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
   private List<ChangeNotice>? _sinceNotices;
   private int _batchNumber;
 
-  public event EventHandler? Changed;
+  public event EventHandler<WorkbenchChangedEventArgs>? Changed;
 
   /// <summary>Delay used to make pausing, checking and running visible; tests set it to zero.</summary>
   public TimeSpan StepDelay { get; init; } = TimeSpan.FromMilliseconds(1200);
@@ -52,7 +52,11 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
 
   public IReadOnlyList<SuggestedLocation> SuggestLocations() => DemoData.Locations();
 
-  public Task AddSourcesAsync(IReadOnlyList<string> paths, SourceOptions options, bool startScan)
+  public bool CanExecute => true;
+
+  public string? ExecuteUnavailableReason => null;
+
+  public Task<IReadOnlyList<string>> AddSourcesAsync(IReadOnlyList<string> paths, SourceOptions options, bool startScan)
   {
     ArgumentNullException.ThrowIfNull(paths);
     ArgumentNullException.ThrowIfNull(options);
@@ -79,7 +83,7 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
       }
     }
     OnChanged();
-    return Task.CompletedTask;
+    return Task.FromResult<IReadOnlyList<string>>([]);
   }
 
   public Task ScanSourceAsync(string sourceId)
@@ -522,5 +526,5 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
     OnChanged();
   }
 
-  private void OnChanged() => Changed?.Invoke(this, EventArgs.Empty);
+  private void OnChanged() => Changed?.Invoke(this, WorkbenchChangedEventArgs.Everything);
 }

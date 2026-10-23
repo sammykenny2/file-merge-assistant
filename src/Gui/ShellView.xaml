@@ -31,7 +31,7 @@
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
           <Border Style="{StaticResource Chip}" BorderBrush="{StaticResource HintBrush}" CornerRadius="4" Margin="0,0,16,0"
                   Visibility="{Binding IsDemo, Converter={StaticResource BoolToVisibility}}"
-                  ToolTip="這個版本用的是 GUI 流程 mock 的模擬資料，不會讀取或改動你的檔案。">
+                  ToolTip="以 --demo 啟動：用的是 GUI 流程 mock 的模擬資料，不會讀取或改動你的檔案。">
             <TextBlock Text="模擬資料" FontSize="12.5" Foreground="{StaticResource MutedBrush}" />
           </Border>
           <TextBlock Text="{Binding VersionText}" Style="{StaticResource Faint}" VerticalAlignment="Center" Margin="0,0,10,0" />
@@ -76,9 +76,6 @@
           </Button>
           <Button Content="歷史" Style="{StaticResource NavTab}" Tag="{Binding IsHistorySelected}"
                   Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:NavSection.History}" />
-          <Button Content="舊版掃描" Style="{StaticResource NavTab}" Tag="{Binding IsLegacySelected}" Margin="12,0,0,0"
-                  Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:NavSection.Legacy}"
-                  ToolTip="之前的 Scan / Results / Reports 畫面，在新介面接上真實掃描前仍可使用。" />
         </StackPanel>
       </DockPanel>
     </Border>

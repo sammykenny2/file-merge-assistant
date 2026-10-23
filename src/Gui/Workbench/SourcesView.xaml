@@ -55,7 +55,8 @@
                           Visibility="{Binding IsOffline, Converter={StaticResource BoolToVisibility}}">
                     <DockPanel>
                       <Button DockPanel.Dock="Right" Content="指定新位置…" Style="{StaticResource SmallButton}" VerticalAlignment="Top" Margin="12,0,0,0"
-                              ToolTip="資料夾被搬走時使用：會先比對結構，給你看摘要，接受後才更新來源。" />
+                              IsEnabled="False" ToolTipService.ShowOnDisabled="True"
+                              ToolTip="之後的版本提供：資料夾被搬走時，先比對結構、給你看摘要，接受後才更新來源。" />
                       <TextBlock Text="{Binding OfflineNote}" Style="{StaticResource Small}" />
                     </DockPanel>
                   </Border>

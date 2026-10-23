@@ -80,6 +80,10 @@
           <Button Content="取消" Style="{StaticResource LinkButton}" Margin="8,0,0,8" Command="{Binding CancelCommand}"
                   Visibility="{Binding IsFirstRun, Converter={StaticResource InverseBoolToVisibility}}" />
         </WrapPanel>
+        <Border Background="{StaticResource WarnSoftBrush}" BorderBrush="{StaticResource WarnBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,8,0,8"
+                Visibility="{Binding Problems, Converter={StaticResource NullToVisibility}}">
+          <TextBlock Text="{Binding Problems}" Foreground="{StaticResource WarnInkBrush}" TextWrapping="Wrap" />
+        </Border>
         <TextBlock Text="加入來源不會移動或修改任何檔案。整理要等你逐疊決定、確認之後才會執行。" Style="{StaticResource Small}" Margin="0,4,0,0" />
       </StackPanel>
 

@@ -23,7 +23,7 @@ public class ScreenRenderingTests
     var errors = WpfHost.Run(() =>
     {
       var store = new DemoWorkbenchStore { StepDelay = TimeSpan.Zero };
-      var main = new MainViewModel(store, () => throw new InvalidOperationException(), () => throw new InvalidOperationException());
+      var main = new MainViewModel(store, () => throw new InvalidOperationException());
       var shell = new ShellView { DataContext = main };
       void Snap(string name)
       {

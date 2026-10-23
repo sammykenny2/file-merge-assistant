@@ -11,11 +11,12 @@
 
 ## 實作狀態
 
-2026-10-23 起，WPF 程式已依這份 mock 做出 7 個畫面（`src/Gui/Workbench/`），取代原本的 Scan、Results、Reports 分頁；舊畫面暫時放在頂端的「舊版掃描」。
+2026-10-23 起，WPF 程式已依這份 mock 做出 7 個畫面（`src/Gui/Workbench/`），取代原本的 Scan、Results、Reports 分頁（已移除；CLI 仍保留原本的功能）。
 
-- 畫面只透過 `IWorkbenchStore` 讀寫資料。目前接的是 `DemoWorkbenchStore`，內容就是這份 mock 的模擬資料，頂端會標示「模擬資料」，不會讀取或改動真正的檔案。
-- 一疊的比對規則是真的程式邏輯（`src/Core/Stacks/StackReview.cs`）：換正本會重算、受保護的正本不能被取代、有衝突沒選就不能加入待執行、只保留正本會列出一起回收的檔。待執行的項目由 `PlanBuilder` 依決定產生。
-- 下一步是以真實的分段掃描、SQLite 索引與疊偵測取代示範資料（PLAN-001 Phase 2 至 4），之後才是會改動檔案的執行與還原（Phase 5）。
+- 畫面只透過 `IWorkbenchStore` 讀寫資料。預設接真實的索引（`IndexedWorkbenchStore`，`%LOCALAPPDATA%\FileMergeAssistant\index.db`）：加入資料夾後在背景分段掃描，掃描中就能看到已確認的疊。
+- 以 `--demo` 啟動時改接 `DemoWorkbenchStore`，內容是這份 mock 的模擬資料，頂端標示「模擬資料」，不會讀取或改動真正的檔案。
+- 一疊的比對規則（`StackReview`）、疊的偵測（`StackDetector`）與待執行項目（`PlanBuilder`）都是真的程式邏輯。
+- 這一版只讀不寫：可以加入來源、掃描、整理疊、記錄決定與重新檢查待執行，但「執行」要等 PLAN-001 Phase 5（ADR-002、003、007 確認後）。歷史、回收區與「自上次以來」也要等那時才有真實資料。
 
 ## 核心提案：一次整理一疊
 

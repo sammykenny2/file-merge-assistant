@@ -40,15 +40,19 @@ public sealed partial class AddSourcesViewModel : PageViewModel
   [ObservableProperty]
   private bool _isBusy;
 
+  [ObservableProperty]
+  private string? _problems;
+
   public AddSourcesViewModel(IWorkbenchStore store, INavigator navigator)
     : base(store, navigator)
   {
     IsFirstRun = store.Sources.Count == 0;
-    foreach (var location in store.SuggestLocations().Where(l => !store.Sources.Any(s => string.Equals(s.RootPath, l.Path, StringComparison.OrdinalIgnoreCase))))
+    var suggestions = store.SuggestLocations();
+    foreach (var location in suggestions.Where(l => !store.Sources.Any(s => string.Equals(s.RootPath, l.Path, StringComparison.OrdinalIgnoreCase))))
     {
       Add(new LocationOption(location.Path, location.Description, location.SelectedByDefault));
     }
-    ProtectPath = store.SuggestLocations().FirstOrDefault(l => l.Description.Contains("git", StringComparison.OrdinalIgnoreCase))?.Path;
+    ProtectPath = suggestions.FirstOrDefault(l => l.Description.Contains("git", StringComparison.OrdinalIgnoreCase))?.Path;
   }
 
   public bool IsFirstRun { get; }
@@ -117,8 +121,17 @@ public sealed partial class AddSourcesViewModel : PageViewModel
     {
       var paths = Locations.Where(l => l.IsChecked).Select(l => l.Path).ToList();
       var protectedPaths = ProtectSuggested && ProtectPath is not null ? new[] { ProtectPath } : [];
-      await Store.AddSourcesAsync(paths, new SourceOptions(SkipRegenerable, SkipCloudOnly, protectedPaths), startScan);
-      Navigator.ShowSources();
+      var problems = await Store.AddSourcesAsync(paths, new SourceOptions(SkipRegenerable, SkipCloudOnly, protectedPaths), startScan);
+      if (problems.Count == 0)
+      {
+        Navigator.ShowSources();
+        return;
+      }
+      Problems = "有些資料夾沒有加入：" + Environment.NewLine + string.Join(Environment.NewLine, problems);
+      foreach (var location in Locations.Where(l => l.IsChecked && !problems.Any(p => p.StartsWith(l.Path, StringComparison.OrdinalIgnoreCase))).ToList())
+      {
+        Locations.Remove(location);
+      }
     }
     finally
     {

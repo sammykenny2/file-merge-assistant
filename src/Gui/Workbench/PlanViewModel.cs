@@ -121,6 +121,9 @@ public sealed partial class PlanViewModel : PageViewModel
   [ObservableProperty]
   private bool _isEmpty;
 
+  [ObservableProperty]
+  private string? _unavailableReason;
+
   public PlanViewModel(IWorkbenchStore store, INavigator navigator)
     : base(store, navigator)
   {
@@ -174,7 +177,8 @@ public sealed partial class PlanViewModel : PageViewModel
         : "還沒有重新檢查。執行前會先檢查一次。";
     Summary = $"會執行 {Fmt.Count(running.Count)} 項：複製或另存 {Fmt.Count(copies)} 個檔到正本，移入回收區 {Fmt.Count(recycles)} 項，共 {Fmt.Size(recycleBytes)}。";
     ExecuteLabel = $"執行 {Fmt.Count(running.Count)} 項";
-    CanExecute = running.Count > 0 && Store.PlanCheckedAt is not null && !IsChecking && !IsRunning;
+    UnavailableReason = Store.CanExecute ? null : Store.ExecuteUnavailableReason;
+    CanExecute = Store.CanExecute && running.Count > 0 && Store.PlanCheckedAt is not null && !IsChecking && !IsRunning;
 
     var duplicate = plan.Sum(e => e.Stack.Copies.Where(c => c.Id != e.Keeper.Id && !e.Decision.Removed.Contains(c.Id)).Sum(c => c.TotalBytes));
     var offlineNote = plan.SelectMany(e => e.OfflineCopies).Select(c => System.IO.Path.GetPathRoot(c.Path)).Distinct().ToList();

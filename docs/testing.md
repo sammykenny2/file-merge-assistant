@@ -7,7 +7,12 @@ doubles; file-operation fixtures create temporary directories and clean them up 
 
 `tests/Gui.Tests/` checks the WPF workbench. `ScreenRenderingTests` walks through every screen
 with the demo data on one STA thread (`WpfHost`), renders the whole window body at 1440 px wide
-with `RenderTargetBitmap`, and fails on any WPF binding error. It needs no visible desktop, so it
+with `RenderTargetBitmap`, and fails on any WPF binding error. `RealIndexRenderingTests` does the
+same over the real index after scanning a throwaway tree under `%TEMP%`.
+
+The scanner and real-store tests (`Scanning/`, `Workbench/IndexedWorkbenchStoreTests`) build folder
+trees under `%TEMP%` (`TempTree`) and an index under `FMA_DATA_DIR`. No test scans or reads the real
+user profile; the first-run folder suggestions are not exercised against the real store. It needs no visible desktop, so it
 also runs while the session is locked. Set `FMA_SNAPSHOT_DIR` to a folder to save each screen as
 a PNG:
 
@@ -178,6 +183,11 @@ When a test hangs, VSTest writes a sequence attachment under
   - New tests: `StackReviewTests`, `PlanBuilderTests`, `StackTriageTests` and
     `DemoWorkbenchStoreTests` in Core.Tests (270 tests in total), and the new Gui.Tests project
     with 2 tests. All 272 pass.
+- 2026-10-23, real index (PLAN-001 Phases 2 to 4, read-only):
+  - New tests: `StackDetectorTests` (ground-truth trees: project copies under other names, subset
+    folders, wrappers and containers, boilerplate inside code projects), `SourceScannerTests`,
+    `IndexedWorkbenchStoreTests` and `RealIndexRenderingTests`. Core.Tests has 304 tests, Gui.Tests 3;
+    all 307 pass.
 
 ## Bootstrap Validation
 

@@ -36,7 +36,7 @@ File Merge Assistant helps you clean up years of accumulated duplicate files acr
 - [x] Watch mode (directory monitoring)
 - [x] Space savings dashboard / analytics
 - [x] PowerShell script export
-- [ ] Stack-by-stack workbench GUI ([GUI flow mock](./docs/gui-flow-mock.md)): all 7 screens are built and run on demo data; the real index, staged scanning and stack detection come next
+- [ ] Stack-by-stack workbench GUI ([GUI flow mock](./docs/gui-flow-mock.md)): all 7 screens; real index, staged scanning and stack detection (read-only). Running the plan (copy, recycle, restore) comes next; `--demo` shows the mock's data
 
 ## Quick Start
 
@@ -50,6 +50,9 @@ dotnet restore
 
 # Build
 dotnet build
+
+# Run the GUI workbench (add --demo to see the GUI flow mock's simulated data instead of your folders)
+dotnet run --project src/Gui
 
 # Run CLI
 dotnet run --project src/Cli -- scan "D:\Photos" --recursive --algorithm sha256

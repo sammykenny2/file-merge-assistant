@@ -21,18 +21,11 @@ public partial class App : Application
         var logger = LoggingSetup.CreateLogger();
         services.RegisterCoreServices(logger);
 
-        services.AddTransient<ScanViewModel>();
-        services.AddTransient<ResultsViewModel>();
-        services.AddTransient<ReportsViewModel>();
-
-        services.AddSingleton<Func<ScanViewModel>>(sp => sp.GetRequiredService<ScanViewModel>);
-        services.AddSingleton<Func<ResultsViewModel>>(sp => sp.GetRequiredService<ResultsViewModel>);
-        services.AddSingleton<Func<ReportsViewModel>>(sp => sp.GetRequiredService<ReportsViewModel>);
-        services.AddTransient<LegacyScanViewModel>();
-        services.AddSingleton<Func<LegacyScanViewModel>>(sp => sp.GetRequiredService<LegacyScanViewModel>);
-
-        // The workbench screens read and change this store. Until the real index lands it holds the mock's demo data.
-        services.AddSingleton<IWorkbenchStore, DemoWorkbenchStore>();
+        // The workbench screens read and change this store: the local index, or the GUI flow mock's simulated data
+        // when started with --demo. It is created on the UI thread, so its change notifications arrive there.
+        services.AddSingleton<IWorkbenchStore>(_ => UseDemoData
+          ? new DemoWorkbenchStore()
+          : IndexedWorkbenchStore.Open(AppDataPaths.IndexPath));
 
         services.AddSingleton<IUpdateService>(_ => UpdateService.CreateDefault());
         services.AddTransient<UpdateViewModel>();
@@ -45,12 +38,37 @@ public partial class App : Application
       .Build();
   }
 
+  /// <summary>True when the app was started with <c>--demo</c>.</summary>
+  public static bool UseDemoData { get; } = Environment.GetCommandLineArgs().Contains("--demo", StringComparer.OrdinalIgnoreCase);
+
   protected override void OnStartup(StartupEventArgs e)
   {
     base.OnStartup(e);
+    // A failing command must not close the window with the user's work in it; report it and keep going.
+    DispatcherUnhandledException += (_, args) =>
+    {
+      _host.Services.GetService<Serilog.ILogger>()?.Error(args.Exception, "Unhandled exception on the UI thread");
+      MessageBox.Show($"發生了沒有預期的錯誤，這個動作沒有完成：{Environment.NewLine}{args.Exception.Message}{Environment.NewLine}{Environment.NewLine}詳細內容寫在記錄檔：{AppDataPaths.LogDirectory}",
+        "File Merge Assistant", MessageBoxButton.OK, MessageBoxImage.Warning);
+      args.Handled = true;
+    };
 
+
+    MainViewModel viewModel;
+    try
+    {
+      viewModel = _host.Services.GetRequiredService<MainViewModel>();
+    }
+    catch (Exception error) when (error is InvalidOperationException or System.IO.IOException or UnauthorizedAccessException
+      or Microsoft.Data.Sqlite.SqliteException)
+    {
+      MessageBox.Show($"無法開啟索引：{error.Message}{Environment.NewLine}{Environment.NewLine}索引位置：{AppDataPaths.IndexPath}", "File Merge Assistant",
+        MessageBoxButton.OK, MessageBoxImage.Error);
+      Shutdown(1);
+      return;
+    }
     var mainWindow = _host.Services.GetRequiredService<MainWindow>();
-    mainWindow.DataContext = _host.Services.GetRequiredService<MainViewModel>();
+    mainWindow.DataContext = viewModel;
     mainWindow.Show();
   }
 
