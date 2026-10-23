@@ -14,17 +14,12 @@ namespace FileMergeAssistant.Infrastructure;
 /// <param name="OpenMainAtLogin">Show the main window after a sign-in start (off by default).</param>
 /// <param name="LastUpdateCheck">When updates were last checked, ISO 8601 in UTC.</param>
 /// <param name="Language">"auto", "en" or "zh-TW".</param>
-/// <param name="StartupApplied">
-/// Whether an installed copy has written <see cref="StartAtLogin"/> to Windows once. After that only the user's own
-/// changes are written, so an entry the user removed in Windows is not created again.
-/// </param>
 public sealed record HostPreferences(
   bool StartAtLogin = true,
   bool CloseToTray = true,
   bool OpenMainAtLogin = false,
   string? LastUpdateCheck = null,
-  string Language = "auto",
-  bool StartupApplied = false)
+  string Language = "auto")
 {
   public const string FileName = "host-preferences.json";
   private const int MaxBytes = 4096;
@@ -57,8 +52,7 @@ public sealed record HostPreferences(
         Flag(value, "closeToTray", defaults.CloseToTray),
         Flag(value, "openMainAtLogin", defaults.OpenMainAtLogin),
         checkedAt,
-        language,
-        Flag(value, "startupApplied", defaults.StartupApplied));
+        language);
     }
     catch (Exception error) when (error is JsonException or FormatException or InvalidOperationException)
     {
@@ -74,11 +68,7 @@ public sealed record HostPreferences(
     openMainAtLogin = OpenMainAtLogin,
     lastUpdateCheck = LastUpdateCheck,
     language = Language,
-    startupApplied = StartupApplied,
   }) + "\n");
-
-  /// <summary>Whether the folder has a preferences file at all; the first start of a new installation has none.</summary>
-  public static bool Exists(string directory) => File.Exists(Path.Combine(directory, FileName));
 
   public static HostPreferences Read(string directory)
   {

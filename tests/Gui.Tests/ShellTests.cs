@@ -104,6 +104,36 @@ public sealed class ShellTests : IDisposable
   }
 
   [Fact]
+  public void The_Demo_Shows_The_Startup_Switches_But_Does_Not_Change_Windows()
+  {
+    var keys = new FakeStartupKeys();
+    WpfHost.Run(() =>
+    {
+      var context = TestSettings.Create(_directory, keys, demo: true);
+      var page = new SettingsViewModel(new DemoWorkbenchStore(), new MainViewModel(new DemoWorkbenchStore()), context);
+      Assert.False(page.StartAtLoginEnabled);
+      Assert.False(page.CloseToTrayEnabled);
+      Assert.False(page.OpenMainEnabled);
+      Assert.Equal(AppText.Get("settings.startup.demo"), page.StartAtLoginDetail);
+      Assert.Empty(keys.Run);
+    });
+  }
+
+  [Fact]
+  public void File_Changes_Are_Counted_Until_Each_One_Ends()
+  {
+    Assert.False(FileChanges.InProgress);
+    var first = FileChanges.Begin();
+    var second = FileChanges.Begin();
+    Assert.True(FileChanges.InProgress);
+    first.Dispose();
+    first.Dispose();
+    Assert.True(FileChanges.InProgress);
+    second.Dispose();
+    Assert.False(FileChanges.InProgress);
+  }
+
+  [Fact]
   public void Updates_Go_Check_Download_Install_With_One_Button()
   {
     var service = new FakeUpdateService();

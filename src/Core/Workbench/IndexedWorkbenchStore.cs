@@ -499,6 +499,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   public async Task<ExecutionBatch> ExecutePlanAsync(CancellationToken cancellationToken)
   {
+    using var changing = FileChanges.Begin();
     // Check every item against the disk now; the executor checks each one again right before it runs.
     await RecheckPlanAsync().ConfigureAwait(true);
     var plan = _plan.ToList();
@@ -555,6 +556,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   public async Task RetryFailedAsync(string batchId)
   {
+    using var changing = FileChanges.Begin();
     var batch = _history.FirstOrDefault(b => b.Id == batchId);
     if (batch is null || batch.EmptiedAt is not null)
     {
@@ -588,6 +590,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   public async Task ResolveRestoreConflictAsync(string conflictId, RestoreConflictChoice choice, string? folder)
   {
+    using var changing = FileChanges.Begin();
     var conflict = _conflicts.FirstOrDefault(c => c.Id == conflictId);
     var batch = conflict is null ? null : _history.FirstOrDefault(b => b.Id == conflict.BatchId);
     var item = batch?.Items.FirstOrDefault(i => i.Id == conflict!.ItemId);
@@ -628,6 +631,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   public async Task EmptyRecycleAreasAsync()
   {
+    using var changing = FileChanges.Begin();
     var batches = _history.Where(b => b.EmptiedAt is null).ToList();
     var outcomes = await Task.Run(() => batches.Select(b =>
     {
@@ -673,6 +677,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   private async Task RestoreAsync(string batchId, Func<BatchItem, bool> which)
   {
+    using var changing = FileChanges.Begin();
     var batch = _history.FirstOrDefault(b => b.Id == batchId);
     if (batch is null || batch.EmptiedAt is not null)
     {

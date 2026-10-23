@@ -15,7 +15,8 @@ namespace FileMergeAssistant.Gui.Settings;
 /// <summary>What the settings page works on, created once by the app.</summary>
 /// <param name="Distribution">"installed", "portable" or "debug".</param>
 /// <param name="TrayAvailable">Whether the tray icon is there right now.</param>
-public sealed record SettingsContext(HostShell Shell, UpdateCoordinator Updates, string Distribution, Func<bool> TrayAvailable);
+/// <param name="Demo">Started with --demo: the startup switches, which change Windows, are shown but cannot be changed.</param>
+public sealed record SettingsContext(HostShell Shell, UpdateCoordinator Updates, string Distribution, Func<bool> TrayAvailable, bool Demo = false);
 
 /// <summary>One choice of the display-language list; its label is in the current display language.</summary>
 public sealed partial class LanguageOption(string value, string labelKey) : ObservableObject
@@ -230,24 +231,25 @@ public sealed partial class SettingsViewModel : PageViewModel, IDisposable
     var shell = _context.Shell;
     var preferences = shell.Preferences;
     var state = shell.Startup.Read();
+    var demo = _context.Demo;
     StartAtLogin = state == StartupState.Enabled;
-    StartAtLoginEnabled = state is StartupState.Enabled or StartupState.Disabled;
-    StartAtLoginDetail = AppText.Get(state switch
+    StartAtLoginEnabled = !demo && state is StartupState.Enabled or StartupState.Disabled;
+    StartAtLoginDetail = AppText.Get(demo ? "settings.startup.demo" : state switch
     {
       StartupState.Unavailable => "settings.startup.needsInstall",
       StartupState.Unreadable => "settings.startup.unreadable",
       StartupState.DisabledByUser => "settings.startup.offByUser",
       _ => "settings.startup.on",
     });
-    ShowOpenSystem = state == StartupState.DisabledByUser;
+    ShowOpenSystem = !demo && state == StartupState.DisabledByUser;
 
     var tray = _context.TrayAvailable();
     CloseToTray = preferences.CloseToTray;
-    CloseToTrayEnabled = tray;
+    CloseToTrayEnabled = !demo && tray;
     CloseToTrayDetail = AppText.Get(tray ? "settings.startup.closeToTrayOff" : "settings.startup.noTray");
 
     OpenMainAtLogin = preferences.OpenMainAtLogin;
-    OpenMainEnabled = state is not (StartupState.Unavailable or StartupState.Unreadable);
+    OpenMainEnabled = !demo && state is not (StartupState.Unavailable or StartupState.Unreadable);
   }
 
   private void RenderUpdate()

@@ -29,6 +29,7 @@ public partial class App : Application
   private NativeTray? _tray;
   private UpdateCoordinator? _updates;
   private MainWindow? _window;
+  private bool _exiting;
 
   public App()
   {
@@ -55,10 +56,11 @@ public partial class App : Application
         services.AddSingleton(sp => new UpdateCoordinator(
           sp.GetRequiredService<IUpdateService>(), Installed, UpdateService.ConfiguredRepository, _shell.LastUpdateCheck, _shell.RecordUpdateCheck)
         {
-          Busy = () => PlanViewModel.AnyRunning,
-          Exit = () => Current.Shutdown(),
+          Busy = () => FileChanges.InProgress,
+          Exit = RequestExit,
         });
-        services.AddSingleton(sp => new SettingsContext(_shell, sp.GetRequiredService<UpdateCoordinator>(), Distribution, () => _tray?.Available == true));
+        services.AddSingleton(sp => new SettingsContext(_shell, sp.GetRequiredService<UpdateCoordinator>(), Distribution,
+          () => _tray?.Available == true, UseDemoData));
 
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
@@ -117,24 +119,46 @@ public partial class App : Application
     _window = window;
     window.DataContext = viewModel;
     MainWindow = window;
+    // A later launch shows this window from now on, whatever happens with the tray below.
+    _single?.Listen(() => Dispatcher.BeginInvoke(ShowMain));
     window.CloseToTray = () => _shell.Preferences.CloseToTray && _tray?.Available == true;
+    window.Closing += (_, args) =>
+    {
+      // Closing the window to quit waits for file changes, as Exit in the tray does.
+      if (!_exiting && FileChanges.InProgress)
+      {
+        args.Cancel = true;
+        ShowBusy();
+      }
+    };
     window.Closed += (_, _) => Shutdown();
 
     var updates = _host.Services.GetRequiredService<UpdateCoordinator>();
     _updates = updates;
     updates.PropertyChanged += OnUpdateChanged;
     AppText.Changed += (_, _) => Dispatcher.BeginInvoke(ShowUpdateTip);
-    _tray = new NativeTray(OnTrayAction, () => TrayMenu.Entries(window.IsVisible, updates.Capable));
-    // Without a tray icon a hidden window could not be reached again.
-    _tray.Changed += (_, _) =>
+    try
     {
-      if (_tray?.Available == false)
+      var tray = new NativeTray(OnTrayAction, () => TrayMenu.Entries(window.IsVisible, updates.Capable));
+      _tray = tray;
+      // Without a tray icon a hidden window could not be reached again.
+      tray.Changed += (_, _) =>
       {
-        ShowMain();
-      }
-    };
+        if (!tray.Available)
+        {
+          ShowMain();
+        }
+      };
+    }
+#pragma warning disable CA1031 // Without a tray the app still works; the window then always shows and closing it quits.
+    catch (Exception error)
+#pragma warning restore CA1031
+    {
+      _host.Services.GetService<Serilog.ILogger>()?.Error(error, "Could not create the tray icon");
+      _tray = null;
+    }
 
-    if (_shell.StartHidden)
+    if (_shell.StartHidden && _tray is not null)
     {
       if (!_tray.Available)
       {
@@ -145,7 +169,6 @@ public partial class App : Application
     {
       window.Show();
     }
-    _single?.Listen(() => Dispatcher.BeginInvoke(ShowMain));
     if (!UseDemoData)
     {
       _shell.SyncStartup();
@@ -227,14 +250,35 @@ public partial class App : Application
         _ = CheckFromTrayAsync();
         break;
       case TrayMenu.Exit:
-        Shutdown();
+        RequestExit();
         break;
       default:
         break;
     }
   }
 
-  /// <summary>The tray asks once: a fresh check, then a native answer; updating restarts like the settings page.</summary>
+  /// <summary>
+  /// Ends the app the way closing the window does, unless a run, retry, restore or emptying is still moving files:
+  /// ending it then would leave the history behind the disk.
+  /// </summary>
+  private void RequestExit()
+  {
+    if (FileChanges.InProgress)
+    {
+      ShowBusy();
+      return;
+    }
+    _exiting = true;
+    Shutdown();
+  }
+
+  private static void ShowBusy() =>
+    MessageBox.Show(AppText.Get("dialog.busy"), Title, MessageBoxButton.OK, MessageBoxImage.Information);
+
+  /// <summary>
+  /// The tray asks once: a fresh check, then a native answer; updating restarts like the settings page. Every path
+  /// ends with an answer, unless the setup program has started and the app is closing.
+  /// </summary>
   private async Task CheckFromTrayAsync()
   {
     if (_updates is not { } updates)
@@ -242,34 +286,40 @@ public partial class App : Application
       return;
     }
     var current = UpdateService.CurrentVersion.ToString(3);
+    var title = AppText.Get("dialog.updateTitle");
     await updates.CheckAsync();
     if (updates.Status is UpdateStatus.UpdateAvailable or UpdateStatus.Downloaded)
     {
       var text = string.IsNullOrWhiteSpace(updates.Summary)
         ? AppText.Get("dialog.updateAvailable", ("version", updates.Version), ("current", current))
         : AppText.Get("dialog.updateAvailableSummary", ("version", updates.Version), ("current", current), ("summary", updates.Summary));
-      if (MessageBox.Show(text, AppText.Get("dialog.updateTitle"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+      if (MessageBox.Show(text, title, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
       {
         return;
       }
-      if (updates.Status != UpdateStatus.Downloaded)
+      // A download that only joined a check already running is started once more.
+      for (var attempt = 0; attempt < 2 && updates.Status is UpdateStatus.UpdateAvailable or UpdateStatus.Checking; attempt++)
       {
         await updates.DownloadAsync();
       }
       if (updates.Status == UpdateStatus.Downloaded)
       {
         updates.Install();
+        if (updates.Status == UpdateStatus.Installing)
+        {
+          return;
+        }
       }
-      if (updates.Status == UpdateStatus.Failed)
-      {
-        MessageBox.Show(AppText.Get("dialog.installFailed", ("detail", updates.ErrorMessage)), AppText.Get("dialog.updateTitle"),
-          MessageBoxButton.OK, MessageBoxImage.Warning);
-      }
-      return;
     }
-    var upToDate = updates.Status == UpdateStatus.UpToDate;
-    MessageBox.Show(upToDate ? AppText.Get("dialog.upToDate", ("version", current)) : updates.ErrorMessage ?? AppText.Get("update.failed"),
-      AppText.Get("dialog.updateTitle"), MessageBoxButton.OK, upToDate ? MessageBoxImage.Information : MessageBoxImage.Warning);
+    var (message, icon) = updates.Status switch
+    {
+      UpdateStatus.UpToDate => (AppText.Get("dialog.upToDate", ("version", current)), MessageBoxImage.Information),
+      UpdateStatus.Failed => (AppText.Get("dialog.installFailed", ("detail", updates.ErrorMessage ?? AppText.Get("update.failed"))), MessageBoxImage.Warning),
+      UpdateStatus.Downloading => (AppText.Get("settings.update.downloading", ("version", updates.Version)), MessageBoxImage.Information),
+      UpdateStatus.Downloaded => (AppText.Get("settings.update.downloaded", ("version", updates.Version)), MessageBoxImage.Information),
+      _ => (AppText.Get("update.failed"), MessageBoxImage.Warning),
+    };
+    MessageBox.Show(message, title, MessageBoxButton.OK, icon);
   }
 
   private void OnUpdateChanged(object? sender, PropertyChangedEventArgs e)

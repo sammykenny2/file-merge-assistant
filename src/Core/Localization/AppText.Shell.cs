@@ -24,6 +24,7 @@ public static partial class AppText
     ["dialog.updateAvailableSummary"] = "Version {version} is available (you have {current}).\n\n{summary}\n\nUpdate and restart File Merge Assistant now?",
     ["dialog.upToDate"] = "File Merge Assistant {version} is up to date.",
     ["dialog.installFailed"] = "The update didn't finish. Saved data is not affected.\n\n{detail}",
+    ["dialog.busy"] = "Files are still being moved by a run, retry, restore or emptying. Exit after it finishes.",
   };
   // i18n:end
 
@@ -48,6 +49,7 @@ public static partial class AppText
     ["dialog.updateAvailableSummary"] = "有新版本 {version}（目前 {current}）。\n\n{summary}\n\n要現在更新並重新啟動 File Merge Assistant 嗎？",
     ["dialog.upToDate"] = "File Merge Assistant {version} 已是最新版本。",
     ["dialog.installFailed"] = "更新沒有完成；已保存的資料不受影響。\n\n{detail}",
+    ["dialog.busy"] = "執行、重試、還原或清空還在移動檔案，請等它完成後再結束。",
   };
   // i18n:end
 }

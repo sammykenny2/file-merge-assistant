@@ -15,14 +15,15 @@ internal static class TestSettings
     FakeStartupKeys? keys = null,
     FakeUpdateService? updates = null,
     bool installed = true,
-    bool tray = true)
+    bool tray = true,
+    bool demo = false)
   {
     directory ??= Path.Combine(Path.GetTempPath(), "fma-gui-settings-" + Guid.NewGuid().ToString("N"));
     keys ??= new FakeStartupKeys();
     var shell = new HostShell(directory, launchedAtLogin: false,
       new StartupRegistration(keys, installed ? @"C:\Programs\FileMergeAssistant\app\FileMergeAssistant.exe" : null));
     var coordinator = new UpdateCoordinator(updates ?? new FakeUpdateService(), installed, "owner/repo", shell.LastUpdateCheck, shell.RecordUpdateCheck);
-    return new SettingsContext(shell, coordinator, installed ? "installed" : "debug", () => tray);
+    return new SettingsContext(shell, coordinator, installed ? "installed" : "debug", () => tray, demo);
   }
 }
 
@@ -39,6 +40,12 @@ internal sealed class FakeStartupKeys : IStartupKeys
   public void DeleteRun(string name) => Run.Remove(name);
 
   public byte[]? ReadApproval(string name) => Approval.GetValueOrDefault(name);
+
+  public bool Applied { get; set; }
+
+  public bool ReadApplied() => Applied;
+
+  public void WriteApplied() => Applied = true;
 }
 
 /// <summary>Answers checks and downloads from what the test set up, and counts them.</summary>

@@ -3,7 +3,7 @@ using Xunit;
 
 namespace FileMergeAssistant.Tests.Infrastructure;
 
-/// <summary>Start at sign-in against in-memory keys; no test touches the real Run or StartupApproved keys.</summary>
+/// <summary>Start at sign-in against in-memory keys; no test touches the real Run, StartupApproved or app keys.</summary>
 public class StartupRegistrationTests
 {
   private const string Exe = @"C:\Users\someone\AppData\Local\Programs\FileMergeAssistant\app\FileMergeAssistant.exe";
@@ -16,9 +16,9 @@ public class StartupRegistrationTests
     Assert.False(startup.Supported);
     Assert.Equal(StartupState.Unavailable, startup.Read());
     startup.Apply(true);
+    startup.Sync(true);
     Assert.Empty(keys.Run);
-    var preferences = new HostPreferences();
-    Assert.Same(preferences, startup.Sync(preferences));
+    Assert.False(keys.Applied);
   }
 
   [Fact]
@@ -33,6 +33,7 @@ public class StartupRegistrationTests
     startup.Apply(false);
     Assert.Empty(keys.Run);
     Assert.Equal(StartupState.Disabled, startup.Read());
+    Assert.True(keys.Applied);
   }
 
   [Theory]
@@ -56,14 +57,27 @@ public class StartupRegistrationTests
   {
     var keys = new FakeStartupKeys();
     var startup = new StartupRegistration(keys, Exe);
-    var applied = startup.Sync(new HostPreferences());
-    Assert.True(applied.StartupApplied);
+    startup.Sync(new HostPreferences().StartAtLogin);
+    Assert.True(keys.Applied);
     Assert.True(keys.Run.ContainsKey(StartupRegistration.ValueName));
 
-    // The user removed the entry outside the app; the next start leaves it removed.
+    // The user removed the entry outside the app, or a damaged preferences file fell back to "on": it stays removed.
     keys.Run.Clear();
-    Assert.Same(applied, startup.Sync(applied));
+    startup.Sync(true);
     Assert.Empty(keys.Run);
+  }
+
+  [Fact]
+  public void A_New_Installation_Writes_The_Preference_Again()
+  {
+    var keys = new FakeStartupKeys();
+    var startup = new StartupRegistration(keys, Exe);
+    startup.Sync(true);
+    // Uninstalling removes the Run value and the installation's key; the preferences in the data folder stay.
+    keys.Run.Clear();
+    keys.Applied = false;
+    startup.Sync(true);
+    Assert.True(keys.Run.ContainsKey(StartupRegistration.ValueName));
   }
 
   [Fact]
@@ -72,18 +86,18 @@ public class StartupRegistrationTests
     var keys = new FakeStartupKeys();
     keys.Run[StartupRegistration.ValueName] = "\"C:\\old\\FileMergeAssistant.exe\" --launch-at-login";
     var startup = new StartupRegistration(keys, Exe);
-    var applied = startup.Sync(new HostPreferences(StartAtLogin: false));
-    Assert.True(applied.StartupApplied);
+    startup.Sync(false);
+    Assert.True(keys.Applied);
     Assert.Empty(keys.Run);
   }
 
   [Fact]
   public void An_Entry_Naming_Another_Copy_Is_Pointed_At_This_One()
   {
-    var keys = new FakeStartupKeys();
+    var keys = new FakeStartupKeys { Applied = true };
     keys.Run[StartupRegistration.ValueName] = "\"D:\\Apps\\FileMergeAssistant\\app\\FileMergeAssistant.exe\" --launch-at-login";
     var startup = new StartupRegistration(keys, Exe);
-    startup.Sync(new HostPreferences(StartupApplied: true));
+    startup.Sync(true);
     Assert.Equal(startup.Command, keys.Run[StartupRegistration.ValueName]);
   }
 
@@ -93,8 +107,7 @@ public class StartupRegistrationTests
     var keys = new FakeStartupKeys { Fail = true };
     var startup = new StartupRegistration(keys, Exe);
     Assert.Equal(StartupState.Unreadable, startup.Read());
-    var preferences = new HostPreferences();
-    Assert.Same(preferences, startup.Sync(preferences));
+    startup.Sync(true);
     Assert.Throws<UnauthorizedAccessException>(() => startup.Apply(true));
   }
 
@@ -103,6 +116,8 @@ public class StartupRegistrationTests
     public Dictionary<string, string> Run { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public Dictionary<string, byte[]> Approval { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public bool Applied { get; set; }
 
     public bool Fail { get; set; }
 
@@ -113,6 +128,10 @@ public class StartupRegistrationTests
     public void DeleteRun(string name) => Run.Remove(Check(name));
 
     public byte[]? ReadApproval(string name) => Check(Approval.GetValueOrDefault(name));
+
+    public bool ReadApplied() => Check(Applied);
+
+    public void WriteApplied() => Applied = Check(true);
 
     private T Check<T>(T value) => Fail ? throw new UnauthorizedAccessException("denied") : value;
   }
