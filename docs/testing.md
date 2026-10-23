@@ -16,6 +16,9 @@ with `RenderTargetBitmap`, and fails on any WPF binding error. `RealIndexRenderi
 same over the real index after scanning a throwaway tree under `%TEMP%`. `ShellTests` covers the tray menu, the
 three startup switches, the update states and switching the display language; it runs in the non-parallel
 `Display language` collection. Both test assemblies pin the display language to `zh-TW` when they load.
+`EnglishScreensTests` switches to English and walks every screen over a real index of ASCII-named folders; it fails
+on any Chinese left on screen or any catalog key shown instead of its text. It skips the add-sources screen, whose
+suggestions over the real store come from the real user profile.
 
 The scanner and real-store tests (`Scanning/`, `Workbench/IndexedWorkbenchStoreTests`) build folder
 trees under `%TEMP%` (`TempTree`) and an index under `FMA_DATA_DIR`. No test scans or reads the real

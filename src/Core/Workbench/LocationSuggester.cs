@@ -1,3 +1,5 @@
+using System.Globalization;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Sources;
 
 namespace FileMergeAssistant.Workbench;
@@ -41,14 +43,14 @@ public static class LocationSuggester
       if (Directory.Exists(path))
       {
         var projects = CountGitProjects(path);
-        Add(path, projects > 0 ? $"偵測到 {projects} 個 git 專案" : "程式碼資料夾", true);
+        Add(path, projects > 0 ? GitProjects(projects) : AppText.Get("scan.suggest.codeFolder"), true);
       }
     }
-    Add(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "文件", true);
-    Add(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "圖片", false);
-    Add(Path.Combine(userProfile, "Downloads"), "下載", false);
-    Add(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "桌面", false);
-    Add(oneDrive, "OneDrive；只在雲端的檔不會被下載", false);
+    Add(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), AppText.Get("scan.suggest.documents"), true);
+    Add(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), AppText.Get("scan.suggest.pictures"), false);
+    Add(Path.Combine(userProfile, "Downloads"), AppText.Get("scan.suggest.downloads"), false);
+    Add(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), AppText.Get("scan.suggest.desktop"), false);
+    Add(oneDrive, AppText.Get("scan.suggest.oneDrive"), false);
 
     var system = Path.GetPathRoot(Environment.SystemDirectory);
     foreach (var drive in DriveInfo.GetDrives())
@@ -58,14 +60,28 @@ public static class LocationSuggester
         continue;
       }
       var info = volumes.Describe(drive.Name);
-      var label = info?.Label is { } name ? $"{name}，" : string.Empty;
-      var description = drive.DriveType == DriveType.Removable
-        ? $"{label}外接硬碟；拔除後仍會保留索引"
-        : $"{label}{info?.Describe() ?? "內建硬碟"}";
+      var label = info?.Label;
+      string description;
+      if (drive.DriveType == DriveType.Removable)
+      {
+        description = label is null ? AppText.Get("scan.suggest.removable") : AppText.Get("scan.suggest.removableLabel", ("label", label));
+      }
+      else
+      {
+        var kind = info?.Describe() ?? AppText.Get("scan.volume.fixed");
+        description = label is null ? kind : AppText.Get("scan.suggest.labelled", ("label", label), ("drive", kind));
+      }
       Add(drive.Name, description, false);
     }
     return result;
   }
+
+  /// <summary>
+  /// 「偵測到 23 個 git 專案」. Both languages keep the word "git": the first-run screen protects the folder whose
+  /// description names git.
+  /// </summary>
+  internal static string GitProjects(int count) =>
+    AppText.Plural("scan.suggest.gitProjects", count, ("count", count.ToString(CultureInfo.InvariantCulture)));
 
   private static int CountGitProjects(string path)
   {

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
+using FileMergeAssistant.Localization;
 
 namespace FileMergeAssistant.Sources;
 
@@ -18,17 +19,17 @@ public enum VolumeKind
 /// <param name="Kind">Drive type.</param>
 public sealed record VolumeInfo(string Root, string? Serial, string? Label, VolumeKind Kind)
 {
-  /// <summary>Plain description, for example 「外接硬碟，磁碟區序號 7C1E-09AB」.</summary>
+  /// <summary>Plain description in the display language, for example 「外接硬碟，磁碟區序號 7C1E-09AB」.</summary>
   public string Describe()
   {
     var kind = Kind switch
     {
-      VolumeKind.Removable => "外接硬碟",
-      VolumeKind.Network => "網路磁碟",
-      VolumeKind.Fixed => "內建硬碟",
-      _ => "磁碟",
+      VolumeKind.Removable => "scan.volume.removable",
+      VolumeKind.Network => "scan.volume.network",
+      VolumeKind.Fixed => "scan.volume.fixed",
+      _ => "scan.volume.other",
     };
-    return Serial is null ? kind : $"{kind}，磁碟區序號 {Serial}";
+    return Serial is null ? AppText.Get(kind) : AppText.Get(kind + "Serial", ("serial", Serial));
   }
 }
 

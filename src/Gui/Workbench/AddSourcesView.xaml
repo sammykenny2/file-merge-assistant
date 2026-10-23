@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:w="clr-namespace:FileMergeAssistant.Gui.Workbench"
+             xmlns:l="clr-namespace:FileMergeAssistant.Gui.Localization"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -21,8 +22,8 @@
         <Border Style="{StaticResource Card}" Margin="0,28,0,0">
           <StackPanel>
             <DockPanel Margin="20,14">
-              <Button DockPanel.Dock="Right" Content="選擇其他資料夾…" Style="{StaticResource SecondaryButton}" Command="{Binding ChooseFolderCommand}" />
-              <TextBlock Text="找到的常用位置" Style="{StaticResource H2}" VerticalAlignment="Center" />
+              <Button DockPanel.Dock="Right" Content="{l:T addSources.choose}" Style="{StaticResource SecondaryButton}" Command="{Binding ChooseFolderCommand}" />
+              <TextBlock Text="{l:T addSources.found}" Style="{StaticResource H2}" VerticalAlignment="Center" />
             </DockPanel>
             <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" />
             <ItemsControl ItemsSource="{Binding Locations}" Focusable="False">
@@ -46,52 +47,52 @@
 
         <Border Style="{StaticResource Card}" Margin="0,24,0,0" Padding="20,14,20,16">
           <StackPanel>
-            <TextBlock Text="每個來源都會套用" Style="{StaticResource H2}" Margin="0,0,0,8" />
+            <TextBlock Text="{l:T addSources.options.title}" Style="{StaticResource H2}" Margin="0,0,0,8" />
             <CheckBox Style="{StaticResource Check}" IsChecked="{Binding SkipRegenerable}" Margin="0,6">
               <StackPanel>
-                <TextBlock Text="略過可重建的資料夾" FontWeight="SemiBold" />
-                <TextBlock Text="node_modules、bin、obj、.vs、dist、__pycache__ 等。只記錄大小，不逐檔比對。" Style="{StaticResource Small}" Margin="0,2,0,0" />
+                <TextBlock Text="{l:T addSources.options.skipRegenerable}" FontWeight="SemiBold" />
+                <TextBlock Text="{l:T addSources.options.skipRegenerableHint}" Style="{StaticResource Small}" Margin="0,2,0,0" />
               </StackPanel>
             </CheckBox>
             <CheckBox Style="{StaticResource Check}" IsChecked="{Binding SkipCloudOnly}" Margin="0,6">
               <StackPanel>
-                <TextBlock Text="不下載只在雲端的檔" FontWeight="SemiBold" />
-                <TextBlock Text="OneDrive 佔位檔只記錄名稱與大小，不會為了比對而下載。" Style="{StaticResource Small}" Margin="0,2,0,0" />
+                <TextBlock Text="{l:T addSources.options.skipCloud}" FontWeight="SemiBold" />
+                <TextBlock Text="{l:T addSources.options.skipCloudHint}" Style="{StaticResource Small}" Margin="0,2,0,0" />
               </StackPanel>
             </CheckBox>
             <CheckBox Style="{StaticResource Check}" IsChecked="{Binding ProtectSuggested}" Margin="0,6"
                       Visibility="{Binding CanProtect, Converter={StaticResource BoolToVisibility}}">
               <StackPanel>
                 <TextBlock Text="{Binding ProtectLabel}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                <TextBlock Text="受保護的檔案不會被移入回收區，也不會被覆寫。" Style="{StaticResource Small}" Margin="0,2,0,0" />
+                <TextBlock Text="{l:T addSources.options.protectHint}" Style="{StaticResource Small}" Margin="0,2,0,0" />
               </StackPanel>
             </CheckBox>
-            <TextBlock Text="之後可以在「來源」裡逐一調整。" Style="{StaticResource Small}" Margin="0,8,0,0" />
+            <TextBlock Text="{l:T addSources.options.later}" Style="{StaticResource Small}" Margin="0,8,0,0" />
           </StackPanel>
         </Border>
 
         <WrapPanel Margin="0,24,0,0">
           <Button Content="{Binding AddAndScanLabel}" Style="{StaticResource PrimaryButton}" MinHeight="48" Margin="0,0,12,8"
                   Command="{Binding AddAndScanCommand}" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibility}}" />
-          <Button Content="只加入，稍後再掃" Style="{StaticResource SecondaryButton}" MinHeight="48" Margin="0,0,12,8"
+          <Button Content="{l:T addSources.addOnly}" Style="{StaticResource SecondaryButton}" MinHeight="48" Margin="0,0,12,8"
                   Command="{Binding AddOnlyCommand}" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibility}}" />
-          <Button Content="先勾選至少一個位置" Style="{StaticResource PrimaryButton}" MinHeight="48" Margin="0,0,12,8" IsEnabled="False"
+          <Button Content="{l:T addSources.selectFirst}" Style="{StaticResource PrimaryButton}" MinHeight="48" Margin="0,0,12,8" IsEnabled="False"
                   Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVisibility}}" />
-          <Button Content="取消" Style="{StaticResource LinkButton}" Margin="8,0,0,8" Command="{Binding CancelCommand}"
+          <Button Content="{l:T addSources.cancel}" Style="{StaticResource LinkButton}" Margin="8,0,0,8" Command="{Binding CancelCommand}"
                   Visibility="{Binding IsFirstRun, Converter={StaticResource InverseBoolToVisibility}}" />
         </WrapPanel>
         <Border Background="{StaticResource WarnSoftBrush}" BorderBrush="{StaticResource WarnBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,8,0,8"
                 Visibility="{Binding Problems, Converter={StaticResource NullToVisibility}}">
           <TextBlock Text="{Binding Problems}" Foreground="{StaticResource WarnInkBrush}" TextWrapping="Wrap" />
         </Border>
-        <TextBlock Text="加入來源不會移動或修改任何檔案。整理要等你逐疊決定、確認之後才會執行。" Style="{StaticResource Small}" Margin="0,4,0,0" />
+        <TextBlock Text="{l:T addSources.safe}" Style="{StaticResource Small}" Margin="0,4,0,0" />
       </StackPanel>
 
       <StackPanel Grid.Column="2" Margin="0,8,0,0">
-        <TextBlock Text="加入之後會發生什麼" Style="{StaticResource H2}" />
-        <ItemsControl Margin="0,14,0,0" Focusable="False">
+        <TextBlock Text="{l:T addSources.how.title}" Style="{StaticResource H2}" />
+        <ItemsControl ItemsSource="{Binding Steps}" Margin="0,14,0,0" Focusable="False">
           <ItemsControl.ItemTemplate>
-            <DataTemplate>
+            <DataTemplate DataType="{x:Type w:HowStep}">
               <Grid Margin="0,0,0,16">
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="Auto" />
@@ -107,14 +108,10 @@
               </Grid>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
-          <w:HowStep Number="1" Title="探索" Text="記錄每個檔的路徑、大小與日期。速度快，隨時可以暫停。" />
-          <w:HowStep Number="2" Title="找可能的複本" Text="結構與大小相近的資料夾、大小相同的檔，會先排進比對。" />
-          <w:HowStep Number="3" Title="確認內容" Text="只對可能的複本計算內容指紋。檔名相同不算數。" />
-          <w:HowStep Number="4" Title="出現在工作台" Text="確認一疊就能整理一疊，不用等全部掃完。" />
         </ItemsControl>
 
-        <TextBlock Text="什麼是一疊" Style="{StaticResource H2}" Margin="0,16,0,0" />
-        <TextBlock Text="同一份東西散在各處的幾個複本。可能是整個專案資料夾，也可能只是一個檔。下面是一疊的例子：" Style="{StaticResource Small}" FontSize="13.5" Margin="0,4,0,12" />
+        <TextBlock Text="{l:T addSources.stack.title}" Style="{StaticResource H2}" Margin="0,16,0,0" />
+        <TextBlock Text="{l:T addSources.stack.text}" Style="{StaticResource Small}" FontSize="13.5" Margin="0,4,0,12" />
         <StackPanel>
           <Border Margin="0,0,0,0" Padding="12,8" BorderThickness="1" BorderBrush="{StaticResource AccentBrush}" Background="{StaticResource AccentSoftBrush}" CornerRadius="4">
             <TextBlock FontSize="13"><Run Text="C:\Users\demo\source\" Foreground="{StaticResource FaintBrush}" /><Run Text="invoice-tool" FontWeight="SemiBold" /></TextBlock>
@@ -123,13 +120,13 @@
             <TextBlock FontSize="13"><Run Text="D:\Projects\" Foreground="{StaticResource FaintBrush}" /><Run Text="invoice-tool-backup-20240311" FontWeight="SemiBold" /></TextBlock>
           </Border>
           <Border Margin="28,-2,0,0" Padding="12,8" BorderThickness="1" BorderBrush="{StaticResource BorderBrush}" Background="{StaticResource SurfaceBrush}" CornerRadius="4">
-            <TextBlock FontSize="13"><Run Text="E:\備份\2023\" Foreground="{StaticResource FaintBrush}" /><Run Text="invoice-tool" FontWeight="SemiBold" /></TextBlock>
+            <TextBlock FontSize="13"><Run Text="{l:T addSources.stack.backupFolder}" Foreground="{StaticResource FaintBrush}" /><Run Text="invoice-tool" FontWeight="SemiBold" /></TextBlock>
           </Border>
           <Border Margin="42,-2,0,0" Padding="12,8" BorderThickness="1" BorderBrush="{StaticResource BorderBrush}" Background="{StaticResource SurfaceBrush}" CornerRadius="4">
-            <TextBlock FontSize="13"><Run Text="C:\Users\demo\Desktop\" Foreground="{StaticResource FaintBrush}" /><Run Text="invoice-tool - 複製" FontWeight="SemiBold" /></TextBlock>
+            <TextBlock FontSize="13"><Run Text="C:\Users\demo\Desktop\" Foreground="{StaticResource FaintBrush}" /><Run Text="{l:T addSources.stack.copyName}" FontWeight="SemiBold" /></TextBlock>
           </Border>
         </StackPanel>
-        <TextBlock Text="你決定其中一份當正本，再選擇合併、只留正本，或都保留。一次只處理這一疊。" Style="{StaticResource Small}" FontSize="13.5" Margin="0,12,0,0" />
+        <TextBlock Text="{l:T addSources.stack.after}" Style="{StaticResource Small}" FontSize="13.5" Margin="0,12,0,0" />
       </StackPanel>
     </Grid>
   </ScrollViewer>

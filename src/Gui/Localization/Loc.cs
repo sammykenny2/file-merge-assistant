@@ -20,11 +20,11 @@ public sealed class Loc : INotifyPropertyChanged
       var dispatcher = Application.Current?.Dispatcher;
       if (dispatcher is null || dispatcher.CheckAccess())
       {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
+        Raise();
       }
       else
       {
-        dispatcher.BeginInvoke(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]")));
+        dispatcher.BeginInvoke(Raise);
       }
     };
   }
@@ -34,6 +34,19 @@ public sealed class Loc : INotifyPropertyChanged
   public event PropertyChangedEventHandler? PropertyChanged;
 
   public string this[string key] => AppText.Get(key);
+
+  /// <summary>
+  /// The space between a verb and what it acts on, or a name and its kind: an ideographic space in Chinese, an en space
+  /// in English. A catalog entry cannot be only white space.
+  /// </summary>
+  [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Bound with change notification.")]
+  public string Gap => AppText.Locale == "zh-TW" ? "\u3000" : "\u2002";
+
+  private void Raise()
+  {
+    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
+    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Gap)));
+  }
 }
 
 /// <summary>XAML text from the catalog that follows the display language: <c>Text="{l:T hub.title}"</c>.</summary>

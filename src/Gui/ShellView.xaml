@@ -18,7 +18,7 @@
     <Border DockPanel.Dock="Top" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
       <DockPanel Margin="24,0">
         <Button DockPanel.Dock="Left" Style="{StaticResource LinkButton}" Foreground="{StaticResource InkBrush}"
-                Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:NavSection.Hub}" AutomationProperties.Name="工作台" Margin="0,0,28,0">
+                Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:NavSection.Hub}" AutomationProperties.Name="{l:T hub.title}" Margin="0,0,28,0">
           <StackPanel Orientation="Horizontal">
             <Canvas Width="22" Height="23" Margin="0,0,10,0" VerticalAlignment="Center">
               <Border Canvas.Left="7" Canvas.Top="0" Width="14" Height="17" BorderBrush="{StaticResource HintBrush}" BorderThickness="1.5" CornerRadius="2" Background="{StaticResource SurfaceBrush}" />
@@ -32,8 +32,8 @@
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
           <Border Style="{StaticResource Chip}" BorderBrush="{StaticResource HintBrush}" CornerRadius="4" Margin="0,0,16,0"
                   Visibility="{Binding IsDemo, Converter={StaticResource BoolToVisibility}}"
-                  ToolTip="以 --demo 啟動：用的是 GUI 流程 mock 的模擬資料，不會讀取或改動你的檔案。">
-            <TextBlock Text="模擬資料" FontSize="12.5" Foreground="{StaticResource MutedBrush}" />
+                  ToolTip="{l:T header.demoTip}">
+            <TextBlock Text="{l:T header.demo}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" />
           </Border>
           <Button Content="{l:T settings.title}" Style="{StaticResource NavTab}" Tag="{Binding IsSettingsSelected}"
                   Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:NavSection.Settings}"
@@ -41,15 +41,15 @@
         </StackPanel>
 
         <StackPanel Orientation="Horizontal">
-          <Button Content="工作台" Style="{StaticResource NavTab}" Tag="{Binding IsHubSelected}"
+          <Button Content="{l:T hub.title}" Style="{StaticResource NavTab}" Tag="{Binding IsHubSelected}"
                   Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:NavSection.Hub}" />
-          <Button Content="來源" Style="{StaticResource NavTab}" Tag="{Binding IsSourcesSelected}"
+          <Button Content="{l:T sources.title}" Style="{StaticResource NavTab}" Tag="{Binding IsSourcesSelected}"
                   Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:NavSection.Sources}" />
           <Button Style="{StaticResource NavTab}" Tag="{Binding IsPlanSelected}"
                   Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:NavSection.Plan}"
-                  AutomationProperties.Name="待執行">
+                  AutomationProperties.Name="{l:T header.nav.pending}">
             <StackPanel Orientation="Horizontal">
-              <TextBlock Text="待執行" VerticalAlignment="Center" />
+              <TextBlock Text="{l:T header.nav.pending}" VerticalAlignment="Center" />
               <Border MinWidth="22" Padding="6,0" Margin="6,0,0,0" CornerRadius="11" VerticalAlignment="Center">
                 <Border.Style>
                   <Style TargetType="Border">
@@ -76,7 +76,7 @@
               </Border>
             </StackPanel>
           </Button>
-          <Button Content="歷史" Style="{StaticResource NavTab}" Tag="{Binding IsHistorySelected}"
+          <Button Content="{l:T header.nav.history}" Style="{StaticResource NavTab}" Tag="{Binding IsHistorySelected}"
                   Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:NavSection.History}" />
         </StackPanel>
       </DockPanel>
@@ -85,7 +85,7 @@
     <!-- Index status strip -->
     <Border DockPanel.Dock="Top" Background="{StaticResource StripBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
             Padding="24,7">
-      <ItemsControl ItemsSource="{Binding Strip}" Focusable="False" AutomationProperties.Name="索引狀態">
+      <ItemsControl ItemsSource="{Binding Strip}" Focusable="False" AutomationProperties.Name="{l:T header.strip.name}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
             <WrapPanel />

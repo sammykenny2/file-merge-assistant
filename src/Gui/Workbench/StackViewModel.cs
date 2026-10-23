@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Stacks;
 using FileMergeAssistant.Workbench;
 
@@ -44,17 +45,17 @@ public sealed partial class StackColumnViewModel : ObservableObject
     IRelayCommand setKeeper, IRelayCommand remove, Action<bool> setAlsoKeep)
   {
     _setAlsoKeep = setAlsoKeep;
-    var role = review.RoleOf(copy);
-    IsKeeper = role == CopyRole.Keeper;
-    Tone = IsKeeper ? ColumnTone.Keeper : role == CopyRole.Offline ? ColumnTone.Offline : ColumnTone.Normal;
-    Pill = role switch
+    Role = review.RoleOf(copy);
+    IsKeeper = Role == CopyRole.Keeper;
+    Tone = IsKeeper ? ColumnTone.Keeper : Role == CopyRole.Offline ? ColumnTone.Offline : ColumnTone.Normal;
+    Pill = Role switch
     {
-      CopyRole.Keeper => "正本",
-      CopyRole.Recycle => "移入回收區",
-      CopyRole.AlsoKeep => "也保留",
-      CopyRole.Protected => "受保護，保留",
-      CopyRole.Offline => "離線，先不動",
-      _ => "不變動",
+      CopyRole.Keeper => AppText.Get("stack.pill.keeper"),
+      CopyRole.Recycle => AppText.Get("stack.pill.recycle"),
+      CopyRole.AlsoKeep => AppText.Get("stack.pill.alsoKeep"),
+      CopyRole.Protected => AppText.Get("stack.pill.protected"),
+      CopyRole.Offline => AppText.Get("stack.pill.offline"),
+      _ => AppText.Get("stack.pill.unchanged"),
     };
     Source = copy.SourceName;
     (Prefix, Tail) = Fmt.SplitPath(copy.Path);
@@ -63,19 +64,21 @@ public sealed partial class StackColumnViewModel : ObservableObject
     KeeperNote = !IsKeeper
       ? null
       : copy.Id == review.Stack.SuggestedKeeperCopy.Id && copy.SuggestReason is not null
-        ? $"建議當正本：{copy.SuggestReason}"
-        : "你選的正本。比較結果已經以這份為準重新計算。";
+        ? AppText.Get("stack.column.suggestedKeeper", ("reason", copy.SuggestReason))
+        : AppText.Get("stack.column.chosenKeeper");
     CanSetKeeper = !IsKeeper && StackReview.CanBeKeeper(copy);
     OfflineNoKeeper = !IsKeeper && !StackReview.CanBeKeeper(copy);
-    ShowAlsoKeep = review.ChangesFiles && role is CopyRole.Recycle or CopyRole.AlsoKeep;
-    _isAlsoKept = role == CopyRole.AlsoKeep;
+    ShowAlsoKeep = review.ChangesFiles && Role is CopyRole.Recycle or CopyRole.AlsoKeep;
+    _isAlsoKept = Role == CopyRole.AlsoKeep;
     CanRemove = review.CanRemove(copy);
     SetKeeper = setKeeper;
     Remove = remove;
-    SetKeeperName = $"把「{copy.SourceName}」這份設為正本";
-    RemoveName = $"把「{copy.SourceName}」這份移出這疊";
+    SetKeeperName = AppText.Get("stack.column.setKeeperName", ("source", copy.SourceName));
+    RemoveName = AppText.Get("stack.column.removeName", ("source", copy.SourceName));
   }
 
+  /// <summary>What happens to this copy; the view colours the pill by it, never by the pill's text.</summary>
+  public CopyRole Role { get; }
   public bool IsKeeper { get; }
   public ColumnTone Tone { get; }
   public string Pill { get; }
@@ -104,37 +107,53 @@ public sealed partial class StackColumnViewModel : ObservableObject
     var lines = new List<string>();
     if (copy.IsOffline && copy.IndexedAt is { } indexed)
     {
-      lines.Add($"最後看到 {Fmt.Day(indexed, now)}，資料是當時的索引");
+      lines.Add(AppText.Get("stack.column.lastSeen", ("day", Fmt.Day(indexed, now))));
     }
     else if (copy.LastModified is { } modified)
     {
-      lines.Add($"最後修改 {Fmt.Day(modified, now)}");
+      lines.Add(AppText.Get("stack.column.modified", ("day", Fmt.Day(modified, now))));
     }
     lines.AddRange(copy.Notes);
     if (copy.Git is { } git)
     {
-      var uncommitted = git.UncommittedChanges > 0 ? $"，{git.UncommittedChanges} 個未提交的變更" : string.Empty;
-      if (copy.Id != keeper.Id && keeper.Git is { } keeperGit && git.Head is not null && git.Head == keeperGit.Head)
-      {
-        lines.Add($"git：和正本同一個 commit{uncommitted}");
-      }
-      else if (copy.Id != keeper.Id && git.BehindKeeper is > 0)
-      {
-        var ahead = git.AheadOfKeeper is > 0 ? $"；有 {git.AheadOfKeeper} 個正本沒有的 commit" : "；沒有正本以外的 commit";
-        lines.Add($"git：{git.Branch}，落後正本 {git.BehindKeeper} 個 commit{ahead}{uncommitted}");
-      }
-      else
-      {
-        lines.Add($"git：{git.Branch}{uncommitted}");
-      }
+      lines.Add(GitLine(copy, keeper, git));
     }
     return lines;
+  }
+
+  private static string GitLine(StackCopy copy, StackCopy keeper, GitStatus git)
+  {
+    var dirty = git.UncommittedChanges;
+    if (copy.Id != keeper.Id && keeper.Git is { } keeperGit && git.Head is not null && git.Head == keeperGit.Head)
+    {
+      return dirty > 0
+        ? AppText.Plural("stack.git.sameDirty", dirty, ("count", dirty))
+        : AppText.Get("stack.git.same");
+    }
+    if (copy.Id != keeper.Id && git.BehindKeeper is { } behind && behind > 0)
+    {
+      if (git.AheadOfKeeper is { } ahead && ahead > 0)
+      {
+        return dirty > 0
+          ? AppText.Plural("stack.git.behindAheadDirty", dirty, ("branch", git.Branch), ("behind", behind), ("ahead", ahead), ("count", dirty))
+          : AppText.Get("stack.git.behindAhead", ("branch", git.Branch), ("behind", behind), ("ahead", ahead));
+      }
+      return dirty > 0
+        ? AppText.Plural("stack.git.behindDirty", dirty, ("branch", git.Branch), ("behind", behind), ("count", dirty))
+        : AppText.Get("stack.git.behind", ("branch", git.Branch), ("behind", behind));
+    }
+    return dirty > 0
+      ? AppText.Plural("stack.git.branchDirty", dirty, ("branch", git.Branch), ("count", dirty))
+      : AppText.Get("stack.git.branch", ("branch", git.Branch));
   }
 }
 
 public sealed partial class ActionOptionViewModel : ObservableObject
 {
   private readonly Action<StackAction> _pick;
+
+  [ObservableProperty]
+  private string _label;
 
   [ObservableProperty]
   private string _description = string.Empty;
@@ -148,12 +167,11 @@ public sealed partial class ActionOptionViewModel : ObservableObject
   public ActionOptionViewModel(StackAction action, string label, Action<StackAction> pick)
   {
     Action = action;
-    Label = label;
+    _label = label;
     _pick = pick;
   }
 
   public StackAction Action { get; }
-  public string Label { get; }
 
   /// <summary>Two-way for the radio button; picking an option changes the decision.</summary>
   public bool IsSelected
@@ -178,19 +196,22 @@ public sealed partial class ConflictOptionViewModel : ObservableObject
   [ObservableProperty]
   private bool _isChosen;
 
-  public ConflictOptionViewModel(ConflictChoice choice, string label, bool isEnabled, string? why, Action<ConflictChoice> pick)
+  /// <summary>Set by the stack screen each time it redraws, so it follows the display language.</summary>
+  [ObservableProperty]
+  private string _label = string.Empty;
+
+  [ObservableProperty]
+  private string? _why;
+
+  public ConflictOptionViewModel(ConflictChoice choice, bool isEnabled, Action<ConflictChoice> pick)
   {
     Choice = choice;
-    Label = label;
     IsEnabled = isEnabled;
-    Why = why;
     _pick = pick;
   }
 
   public ConflictChoice Choice { get; }
-  public string Label { get; }
   public bool IsEnabled { get; }
-  public string? Why { get; }
 
   public bool IsSelected
   {
@@ -207,18 +228,20 @@ public sealed partial class ConflictOptionViewModel : ObservableObject
   partial void OnIsChosenChanged(bool value) => OnPropertyChanged(nameof(IsSelected));
 }
 
-public sealed class ConflictViewModel
+public sealed partial class ConflictViewModel : ObservableObject
 {
-  public ConflictViewModel(string path, string compare, IReadOnlyList<ConflictOptionViewModel> options)
+  /// <summary>Set by the stack screen each time it redraws, so it follows the display language.</summary>
+  [ObservableProperty]
+  private string _compare = string.Empty;
+
+  public ConflictViewModel(string path, IReadOnlyList<ConflictOptionViewModel> options)
   {
     Path = path;
-    Compare = compare;
     Options = options;
     GroupName = "conflict:" + path;
   }
 
   public string Path { get; }
-  public string Compare { get; }
   public string GroupName { get; }
   public IReadOnlyList<ConflictOptionViewModel> Options { get; }
 }
@@ -241,10 +264,17 @@ public sealed record SessionLogItem(string Title, string What);
 public sealed partial class StackViewModel : PageViewModel
 {
   private readonly HashSet<string> _visited = new(StringComparer.Ordinal);
+
+  /// <summary>The decisions of this session, kept so the log can be redrawn in another display language.</summary>
+  private readonly List<(string Title, StackAction Action)> _session = [];
+
   private Stack _stack = null!;
   private StackDecision _decision = null!;
   private bool _keeperUnavailable;
   private StackReview _review = null!;
+
+  /// <summary>The catalog key and stack title of the toast, so it can be redrawn in another display language.</summary>
+  private (string Key, string StackId, string Title)? _toastSource;
 
   [ObservableProperty]
   private string _title = string.Empty;
@@ -341,10 +371,10 @@ public sealed partial class StackViewModel : PageViewModel
   {
     Options =
     [
-      new ActionOptionViewModel(StackAction.Merge, "合併到正本", PickAction),
-      new ActionOptionViewModel(StackAction.KeepKeeperOnly, "只保留正本", PickAction),
-      new ActionOptionViewModel(StackAction.KeepAll, "都保留", PickAction),
-      new ActionOptionViewModel(StackAction.Later, "稍後再看", PickAction),
+      new ActionOptionViewModel(StackAction.Merge, ActionLabel(StackAction.Merge), PickAction),
+      new ActionOptionViewModel(StackAction.KeepKeeperOnly, ActionLabel(StackAction.KeepKeeperOnly), PickAction),
+      new ActionOptionViewModel(StackAction.KeepAll, ActionLabel(StackAction.KeepAll), PickAction),
+      new ActionOptionViewModel(StackAction.Later, ActionLabel(StackAction.Later), PickAction),
     ];
     Load(stackId);
   }
@@ -372,19 +402,43 @@ public sealed partial class StackViewModel : PageViewModel
 
   public bool CanSubmit => !IsBlocked;
 
+  /// <summary>A stack's title as the store has it now, in the current language; the remembered one if it is gone.</summary>
+  private string TitleOf(string stackId, string remembered) =>
+    Store.Stacks.FirstOrDefault(s => s.Id == stackId)?.Title ?? remembered;
+
+  /// <summary>
+  /// Redraws from the store and in the current display language. The decision being edited (keeper, action, conflict
+  /// choices, copies kept or removed) lives in <c>_decision</c> and is kept.
+  /// </summary>
+
   public override void Refresh()
   {
+    // Text made when something happened (the toast, the alert, the session log) is made again in the current language.
+    Toast = _toastSource is { } toast ? AppText.Get(toast.Key, ("title", TitleOf(toast.StackId, toast.Title))) : null;
+    if (Alert is not null)
+    {
+      Alert = AppText.Get("stack.alert.changed");
+    }
+    for (var i = 0; i < _session.Count && i < Log.Count; i++)
+    {
+      var item = new SessionLogItem(_session[i].Title, LogText(_session[i].Action));
+      if (Log[i] != item)
+      {
+        Log[i] = item;
+      }
+    }
+
     if (IsDone)
     {
       UpdateDone();
       return;
     }
+    // A stack that is gone from the store stays on screen as it was last seen.
     var current = Store.Stacks.FirstOrDefault(s => s.Id == _stack.Id);
-    if (current is null)
+    if (current is not null)
     {
-      return;
+      _stack = KeepDetails(current, _stack);
     }
-    _stack = KeepDetails(current, _stack);
     Rebuild();
   }
 
@@ -407,22 +461,16 @@ public sealed partial class StackViewModel : PageViewModel
     }
     catch (StackChangedException)
     {
-      Alert = "這疊剛才有變動（例如掃描找到新的複本，或檔案被修改了），所以這個決定沒有記錄。請回工作台重新打開它再決定。還沒有改動任何檔案。";
+      Alert = AppText.Get("stack.alert.changed");
       return;
     }
     Alert = null;
     var changesFiles = _review.ChangesFiles;
-    Toast = changesFiles
-      ? $"已加入待執行：{_stack.Title}"
-      : _decision.Action == StackAction.KeepAll ? $"已標記為都保留：{_stack.Title}" : $"已放回待整理：{_stack.Title}";
-    var what = _decision.Action switch
-    {
-      StackAction.Merge => "合併到正本，在待執行",
-      StackAction.KeepKeeperOnly => "只保留正本，在待執行",
-      StackAction.KeepAll => "都保留",
-      _ => "稍後再看",
-    };
-    Log.Add(new SessionLogItem(_stack.Title, what));
+    _toastSource = (changesFiles ? "stack.toast.added"
+      : _decision.Action == StackAction.KeepAll ? "stack.toast.keepAll" : "stack.toast.later", _stack.Id, _stack.Title);
+    Toast = AppText.Get(_toastSource.Value.Key, ("title", _stack.Title));
+    _session.Add((_stack.Title, _decision.Action));
+    Log.Add(new SessionLogItem(_stack.Title, LogText(_decision.Action)));
     _visited.Add(_stack.Id);
 
     var next = StackTriage.Order(
@@ -463,6 +511,7 @@ public sealed partial class StackViewModel : PageViewModel
       : stored;
     if (!keepToast)
     {
+      _toastSource = null;
       Toast = null;
     }
     Conflicts.Clear();
@@ -512,34 +561,38 @@ public sealed partial class StackViewModel : PageViewModel
     // A very large file stack would make the table unreadable; the decision still covers every copy.
     var shown = active.Take(MaxColumns).ToList();
     HiddenCopiesText = active.Count > MaxColumns
-      ? $"還有 {Fmt.Count(active.Count - MaxColumns)} 份沒有列在表格裡；選的做法會套用到這疊的全部 {Fmt.Count(active.Count)} 份。"
+      ? AppText.Plural("stack.hiddenCopies", active.Count - MaxColumns,
+        ("count", Fmt.Count(active.Count - MaxColumns)), ("total", Fmt.Count(active.Count)))
       : null;
     var reasons = new List<string>();
     if (_stack.ChangedCopyIds.Count > 0)
     {
-      reasons.Add($"你決定之後，這些位置裡的檔有新增、刪除或修改：{string.Join("、", _stack.Copies.Where(c => _stack.ChangedCopyIds.Contains(c.Id)).Select(c => c.Path))}。下面的比較是現在的內容。");
+      reasons.Add(AppText.Get("stack.reopened.changed",
+        ("paths", StackText.JoinList(_stack.Copies.Where(c => _stack.ChangedCopyIds.Contains(c.Id)).Select(c => c.Path)))));
     }
     if (_stack.NewCopyIds.Count > 0)
     {
-      reasons.Add($"你決定之後，這疊出現了新的複本：{string.Join("、", _stack.Copies.Where(c => _stack.NewCopyIds.Contains(c.Id)).Select(c => c.Path))}。");
+      reasons.Add(AppText.Get("stack.reopened.newCopies",
+        ("paths", StackText.JoinList(_stack.Copies.Where(c => _stack.NewCopyIds.Contains(c.Id)).Select(c => c.Path)))));
     }
     if (_keeperUnavailable)
     {
-      reasons.Add("你原本選的正本現在離線或已經不在這疊裡，先改用建議的正本。");
+      reasons.Add(AppText.Get("stack.reopened.keeperUnavailable"));
     }
-    ReopenedText = reasons.Count == 0 ? null : string.Join(string.Empty, reasons) + "原本的選擇已經帶入，請再確認一次。";
+    ReopenedText = reasons.Count == 0 ? null : StackText.JoinSentences([.. reasons, AppText.Get("stack.reopened.confirm")]);
 
     Title = _stack.Title;
     Group = StackText.GroupTitle(summary.Group);
-    KindLine = $"{(_stack.Kind == StackKind.Folder ? "資料夾複本" : "單檔複本")}，{active.Count} 份";
+    KindLine = StackText.Kind(_stack.Kind, active.Count);
     Why = WhyText(_stack, active.Count);
     Evidence = _stack.Evidence;
     var open = Store.Stacks.Count(s => s.Status == StackStatus.Open && s.Id != _stack.Id);
-    Position = $"還有 {Fmt.Count(open)} 疊待整理";
+    Position = AppText.Plural("stack.position", open, ("count", Fmt.Count(open)));
     BlockedStackText = StackText.Blocked(_stack);
     RemovedText = review.RemovedCopies.Count == 0
       ? null
-      : $"已移出這疊：{string.Join("、", review.RemovedCopies.Select(c => $"{c.SourceName} {c.Path}"))}。之後不會再把它和這疊放在一起。";
+      : AppText.Plural("stack.removed", review.RemovedCopies.Count,
+        ("copies", StackText.JoinList(review.RemovedCopies.Select(c => $"{c.SourceName} {c.Path}"))));
 
     Columns.Clear();
     foreach (var copy in shown)
@@ -572,12 +625,13 @@ public sealed partial class StackViewModel : PageViewModel
     };
 
     HasSame = _stack.SameFileCount > 0 || _stack.SameLabel is not null;
-    SameLabel = _stack.SameLabel ?? $"{Fmt.Count(_stack.SameFileCount)} 個檔";
-    SameSub = $"{active.Count} 份內容都相同";
+    SameLabel = _stack.SameLabel ?? StackText.Files(_stack.SameFileCount);
+    SameSub = AppText.Plural("stack.same.sub", active.Count, ("count", active.Count));
     SameCells.Clear();
+    var sameText = AppText.Get("stack.cell.same");
     foreach (var copy in shown)
     {
-      SameCells.Add(new SimpleCellViewModel("相同", ToneOf(copy)));
+      SameCells.Add(new SimpleCellViewModel(sameText, ToneOf(copy)));
     }
 
     Rows.Clear();
@@ -589,21 +643,21 @@ public sealed partial class StackViewModel : PageViewModel
     }
     NoDiff = Rows.Count == 0;
     DiffNote = NoDiff
-      ? "沒有不同的地方"
+      ? AppText.Get("stack.diff.none")
       : review.Rows.Count > MaxRows
-        ? $"有差異的檔共 {Fmt.Count(review.Rows.Count)} 個，這裡列出前 {MaxRows} 個"
-        : "只列出有差異或需要說明的檔";
+        ? AppText.Get("stack.diff.truncated", ("count", Fmt.Count(review.Rows.Count)), ("max", MaxRows))
+        : AppText.Get("stack.diff.note");
 
     HasRegenerable = _stack.Regenerable is not null;
     RegenerableLabel = _stack.Regenerable?.Names ?? string.Empty;
-    RegenerableSub = "可重建，不逐檔比對；跟著所在的那份一起處理";
+    RegenerableSub = AppText.Get("stack.regenerable.sub");
     RegenerableCells.Clear();
     if (_stack.Regenerable is { } regenerable)
     {
       foreach (var copy in shown)
       {
         var bytes = regenerable.BytesPerCopy[_stack.IndexOf(copy.Id)];
-        RegenerableCells.Add(new SimpleCellViewModel(bytes > 0 ? Fmt.Size(bytes) : "沒有", ToneOf(copy)));
+        RegenerableCells.Add(new SimpleCellViewModel(bytes > 0 ? Fmt.Size(bytes) : AppText.Get("stack.regenerable.none"), ToneOf(copy)));
       }
     }
 
@@ -613,7 +667,7 @@ public sealed partial class StackViewModel : PageViewModel
       notes.Add(_stack.Note);
     }
     notes.AddRange(_stack.RelatedOutside.Select(r =>
-      $"同名但內容不同，不在這疊：{r.Path}（{Fmt.Day(r.Modified, now)} 修改）。檔名相近不代表內容相同，所以不會一起處理。"));
+      AppText.Get("stack.note.related", ("path", r.Path), ("day", Fmt.Day(r.Modified, now)))));
     Note = notes.Count == 0 ? null : string.Join(Environment.NewLine, notes);
 
     UpdateOptions(review);
@@ -622,22 +676,22 @@ public sealed partial class StackViewModel : PageViewModel
 
     BlockReason = review.Block switch
     {
-      ReviewBlock.UnresolvedConflicts => $"還有 {review.UnresolvedCount} 個檔要選版本，才能加入待執行。",
+      ReviewBlock.UnresolvedConflicts => AppText.Plural("stack.block.unresolved", review.UnresolvedCount, ("count", review.UnresolvedCount)),
       ReviewBlock.NothingToRecycle => BlockedStackText is not null
-        ? $"{BlockedStackText}。現在可以選「都保留」或「稍後再看」。"
-        : "沒有要移入回收區的複本。如果每份都要留，請選「都保留」。",
-      ReviewBlock.StillScanning => $"{BlockedStackText}。現在可以選「稍後再看」。",
+        ? AppText.Get("stack.block.keepAllOrLater", ("reason", BlockedStackText))
+        : AppText.Get("stack.block.nothingToRecycle"),
+      ReviewBlock.StillScanning => AppText.Get("stack.block.later", ("reason", BlockedStackText ?? string.Empty)),
       _ => null,
     };
     PrimaryLabel = _decision.Action switch
     {
-      StackAction.KeepAll => "標記為都保留",
-      StackAction.Later => "放回待整理",
-      _ => "加入待執行",
+      StackAction.KeepAll => AppText.Get("stack.primary.keepAll"),
+      StackAction.Later => AppText.Get("stack.primary.later"),
+      _ => AppText.Get("stack.primary.add"),
     };
     PrimaryNote = review.ChangesFiles
-      ? "加入待執行不會改動任何檔案；執行前會再檢查一次每個檔的現況。"
-      : "這個選擇不會改動任何檔案。";
+      ? AppText.Get("stack.primary.noteChanges")
+      : AppText.Get("stack.primary.noteNoChanges");
   }
 
   private void UpdateOptions(StackReview review)
@@ -647,18 +701,21 @@ public sealed partial class StackViewModel : PageViewModel
     var loss = review.LossFileCount;
     foreach (var option in Options)
     {
+      option.Label = ActionLabel(option.Action);
       option.IsChosen = option.Action == _decision.Action;
       option.IsSuggested = option.Action == _stack.SuggestedAction;
       option.Description = option.Action switch
       {
-        StackAction.Merge => unique > 0 || conflicts > 0
-          ? $"把只在其他份的 {Fmt.Count(unique)} 個檔複製進正本{(conflicts > 0 ? $"，{conflicts} 個檔要選版本" : string.Empty)}，再把其他份移入回收區。"
-          : "其他份沒有正本缺少或較新的內容，效果和「只保留正本」相同。",
+        StackAction.Merge => conflicts > 0
+          ? AppText.Plural("stack.option.mergeConflicts", conflicts, ("files", StackText.Files(unique)), ("count", conflicts))
+          : unique > 0
+            ? AppText.Plural("stack.option.merge", unique, ("count", Fmt.Count(unique)))
+            : AppText.Get("stack.option.mergeSame"),
         StackAction.KeepKeeperOnly => loss > 0
-          ? $"其他份移入回收區。其中 {Fmt.Count(loss)} 個檔正本沒有或比較新，也會一起移入。"
-          : "其他份的內容正本都有，直接移入回收區。",
-        StackAction.KeepAll => "它們是刻意分開的版本。不改動檔案；之後其中一份有變動才會再提醒。",
-        _ => "放回待整理，不做任何改動。",
+          ? AppText.Plural("stack.option.keepKeeperOnlyLoss", loss, ("count", Fmt.Count(loss)))
+          : AppText.Get("stack.option.keepKeeperOnly"),
+        StackAction.KeepAll => AppText.Get("stack.option.keepAll"),
+        _ => AppText.Get("stack.option.later"),
       };
     }
   }
@@ -667,45 +724,50 @@ public sealed partial class StackViewModel : PageViewModel
   {
     var visible = _decision.Action == StackAction.Merge ? review.Conflicts : [];
     HasConflicts = visible.Count > 0;
+    var theirsAllowed = review.IsChoiceAllowed(ConflictChoice.Theirs);
+    // The same conflicts keep their view models, so the radio button being clicked is not replaced under the pointer.
     var same = Conflicts.Count == visible.Count
-      && Conflicts.Zip(visible).All(p => p.First.Path == p.Second.Row.RelativePath && p.First.Options[1].IsEnabled == review.IsChoiceAllowed(ConflictChoice.Theirs));
-    if (same)
+      && Conflicts.Zip(visible).All(p => p.First.Path == p.Second.Row.RelativePath && p.First.Options[1].IsEnabled == theirsAllowed);
+    if (!same)
     {
-      foreach (var (vm, row) in Conflicts.Zip(visible))
+      Conflicts.Clear();
+      foreach (var row in visible)
       {
-        foreach (var option in vm.Options)
+        var path = row.Row.RelativePath;
+        void Pick(ConflictChoice choice)
         {
-          option.IsChosen = option.Choice == row.Choice;
+          _decision = _decision.WithChoice(path, choice);
+          Rebuild();
         }
+        Conflicts.Add(new ConflictViewModel(path,
+        [
+          new ConflictOptionViewModel(ConflictChoice.Keeper, true, Pick),
+          new ConflictOptionViewModel(ConflictChoice.Theirs, theirsAllowed, Pick),
+          new ConflictOptionViewModel(ConflictChoice.Both, true, Pick),
+        ]));
       }
-      return;
     }
 
-    Conflicts.Clear();
+    // The text is set on every redraw, kept view models included, so it follows the display language.
     var now = Store.Now;
-    foreach (var row in visible)
+    foreach (var (vm, row) in Conflicts.Zip(visible))
     {
-      var path = row.Row.RelativePath;
       var source = row.Source!;
       var keeperDay = Fmt.Day(row.KeeperVersion!.Modified, now);
       var theirDay = Fmt.Day(row.SourceVersion!.Modified, now);
-      void Pick(ConflictChoice choice)
+      vm.Compare = AppText.Get("stack.conflict.compare", ("keeperDay", keeperDay), ("source", source.SourceName), ("theirDay", theirDay));
+      foreach (var option in vm.Options)
       {
-        _decision = _decision.WithChoice(path, choice);
-        Rebuild();
-      }
-      var theirsAllowed = review.IsChoiceAllowed(ConflictChoice.Theirs);
-      var options = new List<ConflictOptionViewModel>
-      {
-        new(ConflictChoice.Keeper, $"用正本的版本（{keeperDay}）", true, null, Pick),
-        new(ConflictChoice.Theirs, $"用「{source.SourceName}」的版本（{theirDay}）", theirsAllowed, theirsAllowed ? null : "正本受保護，不能覆寫", Pick),
-        new(ConflictChoice.Both, $"兩份都留：「{source.SourceName}」那版另存為 {System.IO.Path.GetFileName(StackReview.SaveAsPath(path, source.Tag))}", true, null, Pick),
-      };
-      foreach (var option in options)
-      {
+        option.Label = option.Choice switch
+        {
+          ConflictChoice.Keeper => AppText.Get("stack.conflict.useKeeper", ("day", keeperDay)),
+          ConflictChoice.Theirs => AppText.Get("stack.conflict.useTheirs", ("source", source.SourceName), ("day", theirDay)),
+          _ => AppText.Get("stack.conflict.keepBoth", ("source", source.SourceName),
+            ("name", System.IO.Path.GetFileName(StackReview.SaveAsPath(vm.Path, source.Tag)))),
+        };
+        option.Why = option.IsEnabled ? null : AppText.Get("stack.conflict.protectedKeeper");
         option.IsChosen = option.Choice == row.Choice;
       }
-      Conflicts.Add(new ConflictViewModel(path, $"正本是 {keeperDay} 的版本；「{source.SourceName}」那份是 {theirDay}，比較新。", options));
     }
   }
 
@@ -716,55 +778,79 @@ public sealed partial class StackViewModel : PageViewModel
     {
       Outcome.Add(item.Kind switch
       {
-        OutcomeKind.KeepAllNote => new OutcomeViewModel("不改動任何檔案。這疊會標記為「都保留」，之後其中一份有變動才會再提醒。", OutcomeIcon.Keep),
-        OutcomeKind.LaterNote => new OutcomeViewModel("不改動任何檔案。這疊會放回待整理。", OutcomeIcon.None),
+        OutcomeKind.KeepAllNote => new OutcomeViewModel(AppText.Get("stack.outcome.keepAll"), OutcomeIcon.Keep),
+        OutcomeKind.LaterNote => new OutcomeViewModel(AppText.Get("stack.outcome.later"), OutcomeIcon.None),
         OutcomeKind.CopyToKeeper => new OutcomeViewModel(
-          $"複製 {Fmt.Count(item.FileCount)} 個檔到正本：{string.Join("、", item.Paths)}{(item.KeeperIsGit ? "。在 git 裡會顯示為未追蹤的檔案。" : string.Empty)}", OutcomeIcon.Copy),
-        OutcomeKind.ConflictUnresolved => new OutcomeViewModel($"{item.Paths[0]}：還沒選版本", OutcomeIcon.Warn),
-        OutcomeKind.SaveAs => new OutcomeViewModel($"另存 {item.NewPath}", OutcomeIcon.Copy),
+          AppText.Plural(item.KeeperIsGit ? "stack.outcome.copyGit" : "stack.outcome.copy", item.FileCount,
+            ("count", Fmt.Count(item.FileCount)), ("paths", StackText.JoinList(item.Paths))), OutcomeIcon.Copy),
+        OutcomeKind.ConflictUnresolved => new OutcomeViewModel(AppText.Get("stack.outcome.unresolved", ("path", item.Paths[0])), OutcomeIcon.Warn),
+        OutcomeKind.SaveAs => new OutcomeViewModel(AppText.Get("stack.outcome.saveAs", ("path", item.NewPath ?? string.Empty)), OutcomeIcon.Copy),
         OutcomeKind.ReplaceKeeperVersion => new OutcomeViewModel(
-          $"用「{item.Copy!.SourceName}」的版本取代正本的 {item.Paths[0]}；正本原本的版本移入回收區", OutcomeIcon.Warn),
-        OutcomeKind.KeepKeeperVersion => new OutcomeViewModel($"{item.Paths[0]}：保留正本的版本", OutcomeIcon.Keep),
+          AppText.Get("stack.outcome.replace", ("source", item.Copy!.SourceName), ("path", item.Paths[0])), OutcomeIcon.Warn),
+        OutcomeKind.KeepKeeperVersion => new OutcomeViewModel(AppText.Get("stack.outcome.keepKeeperVersion", ("path", item.Paths[0])), OutcomeIcon.Keep),
         OutcomeKind.RecyclesUniqueFiles => new OutcomeViewModel(
-          $"{Fmt.Count(item.FileCount)} 個正本沒有或比較新的檔會一起移入回收區：{string.Join("、", item.Paths)}", OutcomeIcon.Warn),
-        OutcomeKind.Recycle => new OutcomeViewModel($"移入回收區：{item.Copy!.Path}（{Fmt.Size(item.Bytes)}）", OutcomeIcon.Recycle),
+          AppText.Plural("stack.outcome.recyclesUnique", item.FileCount,
+            ("count", Fmt.Count(item.FileCount)), ("paths", StackText.JoinList(item.Paths))), OutcomeIcon.Warn),
+        OutcomeKind.Recycle => new OutcomeViewModel(
+          AppText.Get("stack.outcome.recycle", ("path", item.Copy!.Path), ("size", Fmt.Size(item.Bytes))), OutcomeIcon.Recycle),
         OutcomeKind.KeepCopy => new OutcomeViewModel(
-          $"保留：{item.Copy!.Path}{(item.Copy.IsProtected ? "（受保護）" : "（你選擇也保留）")}", OutcomeIcon.Keep),
-        _ => new OutcomeViewModel($"先不動：{item.Copy!.Path}（離線，接上後會再提醒）", OutcomeIcon.Offline),
+          AppText.Get(item.Copy!.IsProtected ? "stack.outcome.keepProtected" : "stack.outcome.keepChosen", ("path", item.Copy.Path)), OutcomeIcon.Keep),
+        _ => new OutcomeViewModel(AppText.Get("stack.outcome.offline", ("path", item.Copy!.Path)), OutcomeIcon.Offline),
       });
     }
 
     Space.Clear();
-    Space.Add($"這疊的其他複本共佔 {Fmt.Size(review.DuplicateBytes)}。");
-    Space.Add(review.ChangesFiles
-      ? $"這次會移入回收區 {Fmt.Size(review.RecycleBytes)}{(review.RecycleRegenerableBytes > 0 ? $"，其中 {Fmt.Size(review.RecycleRegenerableBytes)} 是可重建的資料夾" : string.Empty)}。"
-      : "這次不會移入任何檔案。");
-    Space.Add("移入回收區不會立刻釋放空間；清空回收區後才會釋放。");
+    Space.Add(AppText.Get("stack.space.duplicates", ("size", Fmt.Size(review.DuplicateBytes))));
+    Space.Add(!review.ChangesFiles
+      ? AppText.Get("stack.space.none")
+      : review.RecycleRegenerableBytes > 0
+        ? AppText.Get("stack.space.recycleRegenerable", ("size", Fmt.Size(review.RecycleBytes)), ("regenerable", Fmt.Size(review.RecycleRegenerableBytes)))
+        : AppText.Get("stack.space.recycle", ("size", Fmt.Size(review.RecycleBytes))));
+    Space.Add(AppText.Get("stack.space.release"));
   }
 
   private void UpdateDone()
   {
     var pending = Store.Plan.Count;
     HasPending = pending > 0;
-    PendingLabel = $"檢查並執行 {Fmt.Count(pending)} 疊";
+    PendingLabel = AppText.Plural("stack.done.run", pending, ("count", Fmt.Count(pending)));
     DoneText = pending > 0
-      ? $"已有 {Fmt.Count(pending)} 疊在待執行，還沒有改動任何檔案。可以現在檢查並執行，或回工作台繼續整理下一疊。"
-      : "這一段沒有加入待執行的疊，也沒有改動任何檔案。";
+      ? AppText.Plural("stack.done.pending", pending, ("count", Fmt.Count(pending)))
+      : AppText.Get("stack.done.none");
   }
+
+  private static string ActionLabel(StackAction action) => action switch
+  {
+    StackAction.Merge => AppText.Get("stack.action.merge"),
+    StackAction.KeepKeeperOnly => AppText.Get("stack.action.keepKeeperOnly"),
+    StackAction.KeepAll => AppText.Get("stack.action.keepAll"),
+    _ => AppText.Get("stack.action.later"),
+  };
+
+  /// <summary>What a decision did, for the session log at the end.</summary>
+  private static string LogText(StackAction action) => action switch
+  {
+    StackAction.Merge => AppText.Get("stack.log.merge"),
+    StackAction.KeepKeeperOnly => AppText.Get("stack.log.keepKeeperOnly"),
+    StackAction.KeepAll => AppText.Get("stack.log.keepAll"),
+    _ => AppText.Get("stack.log.later"),
+  };
 
   private static string WhyText(Stack stack, int copies)
   {
     if (stack.Kind == StackKind.File)
     {
-      return $"{copies} 個檔內容完全相同，散在{StackText.Where(stack)}。";
+      return AppText.Plural("stack.why.files", copies, ("count", copies), ("where", StackText.Where(stack)));
     }
     if (stack.Rows.Count == 0)
     {
-      return stack.SameFileCount > 0 ? $"{Fmt.Count(stack.SameFileCount)} 個檔在每一份裡內容都相同。" : $"{copies} 份的內容完全相同。";
+      return stack.SameFileCount > 0
+        ? AppText.Plural("stack.why.sameFiles", stack.SameFileCount, ("count", Fmt.Count(stack.SameFileCount)))
+        : AppText.Plural("stack.why.identicalCopies", copies, ("count", copies));
     }
     return stack.SameFileCount > 0
-      ? $"{Fmt.Count(stack.SameFileCount)} 個檔在每一份裡內容都相同，資料夾結構一致。差異只在下面這幾個檔。"
-      : "下面逐份列出各份之間的差異。";
+      ? AppText.Plural("stack.why.sameAndDiffs", stack.SameFileCount, ("count", Fmt.Count(stack.SameFileCount)))
+      : AppText.Get("stack.why.diffs");
   }
 
   private static (string? Text, bool Warn) Hint(StackReview review, RowReview row)
@@ -777,29 +863,30 @@ public sealed partial class StackViewModel : PageViewModel
     {
       case RowKind.OnlyElsewhere:
         return review.Action == StackAction.Merge
-          ? ($"會從「{row.Source!.SourceName}」複製到正本", false)
-          : ("正本沒有，會隨複本移入回收區", true);
+          ? (AppText.Get("stack.hint.copyFrom", ("source", row.Source!.SourceName)), false)
+          : (AppText.Get("stack.hint.notInKeeper"), true);
       case RowKind.Conflict:
         if (review.Action == StackAction.KeepKeeperOnly)
         {
-          return ($"「{row.Source!.SourceName}」的較新版會隨複本移入回收區", true);
+          return (AppText.Get("stack.hint.newerRecycled", ("source", row.Source!.SourceName)), true);
         }
         if (review.IsUnresolved(row))
         {
-          return ("需要你決定用哪一版", true);
+          return (AppText.Get("stack.hint.chooseVersion"), true);
         }
         return row.Choice switch
         {
-          ConflictChoice.Keeper => ("用正本的版本；較新的那版隨複本回收", false),
-          ConflictChoice.Both => ($"兩份都留：另存為 {System.IO.Path.GetFileName(StackReview.SaveAsPath(row.Row.RelativePath, row.Source!.Tag))}", false),
-          _ => ($"用「{row.Source!.SourceName}」的版本取代正本的", false),
+          ConflictChoice.Keeper => (AppText.Get("stack.hint.useKeeper"), false),
+          ConflictChoice.Both => (AppText.Get("stack.hint.keepBoth",
+            ("name", System.IO.Path.GetFileName(StackReview.SaveAsPath(row.Row.RelativePath, row.Source!.Tag)))), false),
+          _ => (AppText.Get("stack.hint.useTheirs", ("source", row.Source!.SourceName)), false),
         };
       case RowKind.Older:
-        return ("其他份是舊版本，隨複本回收", false);
+        return (AppText.Get("stack.hint.older"), false);
       case RowKind.KeptElsewhere:
-        return ("保留在其他份裡", false);
+        return (AppText.Get("stack.hint.keptElsewhere"), false);
       case RowKind.OnlyOffline:
-        return ("只在離線的那份，這次不處理", false);
+        return (AppText.Get("stack.hint.onlyOffline"), false);
       default:
         return (null, false);
     }
@@ -809,18 +896,18 @@ public sealed partial class StackViewModel : PageViewModel
   {
     var index = _stack.IndexOf(copy.Id);
     var version = row.Row.Cells[index];
-    var label = version is null ? null : row.Row.Count > 1 ? "有" : Fmt.Day(version.Modified, now);
+    var label = version is null ? null : row.Row.Count > 1 ? AppText.Get("stack.cell.has") : Fmt.Day(version.Modified, now);
     var offline = column == ColumnTone.Offline;
     return review.CellOf(row, copy) switch
     {
       CellKind.KeeperHas => new CellViewModel(label!, null, CellTone.Keeper, column, false),
-      CellKind.KeeperMissing => new CellViewModel("沒有", null, CellTone.KeeperMissing, column, false),
-      CellKind.Missing => new CellViewModel("沒有", null, CellTone.Missing, column, false),
-      CellKind.KeeperLacks => new CellViewModel("正本沒有", label, CellTone.Highlight, column, !offline),
-      CellKind.SameAsKeeper => new CellViewModel("同正本", null, CellTone.Same, column, false),
-      CellKind.Newer => new CellViewModel("較新", label, CellTone.Highlight, column, !offline),
-      CellKind.Older => new CellViewModel("較舊", label, CellTone.Older, column, false),
-      _ => new CellViewModel("內容不同", null, CellTone.Highlight, column, false),
+      CellKind.KeeperMissing => new CellViewModel(AppText.Get("stack.cell.missing"), null, CellTone.KeeperMissing, column, false),
+      CellKind.Missing => new CellViewModel(AppText.Get("stack.cell.missing"), null, CellTone.Missing, column, false),
+      CellKind.KeeperLacks => new CellViewModel(AppText.Get("stack.cell.keeperLacks"), label, CellTone.Highlight, column, !offline),
+      CellKind.SameAsKeeper => new CellViewModel(AppText.Get("stack.cell.sameAsKeeper"), null, CellTone.Same, column, false),
+      CellKind.Newer => new CellViewModel(AppText.Get("stack.cell.newer"), label, CellTone.Highlight, column, !offline),
+      CellKind.Older => new CellViewModel(AppText.Get("stack.cell.older"), label, CellTone.Older, column, false),
+      _ => new CellViewModel(AppText.Get("stack.cell.different"), null, CellTone.Highlight, column, false),
     };
   }
 }

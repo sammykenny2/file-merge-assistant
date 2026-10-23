@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Plans;
 using FileMergeAssistant.Stacks;
 using FileMergeAssistant.Workbench;
@@ -15,43 +16,49 @@ public sealed partial class PlanItemViewModel : ObservableObject
   {
     _store = store;
     Id = item.Id;
-    Verb = item.Kind switch
-    {
-      PlanItemKind.Copy => "複製",
-      PlanItemKind.SaveAs => "另存",
-      PlanItemKind.Replace => "取代",
-      _ => "移入回收區",
-    };
+    Verb = VerbText(item.Kind);
     IsCopy = item.IsCopyLike;
     Target = item.Target;
     Detail = item.Kind switch
     {
-      PlanItemKind.Copy => $"從 {SourceRoot(entry, item)} 複製到正本" + (item.LooksLikeSecret ? "；看起來是金鑰或密碼設定檔" : string.Empty),
-      PlanItemKind.SaveAs => $"{item.CopyName}那份的版本；正本原本的檔不變",
-      PlanItemKind.Replace => $"用{item.CopyName}那份的版本取代；正本原本的版本移入回收區",
-      _ => item.FileCount > 1
-        ? $"{Fmt.Count(item.FileCount)} 個檔，{Fmt.Size(item.Bytes)}" + (item.IncludesRegenerable is null ? string.Empty : $"，含 {item.IncludesRegenerable}")
-        : Fmt.Size(item.Bytes),
+      PlanItemKind.Copy => AppText.Get(item.LooksLikeSecret ? "plan.item.copyDetailSecret" : "plan.item.copyDetail", ("source", SourceRoot(entry, item))),
+      PlanItemKind.SaveAs => AppText.Get("plan.item.saveAsDetail", ("copy", item.CopyName)),
+      PlanItemKind.Replace => AppText.Get("plan.item.replaceDetail", ("copy", item.CopyName)),
+      _ => item.FileCount > 1 ? FilesText(item.FileCount, item.Bytes, item.IncludesRegenerable) : Fmt.Size(item.Bytes),
     };
     _isEnabled = item.Enabled;
     IsChanged = item.Check == PlanCheck.Changed && item.Enabled;
     ChangeDetail = item.ChangeDetail;
     IsSkipped = item.SkipChanged;
     Status = !item.Enabled
-      ? new ChipInfo("不執行", Tone.Skipped)
+      ? new ChipInfo(AppText.Get("plan.status.off"), Tone.Skipped)
       : item.Check switch
       {
-        PlanCheck.Changed when item.SkipChanged => new ChipInfo("這次略過", Tone.Skipped),
-        PlanCheck.Changed => new ChipInfo("有變動，先停下", Tone.Warn),
-        PlanCheck.Confirmed => new ChipInfo("已重新確認", Tone.Done),
-        _ => new ChipInfo("待確認", Tone.Wait),
+        PlanCheck.Changed when item.SkipChanged => new ChipInfo(AppText.Get("plan.status.skipped"), Tone.Skipped),
+        PlanCheck.Changed => new ChipInfo(AppText.Get("plan.status.changed"), Tone.Warn),
+        PlanCheck.Confirmed => new ChipInfo(AppText.Get("plan.status.confirmed"), Tone.Done),
+        _ => new ChipInfo(AppText.Get("plan.status.waiting"), Tone.Wait),
       };
     DependencyWarning = PlanBuilder.HasDependencyWarning(entry, item)
-      ? "沒有複製的話，這個檔只存在於即將移入回收區的那份，會跟著一起移入。"
+      ? AppText.Get("plan.item.dependency")
       : null;
-    ToggleName = (item.Enabled ? "不執行：" : "執行：") + Verb + " " + Target;
-    SkipLabel = item.SkipChanged ? "改回先停下" : "這次略過這項";
+    ToggleName = AppText.Get(item.Enabled ? "plan.item.toggleOff" : "plan.item.toggleOn", ("verb", Verb), ("target", Target));
+    SkipLabel = AppText.Get(item.SkipChanged ? "plan.item.unskip" : "plan.item.skip");
   }
+
+  /// <summary>What a plan item does, as the plan and the history show it.</summary>
+  internal static string VerbText(PlanItemKind kind) => kind switch
+  {
+    PlanItemKind.Copy => AppText.Get("plan.verb.copy"),
+    PlanItemKind.SaveAs => AppText.Get("plan.verb.saveAs"),
+    PlanItemKind.Replace => AppText.Get("plan.verb.replace"),
+    _ => AppText.Get("plan.verb.recycle"),
+  };
+
+  /// <summary>「12 個檔，38 MB」, with the regenerable folders it includes when there are any.</summary>
+  internal static string FilesText(long count, long bytes, string? regenerable = null) => regenerable is null
+    ? AppText.Plural("plan.item.files", count, ("count", Fmt.Count(count)), ("size", Fmt.Size(bytes)))
+    : AppText.Plural("plan.item.filesRegenerable", count, ("count", Fmt.Count(count)), ("size", Fmt.Size(bytes)), ("regenerable", regenerable));
 
   public string Id { get; }
   public string Verb { get; }
@@ -141,21 +148,23 @@ public sealed partial class PlanViewModel : PageViewModel
   {
     var plan = Store.Plan;
     IsEmpty = plan.Count == 0;
-    Title = $"待執行：{Fmt.Count(plan.Count)} 疊";
+    Title = AppText.Plural("plan.title", plan.Count, ("count", Fmt.Count(plan.Count)));
 
     Stacks.Clear();
     foreach (var entry in plan)
     {
       var (prefix, tail) = Fmt.SplitPath(entry.Keeper.Path);
       var stackId = entry.Stack.Id;
-      var decision = entry.Decision.Action == StackAction.Merge ? "合併到正本，再把其他份移入回收區" : "只保留正本";
-      if (entry.Decision.FromSuggestion)
+      var decision = AppText.Get((entry.Decision.Action == StackAction.Merge, entry.Decision.FromSuggestion) switch
       {
-        decision += "（依建議加入）";
-      }
+        (true, true) => "plan.decision.mergeSuggested",
+        (true, false) => "plan.decision.merge",
+        (false, true) => "plan.decision.keepOnlySuggested",
+        _ => "plan.decision.keepOnly",
+      });
       var foot = entry.OfflineCopies.Count == 0
         ? null
-        : string.Join("；", entry.OfflineCopies.Select(c => $"先不動：{c.Path}（離線，接上後會再提醒）"));
+        : string.Join(AppText.Get("plan.join.semicolon"), entry.OfflineCopies.Select(c => AppText.Get("plan.stack.offline", ("path", c.Path))));
       Stacks.Add(new PlanStackViewModel(entry.Stack.Title, decision, prefix, tail, entry.KeeperCheck,
         entry.Items.Select(i => new PlanItemViewModel(Store, entry, i)).ToList(), foot,
         new RelayCommand(() => Navigator.ShowStack(stackId)),
@@ -171,25 +180,32 @@ public sealed partial class PlanViewModel : PageViewModel
     var changed = items.Count(i => i.Enabled && i.Check == PlanCheck.Changed);
 
     CheckLine = IsChecking
-      ? "正在重新檢查每個檔的現況…"
+      ? AppText.Get("plan.check.checking")
       : Store.PlanCheckedAt is { } at
-        ? $"{Fmt.When(at, Store.Now)} 重新檢查了 {Fmt.Count(items.Count)} 項：" + (changed > 0 ? $"{Fmt.Count(items.Count - changed)} 項可以執行，{Fmt.Count(changed)} 項有變動。" : "可以執行的都已確認。")
-        : "還沒有重新檢查。執行前會先檢查一次。";
-    Summary = $"會執行 {Fmt.Count(running.Count)} 項：複製或另存 {Fmt.Count(copies)} 個檔到正本，移入回收區 {Fmt.Count(recycles)} 項，共 {Fmt.Size(recycleBytes)}。";
-    ExecuteLabel = $"執行 {Fmt.Count(running.Count)} 項";
+        ? AppText.Plural(changed > 0 ? "plan.check.changed" : "plan.check.confirmed", items.Count,
+            ("when", Fmt.When(at, Store.Now)), ("count", Fmt.Count(items.Count)),
+            ("ready", Fmt.Count(items.Count - changed)), ("changed", Fmt.Count(changed)))
+        : AppText.Get("plan.check.never");
+    Summary = AppText.Plural("plan.summary", running.Count, ("count", Fmt.Count(running.Count)), ("copies", Fmt.Count(copies)),
+      ("recycles", Fmt.Count(recycles)), ("size", Fmt.Size(recycleBytes)));
+    ExecuteLabel = AppText.Plural("plan.run", running.Count, ("count", Fmt.Count(running.Count)));
     UnavailableReason = Store.CanExecute ? null : Store.ExecuteUnavailableReason;
     CanExecute = Store.CanExecute && running.Count > 0 && Store.PlanCheckedAt is not null && !IsChecking && !IsRunning;
 
     var duplicate = plan.Sum(e => e.Stack.Copies.Where(c => c.Id != e.Keeper.Id && !e.Decision.Removed.Contains(c.Id)).Sum(c => c.TotalBytes));
     var offlineNote = plan.SelectMany(e => e.OfflineCopies).Select(c => System.IO.Path.GetPathRoot(c.Path)).Distinct().ToList();
     SpaceFigures.Clear();
-    SpaceFigures.Add(new SpaceFigure($"這 {Fmt.Count(plan.Count)} 疊的複本共佔", Fmt.Size(duplicate),
-      "所有不是正本的那幾份加起來" + (offlineNote.Count > 0 ? $"，包含離線的 {string.Join("、", offlineNote)}。" : "。"), false));
-    SpaceFigures.Add(new SpaceFigure("這次會移入回收區", Fmt.Size(recycleBytes), "只算勾選而且可以執行的項目。", true));
+    SpaceFigures.Add(new SpaceFigure(AppText.Plural("plan.space.copies", plan.Count, ("count", Fmt.Count(plan.Count))), Fmt.Size(duplicate),
+      offlineNote.Count > 0
+        ? AppText.Get("plan.space.copiesNoteOffline", ("drives", string.Join(AppText.Get("plan.join.enumeration"), offlineNote)))
+        : AppText.Get("plan.space.copiesNote"), false));
+    SpaceFigures.Add(new SpaceFigure(AppText.Get("plan.space.thisRun"), Fmt.Size(recycleBytes), AppText.Get("plan.space.thisRunNote"), true));
     var areas = Store.RecycleAreas.Where(a => a.Bytes > 0).ToList();
-    SpaceFigures.Add(new SpaceFigure("回收區目前已佔用", Fmt.Size(areas.Sum(a => a.Bytes)),
-      areas.Count == 0 ? "目前是空的。" : string.Join("，", areas.Select(a => $"{a.Volume} {Fmt.Size(a.Bytes)}")) + "，來自之前的整理。", false));
-    SpaceFigures.Add(new SpaceFigure("實際釋放", "0 B", "移入回收區不等於釋放空間；清空回收區後才會釋放。", false));
+    SpaceFigures.Add(new SpaceFigure(AppText.Get("plan.space.inUse"), Fmt.Size(areas.Sum(a => a.Bytes)),
+      areas.Count == 0
+        ? AppText.Get("plan.space.inUseEmpty")
+        : AppText.Get("plan.space.inUseNote", ("areas", string.Join(AppText.Get("plan.join.comma"), areas.Select(a => $"{a.Volume} {Fmt.Size(a.Bytes)}")))), false));
+    SpaceFigures.Add(new SpaceFigure(AppText.Get("plan.space.freed"), "0 B", AppText.Get("plan.space.freedNote"), false));
   }
 
   partial void OnIsCheckingChanged(bool value) => Refresh();

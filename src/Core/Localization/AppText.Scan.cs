@@ -1,0 +1,101 @@
+namespace FileMergeAssistant.Localization;
+
+// Sources and scanning: how a drive is described, why a scan job is queued or stopped, the remark under a source, and
+// the folders suggested on the first-run screen. Job reasons and drive descriptions are written into the index and keep
+// the language they were written in (docs/i18n.md).
+public static partial class AppText
+{
+  // i18n:en
+  private static readonly Dictionary<string, string> ScanEnglish = new(StringComparer.Ordinal)
+  {
+    ["scan.volume.fixed"] = "Internal drive",
+    ["scan.volume.removable"] = "External drive",
+    ["scan.volume.network"] = "Network drive",
+    ["scan.volume.other"] = "Drive",
+    ["scan.volume.fixedSerial"] = "Internal drive, volume serial {serial}",
+    ["scan.volume.removableSerial"] = "External drive, volume serial {serial}",
+    ["scan.volume.networkSerial"] = "Network drive, volume serial {serial}",
+    ["scan.volume.otherSerial"] = "Drive, volume serial {serial}",
+    ["scan.job.firstScan"] = "First scan",
+    ["scan.job.requested"] = "You asked for an update",
+    ["scan.job.resume"] = "Continuing from where it stopped",
+    ["scan.job.restart"] = "Scanning again from the start",
+    ["scan.job.rescanFailed.one"] = "Scanning the {count} item that couldn't be read last time again",
+    ["scan.job.rescanFailed.other"] = "Scanning the {count} items that couldn't be read last time again",
+    ["scan.job.afterRun"] = "Updating the index after the run",
+    ["scan.job.recovered"] = "The app didn't close normally during the last scan. The saved index can still be used; the part that wasn't saved is processed again without creating duplicate records.",
+    ["scan.job.otherDrive"] = "This location is on a different drive now (the volume serial is different), so it wasn't scanned. Connect the original drive and try again.",
+    ["scan.job.offline"] = "The drive is offline, so the update waits here. When the drive is connected, the app first confirms it's the same drive, then starts.",
+    ["scan.job.closed"] = "The scan hadn't finished when the app closed. The saved index can still be used; resuming only redoes the part that wasn't saved.",
+    ["scan.job.failed"] = "The scan was interrupted: {error}",
+    ["scan.job.paused"] = "Paused. No new files are scheduled. Other jobs in the queue also wait until this one is resumed or canceled.",
+    ["scan.job.skipped"] = "Exclusion rules or changes during the scan",
+    ["scan.job.errors.one"] = "Couldn't read {path}. It isn't in any stack and won't be treated as deleted.",
+    ["scan.job.errors.other"] = "Couldn't read {count} items, such as {path}. They aren't in any stack and won't be treated as deleted.",
+    ["scan.source.interrupted"] = "The last scan didn't finish",
+    ["scan.source.notScanned"] = "Not scanned yet",
+    ["scan.source.firstScanPaused"] = "First scan paused",
+    ["scan.source.scanPaused"] = "Scan paused",
+    ["scan.source.queuedFirst"] = "Queued, waiting for the first scan",
+    ["scan.source.startedAt"] = "Started at {time}",
+    ["scan.suggest.gitProjects.one"] = "{count} git project found",
+    ["scan.suggest.gitProjects.other"] = "{count} git projects found",
+    ["scan.suggest.codeFolder"] = "Code folder",
+    ["scan.suggest.documents"] = "Documents",
+    ["scan.suggest.pictures"] = "Pictures",
+    ["scan.suggest.downloads"] = "Downloads",
+    ["scan.suggest.desktop"] = "Desktop",
+    ["scan.suggest.oneDrive"] = "OneDrive; cloud-only files aren't downloaded",
+    ["scan.suggest.removable"] = "External drive; its index stays when it's unplugged",
+    ["scan.suggest.removableLabel"] = "{label}, external drive; its index stays when it's unplugged",
+    ["scan.suggest.labelled"] = "{label}, {drive}",
+  };
+  // i18n:end
+
+  // i18n:zh-TW
+  private static readonly Dictionary<string, string> ScanChinese = new(StringComparer.Ordinal)
+  {
+    ["scan.volume.fixed"] = "內建硬碟",
+    ["scan.volume.removable"] = "外接硬碟",
+    ["scan.volume.network"] = "網路磁碟",
+    ["scan.volume.other"] = "磁碟",
+    ["scan.volume.fixedSerial"] = "內建硬碟，磁碟區序號 {serial}",
+    ["scan.volume.removableSerial"] = "外接硬碟，磁碟區序號 {serial}",
+    ["scan.volume.networkSerial"] = "網路磁碟，磁碟區序號 {serial}",
+    ["scan.volume.otherSerial"] = "磁碟，磁碟區序號 {serial}",
+    ["scan.job.firstScan"] = "第一次掃描",
+    ["scan.job.requested"] = "你要求更新",
+    ["scan.job.resume"] = "繼續上次的進度",
+    ["scan.job.restart"] = "從頭重新掃描",
+    ["scan.job.rescanFailed.one"] = "重新掃描上次無法讀取的 {count} 個項目",
+    ["scan.job.rescanFailed.other"] = "重新掃描上次無法讀取的 {count} 個項目",
+    ["scan.job.afterRun"] = "整理之後更新索引",
+    ["scan.job.recovered"] = "上次掃描時程式沒有正常結束。已保存的索引仍可使用；還沒保存的部分會重新處理，不會產生重複紀錄。",
+    ["scan.job.otherDrive"] = "這個位置現在是另一顆硬碟（磁碟區序號不同），所以沒有掃描。接上原本那顆後再試。",
+    ["scan.job.offline"] = "硬碟離線，更新工作先保留在這裡。接上後會先確認是同一顆硬碟，再開始。",
+    ["scan.job.closed"] = "程式結束時掃描還沒完成。已保存的索引仍可使用；繼續時只會重做還沒保存的部分。",
+    ["scan.job.failed"] = "掃描中斷：{error}",
+    ["scan.job.paused"] = "已暫停，不會再安排新檔案。佇列裡的其他工作也會等這個繼續或取消。",
+    ["scan.job.skipped"] = "排除規則或掃描中變動",
+    ["scan.job.errors.one"] = "無法讀取 {path} 等 1 個項目。它們不在任何一疊裡，也不會被當成已刪除。",
+    ["scan.job.errors.other"] = "無法讀取 {path} 等 {count} 個項目。它們不在任何一疊裡，也不會被當成已刪除。",
+    ["scan.source.interrupted"] = "上次掃描沒有完成",
+    ["scan.source.notScanned"] = "還沒掃描",
+    ["scan.source.firstScanPaused"] = "第一次掃描已暫停",
+    ["scan.source.scanPaused"] = "掃描已暫停",
+    ["scan.source.queuedFirst"] = "已排入佇列，等候第一次掃描",
+    ["scan.source.startedAt"] = "{time} 開始",
+    ["scan.suggest.gitProjects.one"] = "偵測到 {count} 個 git 專案",
+    ["scan.suggest.gitProjects.other"] = "偵測到 {count} 個 git 專案",
+    ["scan.suggest.codeFolder"] = "程式碼資料夾",
+    ["scan.suggest.documents"] = "文件",
+    ["scan.suggest.pictures"] = "圖片",
+    ["scan.suggest.downloads"] = "下載",
+    ["scan.suggest.desktop"] = "桌面",
+    ["scan.suggest.oneDrive"] = "OneDrive；只在雲端的檔不會被下載",
+    ["scan.suggest.removable"] = "外接硬碟；拔除後仍會保留索引",
+    ["scan.suggest.removableLabel"] = "{label}，外接硬碟；拔除後仍會保留索引",
+    ["scan.suggest.labelled"] = "{label}，{drive}",
+  };
+  // i18n:end
+}

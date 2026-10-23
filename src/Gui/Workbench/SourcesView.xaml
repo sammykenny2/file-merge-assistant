@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:w="clr-namespace:FileMergeAssistant.Gui.Workbench"
+             xmlns:l="clr-namespace:FileMergeAssistant.Gui.Localization"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -18,11 +19,11 @@
       <StackPanel Grid.Column="0">
         <DockPanel>
           <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
-            <Button Content="加入資料夾" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" Command="{Binding AddFoldersCommand}" />
-            <TextBlock Text="掃描中也可以加入，會排在佇列最後" Style="{StaticResource Faint}" Margin="0,6,0,0" HorizontalAlignment="Right" />
+            <Button Content="{l:T sources.add}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" Command="{Binding AddFoldersCommand}" />
+            <TextBlock Text="{l:T sources.addHint}" Style="{StaticResource Faint}" Margin="0,6,0,0" HorizontalAlignment="Right" />
           </StackPanel>
           <StackPanel>
-            <TextBlock Text="來源" Style="{StaticResource H1}" />
+            <TextBlock Text="{l:T sources.title}" Style="{StaticResource H1}" />
             <TextBlock Text="{Binding Summary}" Style="{StaticResource Body}" Foreground="{StaticResource Ink2Brush}" Margin="0,6,24,0" />
           </StackPanel>
         </DockPanel>
@@ -35,7 +36,7 @@
                   <DockPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
                       <Button Content="{Binding ScanLabel}" Command="{Binding Scan}" IsEnabled="{Binding ScanEnabled}" Style="{StaticResource SmallButton}" Margin="0,0,8,0" />
-                      <Button Content="設定" Command="{Binding ToggleSettingsCommand}" Style="{StaticResource SmallButton}" />
+                      <Button Content="{l:T settings.title}" Command="{Binding ToggleSettingsCommand}" Style="{StaticResource SmallButton}" />
                     </StackPanel>
                     <WrapPanel VerticalAlignment="Center">
                       <TextBlock Text="{Binding Name}" Style="{StaticResource H2}" Margin="0,0,10,0" VerticalAlignment="Center" />
@@ -54,15 +55,15 @@
                   <Border Margin="0,10,0,0" Padding="12,10" CornerRadius="6" Background="{StaticResource OfflineBrush}"
                           Visibility="{Binding IsOffline, Converter={StaticResource BoolToVisibility}}">
                     <DockPanel>
-                      <Button DockPanel.Dock="Right" Content="指定新位置…" Style="{StaticResource SmallButton}" VerticalAlignment="Top" Margin="12,0,0,0"
+                      <Button DockPanel.Dock="Right" Content="{l:T sources.card.relocate}" Style="{StaticResource SmallButton}" VerticalAlignment="Top" Margin="12,0,0,0"
                               IsEnabled="False" ToolTipService.ShowOnDisabled="True"
-                              ToolTip="之後的版本提供：資料夾被搬走時，先比對結構、給你看摘要，接受後才更新來源。" />
+                              ToolTip="{l:T sources.card.relocateTip}" />
                       <TextBlock Text="{Binding OfflineNote}" Style="{StaticResource Small}" />
                     </DockPanel>
                   </Border>
                   <Grid Margin="0,12,0,0" Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}">
                     <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="140" />
+                      <ColumnDefinition Width="Auto" MinWidth="140" />
                       <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
@@ -72,22 +73,22 @@
                       <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Border Grid.ColumnSpan="2" Grid.RowSpan="4" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" />
-                    <TextBlock Grid.Row="0" Text="可重建，只記大小" Style="{StaticResource Small}" FontWeight="SemiBold" Margin="0,10,0,4" />
+                    <TextBlock Grid.Row="0" Text="{l:T sources.card.regenerable}" Style="{StaticResource Small}" FontWeight="SemiBold" Margin="0,10,12,4" />
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Regenerable}" Style="{StaticResource Small}" Foreground="{StaticResource InkBrush}" Margin="0,10,0,4" />
-                    <TextBlock Grid.Row="1" Text="排除" Style="{StaticResource Small}" FontWeight="SemiBold" Margin="0,4" />
+                    <TextBlock Grid.Row="1" Text="{l:T sources.card.exclusions}" Style="{StaticResource Small}" FontWeight="SemiBold" Margin="0,4,12,4" />
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Exclusions}" Style="{StaticResource Small}" Foreground="{StaticResource InkBrush}" Margin="0,4" />
-                    <TextBlock Grid.Row="2" Text="受保護" Style="{StaticResource Small}" FontWeight="SemiBold" Margin="0,4" />
+                    <TextBlock Grid.Row="2" Text="{l:T sources.card.protected}" Style="{StaticResource Small}" FontWeight="SemiBold" Margin="0,4,12,4" />
                     <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Small}" Foreground="{StaticResource InkBrush}" Margin="0,4">
                       <TextBlock.Text>
                         <Binding Path="IsProtected">
                           <Binding.Converter>
-                            <w:BoolTextConverter TrueText="不會被移入回收區或覆寫；合併時可以新增檔案進來。" FalseText="沒有。可以在這裡設為受保護。" />
+                            <w:BoolTextConverter TrueKey="sources.card.protectedYes" FalseKey="sources.card.protectedNo" />
                           </Binding.Converter>
                         </Binding>
                       </TextBlock.Text>
                     </TextBlock>
-                    <TextBlock Grid.Row="3" Text="從清單移除" Style="{StaticResource Small}" FontWeight="SemiBold" Margin="0,4" />
-                    <TextBlock Grid.Row="3" Grid.Column="1" Text="只會停止追蹤，不會刪除資料夾裡的檔案。可以選擇保留或清除這個來源的索引；操作歷史不受影響。"
+                    <TextBlock Grid.Row="3" Text="{l:T sources.card.remove}" Style="{StaticResource Small}" FontWeight="SemiBold" Margin="0,4,12,4" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{l:T sources.card.removeText}"
                                Style="{StaticResource Small}" Foreground="{StaticResource InkBrush}" Margin="0,4" />
                   </Grid>
                 </StackPanel>
@@ -104,8 +105,8 @@
 
       <!-- Scan jobs -->
       <StackPanel Grid.Column="2">
-        <TextBlock Text="掃描工作" Style="{StaticResource H2}" FontSize="20" />
-        <TextBlock Text="一次執行一個，其餘排隊。掃描時可以照常在工作台整理已經找到的疊。" Style="{StaticResource Small}" FontSize="13.5" Margin="0,4,0,14" />
+        <TextBlock Text="{l:T sources.jobs.title}" Style="{StaticResource H2}" FontSize="20" />
+        <TextBlock Text="{l:T sources.jobs.hint}" Style="{StaticResource Small}" FontSize="13.5" Margin="0,4,0,14" />
 
         <ContentControl Content="{Binding Running}" Focusable="False">
           <ContentControl.ContentTemplate>
@@ -119,7 +120,7 @@
                   </WrapPanel>
                   <Grid Margin="0,12,0,0">
                     <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="92" />
+                      <ColumnDefinition Width="Auto" MinWidth="92" />
                       <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
@@ -127,17 +128,17 @@
                       <RowDefinition Height="Auto" />
                       <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <TextBlock Text="1 探索" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <TextBlock Text="{l:T sources.job.step.discover}" FontWeight="SemiBold" Margin="0,0,12,8" />
                     <TextBlock Grid.Column="1" Text="{Binding Discover}" Style="{StaticResource Small}" FontSize="13.5" Margin="0,0,0,8" />
-                    <TextBlock Grid.Row="1" Text="2 確認內容" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <TextBlock Grid.Row="1" Text="{l:T sources.job.step.confirm}" FontWeight="SemiBold" Margin="0,0,12,8" />
                     <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,8">
                       <TextBlock Text="{Binding Confirm}" Style="{StaticResource Small}" FontSize="13.5" Foreground="{StaticResource AccentBrush}" />
                       <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="1" Height="6" Margin="0,6,0,6" BorderThickness="0"
                                    Background="{StaticResource ChipBrush}" Foreground="{StaticResource AccentBrush}"
-                                   Visibility="{Binding IsConfirming, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="確認內容的進度" />
+                                   Visibility="{Binding IsConfirming, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="{l:T sources.job.progressName}" />
                       <TextBlock Text="{Binding ConfirmNote}" Style="{StaticResource Faint}" />
                     </StackPanel>
-                    <TextBlock Grid.Row="2" Text="3 保存" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="2" Text="{l:T sources.job.step.save}" FontWeight="SemiBold" Margin="0,0,12,0" />
                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Save}" Style="{StaticResource Small}" FontSize="13.5" />
                   </Grid>
                   <TextBlock Text="{Binding Counts}" Style="{StaticResource Small}" Margin="0,10,0,0" />
@@ -148,7 +149,7 @@
                   </Border>
                   <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                     <Button Content="{Binding PrimaryLabel}" Command="{Binding Primary}" IsEnabled="{Binding PrimaryEnabled}" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" />
-                    <Button Content="取消" Command="{Binding Cancel}" Style="{StaticResource SecondaryButton}" />
+                    <Button Content="{l:T sources.cancel}" Command="{Binding Cancel}" Style="{StaticResource SecondaryButton}" />
                   </StackPanel>
                 </StackPanel>
               </Border>
@@ -157,7 +158,7 @@
         </ContentControl>
 
         <StackPanel Visibility="{Binding HasWaiting, Converter={StaticResource BoolToVisibility}}" Margin="0,0,0,20">
-          <TextBlock Text="等候中" Style="{StaticResource H3}" Margin="0,0,0,8" />
+          <TextBlock Text="{l:T sources.waiting.title}" Style="{StaticResource H3}" Margin="0,0,0,8" />
           <ItemsControl ItemsSource="{Binding Waiting}" Focusable="False">
             <ItemsControl.ItemTemplate>
               <DataTemplate DataType="{x:Type w:QueuedJobViewModel}">
@@ -172,7 +173,7 @@
                               IsEnabled="{Binding IsLast, Converter={StaticResource InverseBool}}" Margin="0,0,6,0">
                         <Path Style="{StaticResource Icon}" Data="{StaticResource IconDown}" />
                       </Button>
-                      <Button Content="取消" Style="{StaticResource SmallButton}" Command="{Binding Cancel}" />
+                      <Button Content="{l:T sources.cancel}" Style="{StaticResource SmallButton}" Command="{Binding Cancel}" />
                     </StackPanel>
                     <TextBlock Text="{Binding Position}" FontWeight="Bold" Foreground="{StaticResource FaintBrush}" Width="22" VerticalAlignment="Center" />
                     <StackPanel VerticalAlignment="Center">
@@ -187,7 +188,7 @@
         </StackPanel>
 
         <StackPanel Visibility="{Binding HasAttention, Converter={StaticResource BoolToVisibility}}" Margin="0,0,0,20">
-          <TextBlock Text="需要你處理" Style="{StaticResource H3}" Margin="0,0,0,8" />
+          <TextBlock Text="{l:T sources.attention.title}" Style="{StaticResource H3}" Margin="0,0,0,8" />
           <ItemsControl ItemsSource="{Binding Attention}" Focusable="False">
             <ItemsControl.ItemTemplate>
               <DataTemplate DataType="{x:Type w:AttentionJobViewModel}">
@@ -207,7 +208,7 @@
         </StackPanel>
 
         <StackPanel Visibility="{Binding HasFinished, Converter={StaticResource BoolToVisibility}}" Margin="0,0,0,20">
-          <TextBlock Text="最近完成" Style="{StaticResource H3}" Margin="0,0,0,8" />
+          <TextBlock Text="{l:T sources.finished.title}" Style="{StaticResource H3}" Margin="0,0,0,8" />
           <ItemsControl ItemsSource="{Binding Finished}" Focusable="False">
             <ItemsControl.ItemTemplate>
               <DataTemplate DataType="{x:Type w:FinishedJobViewModel}">
@@ -223,7 +224,7 @@
                                Visibility="{Binding ShowErrors, Converter={StaticResource BoolToVisibility}}" />
                     <WrapPanel Margin="0,10,0,0" Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibility}}">
                       <Button Content="{Binding ErrorsLabel}" Command="{Binding ToggleErrorsCommand}" Style="{StaticResource SmallButton}" Margin="0,0,8,0" />
-                      <Button Content="重新掃描失敗的項目" Command="{Binding Rescan}" Style="{StaticResource SmallButton}" />
+                      <Button Content="{l:T sources.finished.rescan}" Command="{Binding Rescan}" Style="{StaticResource SmallButton}" />
                     </WrapPanel>
                   </StackPanel>
                 </Border>
