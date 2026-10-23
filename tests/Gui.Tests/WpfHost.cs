@@ -63,6 +63,13 @@ internal static class WpfHost
     task.GetAwaiter().GetResult();
   }
 
+  /// <summary>Waits for a task on the WPF thread and returns its result.</summary>
+  public static T Wait<T>(Task<T> task)
+  {
+    Wait((Task)task);
+    return task.GetAwaiter().GetResult();
+  }
+
   /// <summary>Lets pending layout, binding and loaded work finish.</summary>
   public static void Flush() =>
     Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ContextIdle);

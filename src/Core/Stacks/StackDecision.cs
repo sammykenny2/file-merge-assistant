@@ -31,6 +31,30 @@ public enum ConflictChoice
   Both,
 }
 
+/// <summary>
+/// The stack a decision was made for is no longer in the index in that form, for example because scanning found another
+/// copy. The user has to look at the stack again.
+/// </summary>
+public sealed class StackChangedException : InvalidOperationException
+{
+  public StackChangedException()
+  {
+  }
+
+  public StackChangedException(string stackId)
+    : base($"Stack '{stackId}' changed after it was shown; review it again.")
+  {
+    StackId = stackId;
+  }
+
+  public StackChangedException(string message, Exception innerException)
+    : base(message, innerException)
+  {
+  }
+
+  public string? StackId { get; }
+}
+
 /// <summary>The user's decision for one stack. Copy ids refer to <see cref="Stack.Copies"/>.</summary>
 public sealed record StackDecision(string StackId, string KeeperCopyId, StackAction Action)
 {

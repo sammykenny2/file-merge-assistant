@@ -3,6 +3,8 @@
   <PropertyGroup>
     <RootNamespace>FileMergeAssistant</RootNamespace>
     <AssemblyName>FileMergeAssistant.Core</AssemblyName>
+    <!-- LibraryImport (volume serial numbers) generates marshalling code that needs unsafe blocks. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +17,9 @@
 
     <!-- Photo/video metadata extraction (EXIF, etc.) -->
     <PackageReference Include="MetadataExtractor" Version="2.8.1" />
+
+    <!-- Persistent index (ADR-008) -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.13" />
 
     <!-- Dependency Injection -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.13" />

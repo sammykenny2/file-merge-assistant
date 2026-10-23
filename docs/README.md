@@ -24,8 +24,8 @@ These important documents live in the project root:
 The next GUI is built around multiple scan sources, a persistent index, copies
 reviewed one small "stack" at a time, and explicit file-operation plans. The
 product owner accepted the clickable mock's direction; the WPF app now has all
-seven of its screens, running on the mock's demo data. The persistent index,
-staged scanning, stack detection and the file-changing steps are still to come.
+seven of its screens over a persistent SQLite index with staged scanning and
+stack detection (read-only). Running the plan, which changes files, is still to come.
 
 | Document | Status | Purpose |
 |----------|--------|---------|

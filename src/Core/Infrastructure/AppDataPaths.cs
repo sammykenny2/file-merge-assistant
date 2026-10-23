@@ -19,6 +19,9 @@ public static class AppDataPaths
   public static string ResultsDirectory => Path.Combine(Root, "results");
   public static string UpdatesDirectory => Path.Combine(Root, "updates");
 
+  /// <summary>The local index of sources, files, fingerprints and decisions (ADR-008).</summary>
+  public static string IndexPath => Path.Combine(Root, "index.db");
+
   public static string ResolveRoot(string? overrideRoot, string localApplicationData)
   {
     if (!string.IsNullOrWhiteSpace(overrideRoot))

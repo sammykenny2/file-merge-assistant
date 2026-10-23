@@ -4,6 +4,16 @@ using FileMergeAssistant.Stacks;
 
 namespace FileMergeAssistant.Workbench;
 
+/// <summary>What a <see cref="IWorkbenchStore.Changed"/> notification covers.</summary>
+public sealed class WorkbenchChangedEventArgs : EventArgs
+{
+  public static readonly WorkbenchChangedEventArgs Everything = new();
+  public static readonly WorkbenchChangedEventArgs Progress = new() { OnlyProgress = true };
+
+  /// <summary>Only sources and scan jobs changed (scan progress); stacks, decisions and the plan are as before.</summary>
+  public bool OnlyProgress { get; init; }
+}
+
 /// <summary>Options applied to every source added from the first-run screen.</summary>
 /// <param name="SkipRegenerable">Measure regenerable folders instead of comparing them file by file.</param>
 /// <param name="SkipCloudOnly">Never download cloud-only placeholders for comparison.</param>
@@ -19,7 +29,7 @@ public sealed record SourceOptions(bool SkipRegenerable, bool SkipCloudOnly, IRe
 public interface IWorkbenchStore
 {
   /// <summary>Raised after any change.</summary>
-  event EventHandler? Changed;
+  event EventHandler<WorkbenchChangedEventArgs>? Changed;
 
   /// <summary>True when the store holds simulated data; the interface shows 「模擬資料」.</summary>
   bool IsDemo { get; }
@@ -57,7 +67,8 @@ public interface IWorkbenchStore
   /// <summary>Folders worth offering on the first-run screen.</summary>
   IReadOnlyList<SuggestedLocation> SuggestLocations();
 
-  Task AddSourcesAsync(IReadOnlyList<string> paths, SourceOptions options, bool startScan);
+  /// <summary>Adds folders as sources; returns one message per folder that was not added and why.</summary>
+  Task<IReadOnlyList<string>> AddSourcesAsync(IReadOnlyList<string> paths, SourceOptions options, bool startScan);
 
   /// <summary>Queues an update of a source, or resumes its interrupted scan.</summary>
   Task ScanSourceAsync(string sourceId);
@@ -92,6 +103,12 @@ public interface IWorkbenchStore
 
   /// <summary>Checks every plan item against the disk again.</summary>
   Task RecheckPlanAsync();
+
+  /// <summary>Whether this store can run the plan; the real index cannot yet (PLAN-001 Phase 5).</summary>
+  bool CanExecute { get; }
+
+  /// <summary>Why the plan cannot run, shown next to the disabled button.</summary>
+  string? ExecuteUnavailableReason { get; }
 
   /// <summary>Runs every item that will run, copies first and recycling after (ADR-002).</summary>
   Task<ExecutionBatch> ExecutePlanAsync(CancellationToken cancellationToken);

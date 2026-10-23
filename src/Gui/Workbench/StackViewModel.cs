@@ -326,6 +326,9 @@ public sealed partial class StackViewModel : PageViewModel
   [ObservableProperty]
   private string? _blockedStackText;
 
+  [ObservableProperty]
+  private string? _alert;
+
   public StackViewModel(IWorkbenchStore store, INavigator navigator, string stackId)
     : base(store, navigator)
   {
@@ -338,6 +341,9 @@ public sealed partial class StackViewModel : PageViewModel
     ];
     Load(stackId);
   }
+
+  /// <summary>The comparison lists at most this many differing paths; the decision still covers all of them.</summary>
+  public const int MaxRows = 200;
 
   public const double RowHeaderWidth = 230;
   public const double CellWidth = 180;
@@ -385,7 +391,16 @@ public sealed partial class StackViewModel : PageViewModel
     {
       return;
     }
-    Store.Decide(_decision);
+    try
+    {
+      Store.Decide(_decision);
+    }
+    catch (StackChangedException)
+    {
+      Alert = "這疊剛才有變動（例如掃描找到新的複本，或檔案被修改了），所以這個決定沒有記錄。請回工作台重新打開它再決定。還沒有改動任何檔案。";
+      return;
+    }
+    Alert = null;
     var changesFiles = _review.ChangesFiles;
     Toast = changesFiles
       ? $"已加入待執行：{_stack.Title}"
@@ -505,14 +520,18 @@ public sealed partial class StackViewModel : PageViewModel
     }
 
     Rows.Clear();
-    foreach (var row in review.Rows)
+    foreach (var row in review.Rows.Take(MaxRows))
     {
       var (hint, hintWarn) = Hint(review, row);
       var cells = active.Select(copy => Cell(review, row, copy, ToneOf(copy), now)).ToList();
       Rows.Add(new StackRowViewModel(row.Row.RelativePath, row.Row.Description, row.Row.Warning, hint, hintWarn, cells));
     }
     NoDiff = Rows.Count == 0;
-    DiffNote = NoDiff ? "沒有不同的地方" : "只列出有差異或需要說明的檔";
+    DiffNote = NoDiff
+      ? "沒有不同的地方"
+      : review.Rows.Count > MaxRows
+        ? $"有差異的檔共 {Fmt.Count(review.Rows.Count)} 個，這裡列出前 {MaxRows} 個"
+        : "只列出有差異或需要說明的檔";
 
     HasRegenerable = _stack.Regenerable is not null;
     RegenerableLabel = _stack.Regenerable?.Names ?? string.Empty;

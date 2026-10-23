@@ -16,7 +16,6 @@ public enum NavSection
   Sources,
   Plan,
   History,
-  Legacy,
 }
 
 /// <summary>How an item of the status strip under the header is drawn.</summary>
@@ -34,8 +33,6 @@ public partial class MainViewModel : ObservableObject, INavigator
 {
   private readonly IWorkbenchStore _store;
   private readonly Func<UpdateWindow> _updateWindowFactory;
-  private readonly Func<LegacyScanViewModel> _legacyFactory;
-  private LegacyScanViewModel? _legacy;
 
   [ObservableProperty]
   private object? _currentPage;
@@ -46,13 +43,12 @@ public partial class MainViewModel : ObservableObject, INavigator
   [ObservableProperty]
   private int _pendingCount;
 
-  public MainViewModel(IWorkbenchStore store, Func<UpdateWindow> updateWindowFactory, Func<LegacyScanViewModel> legacyFactory)
+  public MainViewModel(IWorkbenchStore store, Func<UpdateWindow> updateWindowFactory)
   {
     ArgumentNullException.ThrowIfNull(store);
     _store = store;
     _updateWindowFactory = updateWindowFactory;
-    _legacyFactory = legacyFactory;
-    _store.Changed += (_, _) => OnStoreChanged();
+    _store.Changed += (_, e) => OnStoreChanged(e);
 
     RefreshHeader();
     if (_store.Sources.Count == 0)
@@ -79,7 +75,6 @@ public partial class MainViewModel : ObservableObject, INavigator
 
   public bool IsHistorySelected => Section == NavSection.History;
 
-  public bool IsLegacySelected => Section == NavSection.Legacy;
 
   public bool HasPending => PendingCount > 0;
 
@@ -96,8 +91,6 @@ public partial class MainViewModel : ObservableObject, INavigator
   public void ShowHistory(string? batchId = null) => Show(NavSection.History, new HistoryViewModel(_store, this, batchId));
 
   public void ShowSince() => Show(NavSection.Hub, new SinceViewModel(_store, this));
-
-  private void ShowLegacy() => Show(NavSection.Legacy, _legacy ??= _legacyFactory());
 
   [RelayCommand]
   private void CheckForUpdates()
@@ -121,9 +114,6 @@ public partial class MainViewModel : ObservableObject, INavigator
       case NavSection.History:
         ShowHistory();
         break;
-      case NavSection.Legacy:
-        ShowLegacy();
-        break;
       default:
         ShowHub();
         break;
@@ -136,7 +126,6 @@ public partial class MainViewModel : ObservableObject, INavigator
     OnPropertyChanged(nameof(IsSourcesSelected));
     OnPropertyChanged(nameof(IsPlanSelected));
     OnPropertyChanged(nameof(IsHistorySelected));
-    OnPropertyChanged(nameof(IsLegacySelected));
   }
 
   partial void OnPendingCountChanged(int value) => OnPropertyChanged(nameof(HasPending));
@@ -147,10 +136,14 @@ public partial class MainViewModel : ObservableObject, INavigator
     CurrentPage = page;
   }
 
-  private void OnStoreChanged()
+  private void OnStoreChanged(WorkbenchChangedEventArgs change)
   {
     RefreshHeader();
-    (CurrentPage as PageViewModel)?.Refresh();
+    // Scan progress only redraws the page that shows it; other pages keep their state (open panels, focus).
+    if (!change.OnlyProgress || CurrentPage is SourcesViewModel)
+    {
+      (CurrentPage as PageViewModel)?.Refresh();
+    }
   }
 
   private void RefreshHeader()
