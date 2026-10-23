@@ -1,13 +1,14 @@
 # Testing Strategy
 
-File Merge Assistant uses xUnit for the .NET 8 Windows-targeted core library.
+File Merge Assistant uses xUnit for the .NET 10 Windows-targeted core library.
 Tests live in `tests/Core.Tests/`, grouped under `Hashing/`, `Reporting/`,
 `Resolution/`, and `Services/`. NSubstitute supplies test doubles; file-operation
 fixtures create temporary directories and clean them up after each test.
 
 ## Running Tests
 
-Run from the repository root on Windows with the .NET 8 SDK installed:
+Run from the repository root on Windows with the .NET 10 SDK installed
+(`global.json` selects the latest installed 10.0 feature band):
 
 ```powershell
 dotnet test tests/Core.Tests/Core.Tests.csproj --verbosity minimal
@@ -39,12 +40,25 @@ and YAML; they do not run this .NET test suite.
 
 ## Test Baseline
 
-Checked on 2026-10-23 with SDK 8.0.426, with `TreatWarningsAsErrors` on (set in
-`Directory.Build.props`) and NuGet audit at its default:
+Checked on 2026-10-23 with SDK 10.0.402 and `net10.0-windows`, with
+`TreatWarningsAsErrors` on (set in `Directory.Build.props`) and NuGet audit at its
+default:
 
 - `dotnet build file-merge-assistant.sln` succeeds for the Debug configuration.
 - `dotnet test tests/Core.Tests/Core.Tests.csproj` passes all 149 tests; VSTest
-  reports about 0.2 seconds of test time.
+  reports under about a second of test time.
+- `dotnet list file-merge-assistant.sln package --vulnerable --include-transitive`
+  reports no vulnerable packages.
+- Smoke check: `fma --help` and `fma scan` on a small folder succeed, and the
+  GUI opens its main window and stays responsive.
+
+The same build and tests also passed on SDK 8.0.426 with `net8.0-windows`
+immediately before the upgrade.
+
+With this SDK, NuGet audit also checks transitive packages, not only direct ones.
+Because `TreatWarningsAsErrors` is on, a new advisory against any transitive
+package fails restore and therefore the build. Fix it by updating or pinning the
+package; record any deliberate suppression here.
 
 To guard against future hangs, add a bounded timeout when diagnosing:
 
@@ -76,6 +90,16 @@ When a test hangs, VSTest writes a sequence attachment under
 - NuGet audit errors NU1902/NU1903: `SixLabors.ImageSharp` moved from 2.1.13 to
   4.1.3, which fixes GHSA-gwg2-r3hj-4w44, GHSA-wmxv-xphr-5c9g,
   GHSA-j3p4-wp97-rph4, GHSA-j9gm-c75j-xc9q and GHSA-jjfr-hcj7-qf5w.
+- .NET 10 upgrade: all projects target `net10.0-windows`; `global.json` requires
+  the 10.0 SDK. Microsoft.Extensions.DependencyInjection, Microsoft.Extensions.Hosting
+  and System.IO.Hashing moved to 10.0.13, Serilog.Extensions.Logging to 10.0.0,
+  and Serilog to 4.2.0, the minimum that Serilog.Extensions.Logging 10.0.0 needs.
+  The upgrade also removed the transitive vulnerable packages that the .NET 8
+  build pulled in. System.Text.Json 8.0.0 left Gui with the
+  Microsoft.Extensions.Hosting 10.0.13 update. System.Net.Http and
+  System.Text.RegularExpressions 4.3.0 left Core.Tests because the .NET 10 SDK
+  prunes packages that the shared framework already provides; restoring with
+  `-p:RestoreEnablePackagePruning=false` brings them back as NU1903 errors.
 
 ### Known Remaining Issues
 
@@ -93,15 +117,9 @@ When a test hangs, VSTest writes a sequence attachment under
   `AverageHash.Hash`, is covered by `PerceptualHashAlgorithmTests` and gave the
   same hashes under 2.1.13 and 4.1.3 in review. Rerun those tests whenever
   ImageSharp is updated.
-- **Transitive packages with known vulnerabilities** (reported by
-  `dotnet list package --vulnerable --include-transitive`; they do not fail the
-  current build):
-  - Gui: System.Text.Json 8.0.0 (GHSA-hh2w-p6rv-4g7w, GHSA-8g4q-xg66-9fp4).
-  - Core.Tests: System.Net.Http 4.3.0 (GHSA-7jgj-8wvc-jh57) and
-    System.Text.RegularExpressions 4.3.0 (GHSA-cmhx-cq75-c4mj).
-
-  These are to be resolved or explicitly accepted with the .NET 10 upgrade
-  (PLAN-001 Task 0.4).
+- Test tooling was kept at its existing versions (Microsoft.NET.Test.Sdk 17.8.0,
+  xunit 2.6.2, xunit.runner.visualstudio 2.5.4, NSubstitute 5.1.0, coverlet 6.0.0).
+  They run on .NET 10; updating them is separate work.
 
 ## Bootstrap Validation
 

@@ -6,7 +6,7 @@ Proposed（草稿，待產品負責人決定）
 
 ## 背景
 
-- 現行 GUI 使用 WPF（`net8.0-windows`），搭配 CommunityToolkit.Mvvm 與 Microsoft.Extensions.Hosting。畫面分成 Scan、Results、Reports 三個 View。核心邏輯在共用的 `src/Core` 類別庫，CLI 也使用同一套。
+- 現行 GUI 使用 WPF（撰寫時為 `net8.0-windows`，2026-10-23 已升級到 `net10.0-windows`），搭配 CommunityToolkit.Mvvm 與 Microsoft.Extensions.Hosting。畫面分成 Scan、Results、Reports 三個 View。核心邏輯在共用的 `src/Core` 類別庫，CLI 也使用同一套。
 - 產品定位是 Windows 原生工具，沒有跨平台需求。
 - [GUI 流程 mock](../gui-flow-mock.md) 需要的介面能力：
   - 數千個疊、數千列對照表的清單虛擬化與捲動。

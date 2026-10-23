@@ -17,8 +17,8 @@
 - Type: single-project
 - Purpose: Windows-native file deduplication and collection organization.
 - Entry points: `src/Cli/Program.cs` and `src/Gui/App.xaml`; shared logic in `src/Core/`.
-- Stack and versions: C# / .NET 8 (`net8.0-windows`), WPF, and xUnit.
-- Test command: `dotnet test tests/Core.Tests/Core.Tests.csproj`; see `docs/testing.md` for known baseline failures.
+- Stack and versions: C# / .NET 10 (`net10.0-windows`), WPF, and xUnit.
+- Test command: `dotnet test tests/Core.Tests/Core.Tests.csproj`; see `docs/testing.md` for the current baseline and known issues.
 - Subprojects: none declared; nested AGENTS.md files provide scoped instructions
   and do not by themselves prove a monorepo architecture.
 
