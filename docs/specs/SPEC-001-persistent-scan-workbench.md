@@ -9,7 +9,7 @@
 | Owner | 待指定 |
 | Reviewer | 產品負責人與後續設計人員 |
 | 建立與更新日期 | 2026-10-23 |
-| Related Plan | 尚未建立，待需求與設計審閱後安排 |
+| Related Plan | [PLAN-001](../plans/PLAN-001-batch-consolidation-workbench.md)（Draft，待相關 ADR 決定後開始） |
 
 ## 摘要
 

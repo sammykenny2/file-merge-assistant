@@ -14,7 +14,7 @@ Proposed（草稿，待產品負責人決定）
   - `ScanOptions` 的預設輸出目錄。
   - GUI 的 `ScanViewModel`。
 - [產品需求](../requirements.md) 的 D-06 列出三種候選：免安裝、NSIS 安裝檔、MSIX。
-- 所有專案都以 .NET 8 為目標。依 Microsoft 的支援政策，.NET 8 LTS 的支援預計在 2026 年 11 月結束，下一個 LTS 版本是 .NET 10。
+- 所有專案都以 .NET 8 為目標。依 [.NET Blog 的公告](https://devblogs.microsoft.com/dotnet/dotnet-8-9-end-of-support/)，.NET 8 在 2026-11-10 結束支援，之後不再有安全性更新；.NET 10 是 LTS 版本，支援到 2028 年 11 月。
 
 ## 決策（提議）
 
@@ -23,7 +23,7 @@ Proposed（草稿，待產品負責人決定）
   - 不需要系統管理員權限。
   - 是否打包成單一執行檔，實作時再驗證。
 - 所有程式資料統一放在 `%LOCALAPPDATA%\FileMergeAssistant\`，包括索引、記錄檔與操作歷史。回收內容依 [ADR-007](./ADR-007-recycle-area-policy.md) 放在各磁碟區。程式資料不放在執行檔旁邊，換版本時資料也會保留。
-- 正式發佈前，先升級到 .NET 10 LTS，避免發佈時已經超過支援期。
+- 正式發佈前，先升級到 .NET 10 LTS。.NET 8 在 2026-11-10 之後不再有安全性更新，發佈時不應仍停留在已結束支援的版本。
 - 公開發佈前，決定是否進行程式碼簽章。未簽章的執行檔會被 SmartScreen 警告。
 - 需要開始功能表捷徑、解除安裝或自動更新時，再評估 NSIS 或 MSIX。
 

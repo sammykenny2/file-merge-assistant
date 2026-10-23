@@ -47,6 +47,7 @@ Use [000-template.md](./000-template.md) as the starting point for new plans.
 | Plan | Title | Status | Related Spec |
 |------|-------|--------|--------------|
 | [000-template](./000-template.md) | Template | - | - |
+| [PLAN-001](./PLAN-001-batch-consolidation-workbench.md) | 分批收斂工作台第一階段 | Draft | [SPEC-001](../specs/SPEC-001-persistent-scan-workbench.md) |
 <!-- Add new plans above this line -->
 
 ## For AI Agents

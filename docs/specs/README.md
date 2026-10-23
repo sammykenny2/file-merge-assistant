@@ -49,7 +49,7 @@ Use [000-template.md](./000-template.md) as the starting point for new specs.
 | Spec | Title | Status | Related Plan |
 |------|-------|--------|--------------|
 | [000-template](./000-template.md) | Template | - | - |
-| [SPEC-001](./SPEC-001-persistent-scan-workbench.md) | 多來源掃描與持續索引工作流程 | Draft | Not created; pending requirements and design review |
+| [SPEC-001](./SPEC-001-persistent-scan-workbench.md) | 多來源掃描與持續索引工作流程 | Draft | [PLAN-001](../plans/PLAN-001-batch-consolidation-workbench.md) (Draft; starts after the related ADRs are decided) |
 <!-- Add new specs above this line -->
 
 ## For AI Agents
