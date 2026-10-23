@@ -15,11 +15,13 @@ public sealed class ManagedAnalysisEngine : IFileAnalysisEngine
   public async IAsyncEnumerable<AnalysisBatch> AnalyzeAsync(AnalysisRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
   {
     ArgumentNullException.ThrowIfNull(request);
-    var registry = new AnalysisEngineRegistry([this]);
-    registry.Resolve(request.Engine);
-    AnalysisResultValidator.ValidateRequest(request);
-    using var parameters = JsonDocument.Parse(request.Engine.ParametersJson);
-    if (parameters.RootElement.EnumerateObject().Any()) { throw new ArgumentException("Managed content analysis has no configurable parameters.", nameof(request)); }
+    await Task.Run(() =>
+    {
+      new AnalysisEngineRegistry([this]).Resolve(request.Engine);
+      AnalysisResultValidator.ValidateRequest(request);
+      using var parameters = JsonDocument.Parse(request.Engine.ParametersJson);
+      if (parameters.RootElement.EnumerateObject().Any()) { throw new ArgumentException("Managed content analysis has no configurable parameters.", nameof(request)); }
+    }, cancellationToken).ConfigureAwait(false);
     long sequence = 0, bytes = 0, processed = 0;
     var complete = true;
     foreach (var file in request.Files)

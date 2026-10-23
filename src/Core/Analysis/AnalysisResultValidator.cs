@@ -27,7 +27,9 @@ public sealed class AnalysisResultValidator
     ArgumentNullException.ThrowIfNull(request.Engine);
     ArgumentException.ThrowIfNullOrWhiteSpace(request.JobId);
     if (request.Files.IsDefault) { throw new ArgumentException("The file set must be explicit.", nameof(request)); }
+    if (request.Files.Length > 1_000_000) { throw new ArgumentException("The request exceeds the per-job file limit.", nameof(request)); }
     var ids = new HashSet<long>();
+    long totalBytes = 0;
     foreach (var file in request.Files)
     {
       if (file is null || file.Observation is null || file.Id <= 0 || !ids.Add(file.Id) || string.IsNullOrWhiteSpace(file.SourceId) || !Path.IsPathFullyQualified(file.Path)
@@ -35,6 +37,8 @@ public sealed class AnalysisResultValidator
       {
         throw new ArgumentException("The analysis request contains invalid or duplicate file observations.", nameof(request));
       }
+      if (file.Observation.Size > long.MaxValue - totalBytes) { throw new ArgumentException("The requested byte count exceeds the supported range.", nameof(request)); }
+      totalBytes += file.Observation.Size;
     }
   }
 

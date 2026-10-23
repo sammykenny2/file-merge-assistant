@@ -5,16 +5,31 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use czkawka_core::common::model::HashType;
 use czkawka_core::tools::duplicate::{DuplicateEntry, hash_calculation};
 
+mod ffi;
+mod jobs;
+mod protocol;
+
+#[cfg(test)]
+pub(crate) static JOB_TESTS: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 pub const UPSTREAM_COMMIT: &str = "eb8b91dbb4d25dff416202674ee0de84ee4b5e5c";
 pub const FINGERPRINT_PREFIX: &str = "blake3-v1:";
 
 /// Reads only the requested file, using Czkawka's public full-content hashing API.
 pub fn content_hash(path: &Path, stop: &Arc<AtomicBool>) -> Result<Option<String>, String> {
+  content_hash_with_counter(path, stop, &Arc::new(AtomicU64::new(0)))
+}
+
+pub(crate) fn content_hash_with_counter(
+  path: &Path,
+  stop: &Arc<AtomicBool>,
+  bytes_read: &Arc<AtomicU64>,
+) -> Result<Option<String>, String> {
   if stop.load(Ordering::Relaxed) {
     return Ok(None);
   }
   let before = path
-    .metadata()
+    .symlink_metadata()
     .map_err(|error| format!("{}: {error}", path.display()))?;
   if !before.is_file() {
     return Err(format!("{}: expected a regular file", path.display()));
@@ -27,8 +42,8 @@ pub fn content_hash(path: &Path, stop: &Arc<AtomicBool>) -> Result<Option<String
     size: before.len(),
     ..Default::default()
   };
-  let bytes_read = Arc::new(AtomicU64::new(0));
-  let hash = hash_calculation(&mut vec![0; 64 * 1024], &entry, HashType::Blake3, &bytes_read, stop)?;
+  let initial_bytes = bytes_read.load(Ordering::Relaxed);
+  let hash = hash_calculation(&mut vec![0; 64 * 1024], &entry, HashType::Blake3, bytes_read, stop)?;
   if stop.load(Ordering::Relaxed) {
     return Ok(None);
   }
@@ -40,7 +55,7 @@ pub fn content_hash(path: &Path, stop: &Arc<AtomicBool>) -> Result<Option<String
     .map_err(|error| format!("{}: cannot observe modification time: {error}", path.display()))?;
   if before.len() != after.len()
     || modified_before != modified_after
-    || bytes_read.load(Ordering::Relaxed) != before.len()
+    || bytes_read.load(Ordering::Relaxed) - initial_bytes != before.len()
   {
     return Err(format!("{}: changed while being analysed", path.display()));
   }

@@ -12,8 +12,8 @@
 
 ## Related Spec
 
-- [SPEC-002：可切換的檔案分析引擎](../specs/SPEC-002-pluggable-analysis-engines.md)（Draft）
-- [ADR-015：雙引擎決策](../decisions/ADR-015-pluggable-analysis-engines.md)（Accepted，尚未實作）
+- [SPEC-002：可切換的檔案分析引擎](../specs/SPEC-002-pluggable-analysis-engines.md)（Approved for staged implementation）
+- [ADR-015：雙引擎決策](../decisions/ADR-015-pluggable-analysis-engines.md)（Accepted，依本計畫實作中）
 - [SPEC-001](../specs/SPEC-001-persistent-scan-workbench.md)、[PLAN-001](./PLAN-001-batch-consolidation-workbench.md)
 
 ## Overview
@@ -52,16 +52,18 @@
 
 ### Phase 2：Rust C ABI 與 .NET 適配
 
-- [ ] Task 2.1：在 FMA 的 `native/fma-czkawka-ffi/` 建立獨立包裝 crate，固定上游完整 commit、Rust 工具鏈、Cargo.lock 與最小建置功能；先產出 Windows x64 `cdylib`。
-- [ ] Task 2.2：實作版本／能力查詢、job handle、開始、輪詢、批次、取消及釋放協定。記錄字串編碼、結構大小／版本、長度上限與記憶體所有權。
-- [ ] Task 2.3：包裝只呼叫讀取／分析能力；明確關閉來源變更操作，快取及暫存只進 FMA 分配目錄。先驗證精確去重，不一次包完上游工具。
-- [ ] Task 2.4：在 Core 建立以 SafeHandle／P/Invoke 為基礎的 Czkawka 適配，按受控絕對路徑載入，先檢查版本／ABI／架構，再執行工作。
-- [ ] Task 2.5：加入原生邊界測試：錯誤輸入、缺 DLL、錯誤架構、ABI 不符、重複取消、完成後釋放、執行中關閉、批次背壓、反覆執行的記憶體及來源不變性。
+- [x] Task 2.1：在 FMA 的 `native/fma-czkawka-ffi/` 建立獨立包裝 crate，固定上游完整 commit、Rust 工具鏈、Cargo.lock 與最小建置功能；先產出 Windows x64 `cdylib`。
+- [x] Task 2.2：實作版本／能力查詢、job handle、開始、輪詢、批次、取消及釋放協定。記錄字串編碼、結構大小／版本、長度上限與記憶體所有權。
+- [x] Task 2.3：包裝只呼叫讀取／分析能力；明確關閉來源變更操作，快取及暫存只進 FMA 分配目錄。先驗證精確去重，不一次包完上游工具。
+- [x] Task 2.4：在 Core 建立以 SafeHandle／P/Invoke 為基礎的 Czkawka 適配，按受控絕對路徑載入，先檢查版本／ABI／架構，再執行工作。
+- [x] Task 2.5：加入原生邊界測試：錯誤輸入、缺 DLL、錯誤架構、ABI 不符、重複取消、完成後釋放、執行中關閉、批次背壓、反覆執行的記憶體及來源不變性。
 - [ ] Task 2.6：可恢復錯誤不跨 ABI 展開；程序級崩潰案例在隔離的測試程序內驗證下次啟動的恢復，不能靠 catch 宣稱有程序隔離。
 
 **Deliverables**：固定版本的原生產物、能力資訊、C# 適配及可重現 ABI 測試。
 
 **Gate G2**：Rust 各自通過已知答案與來源不變測試，AC-E07 通過；獨立審閱原生記憶體、生命週期與取消流程。失敗時仍保留 C# 原路徑，不提升原生預設值。
+
+2026-10-24：G2 的 Windows x64 interop 範圍通過獨立審閱：Rust 10、Core 421、GUI 16 通過，原生整合 5 項零略過。短緩衝區保留事件、輸出長度上限、背壓、8 個實際 worker 上限、取消停止確認與上傳途中取消皆有回歸。協定見 [ABI.md](../../native/fma-czkawka-ffi/ABI.md)，重現指令為 `scripts/windows/Build-NativeAnalysis.ps1 -Test`。Task 2.6 的程序中斷持久恢復留在 Phase 3 完成，不能用本次 interop 測試代替。
 
 ### Phase 3：持久任務、索引與舊紀錄遷移
 
@@ -111,7 +113,7 @@
 
 ## Files to Create/Modify
 
-以下是預計位置，均尚未建立或實作；實作時依最終契約調整並同步本表。
+以下列出交付位置；完成範圍以各階段勾選與測試紀錄為準。
 
 | 路徑 | 預計動作 | 責任 |
 |------|----------|------|
@@ -161,6 +163,7 @@
 | 2026-10-24 | 建立 ADR-015、SPEC-002 與本計畫；記錄 0.2.1 及上游查閱基準。只有文件，未開始任何實作階段。 |
 | 2026-10-24 | Slice 0：建立共用已知答案與固定上游的 Rust crate，確認公開逐檔 API 可用；完整基準 Core 404／GUI 16、新 C# fixture 測試 1、Rust 測試 3 通過。尚未提供 C ABI 或切換應用程式引擎。 |
 | 2026-10-24 | Slice 1：建立不可變的分析契約、registry、有限 C# 引擎與共用結果驗證；工作台委派候選分析，既有 xxh128 與操作驗證保留。Core 416／GUI 16 通過，G1 獨立審閱通過。 |
+| 2026-10-24 | Slice 2：Windows x64 Rust C ABI、受控載入的 .NET 適配、生命週期／取消競爭回歸與建置腳本；Rust 10、Core 421／GUI 16 通過，G2 interop 獨立審閱通過。程序中斷恢復仍待 Phase 3；未變更預設、未 push。 |
 
 ---
 

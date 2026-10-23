@@ -73,7 +73,7 @@ cargo fmt --all -- --check
 cargo clippy --locked --all-targets --no-deps -- -D warnings
 ```
 
-These checks do not exercise a C ABI or application engine selection yet. The
+The Slice 0 checks alone do not exercise the C ABI. The
 existing ImageSharp Debug license warnings remain; this is not Release validation.
 The adaptation evidence is in
 [the research note](research/2026-10-24-pluggable-analysis-engines.md).
@@ -85,7 +85,27 @@ tests cover known answers, per-file coverage, cancellation, changed/missing
 files, unsupported capabilities and malformed results. A fake-engine regression
 checks that Core reobserves metadata instead of trusting a reported change.
 Independent review passed G1 after correcting that metadata boundary. Native
-interop, persisted engine snapshots and schema migration are not covered yet.
+interop was added in Slice 2; persisted engine snapshots and schema migration
+remain pending.
+
+PLAN-002 Slice 2 passes 421 Core and 16 GUI tests, with all native cases enabled
+and zero skips; Rust passes 10 tests. The independent G2 interop review passed.
+Run the complete native build/check/test path on Windows x64:
+
+```powershell
+.\scripts\windows\Build-NativeAnalysis.ps1 -Test
+```
+
+The runner builds the pinned real adapter plus two test-only DLL variants, sets
+the three native test directories for its child .NET process, then restores the
+environment. Native cases are optional and skipped in ordinary `dotnet test`
+when `FMA_NATIVE_LIBRARY_DIR` is absent; those skips are not native validation.
+Coverage includes known answers and unchanged sources, malformed requests and
+DLLs, ABI mismatch, bounded output, short-buffer retry, repeated disposal and
+cancellation while uploading inputs or while a worker is blocked. Cancellation
+completion requires actual worker exit. Process-level recovery after termination
+is a separate Phase 3 test, not covered by these results. No Release application
+validation has passed: a valid ImageSharp license has not been obtained.
 
 ## CI Pause
 
