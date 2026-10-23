@@ -23,6 +23,13 @@ public static class StackText
   /// <summary>One line under the title in the list.</summary>
   public static string Detail(StackSummary summary)
   {
+    ArgumentNullException.ThrowIfNull(summary);
+    var detail = PlainDetail(summary);
+    return summary.Stack.NewCopyIds.Count == 0 ? detail : $"出現新的複本，請再確認一次。{detail}";
+  }
+
+  private static string PlainDetail(StackSummary summary)
+  {
     var stack = summary.Stack;
     if (summary.Group == StackGroup.StillComparing)
     {

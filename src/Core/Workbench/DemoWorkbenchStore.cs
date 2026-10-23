@@ -52,6 +52,8 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
 
   public IReadOnlyList<SuggestedLocation> SuggestLocations() => DemoData.Locations();
 
+  public Task<Stack> WithDetailsAsync(Stack stack) => Task.FromResult(stack);
+
   public bool CanExecute => true;
 
   public string? ExecuteUnavailableReason => null;

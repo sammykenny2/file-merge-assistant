@@ -117,6 +117,37 @@ public sealed class IndexedWorkbenchStoreTests : IDisposable
   }
 
   [Fact]
+  public async Task A_New_Copy_Reopens_A_Decided_Stack_With_The_Earlier_Choices()
+  {
+    using var store = await ScannedStore();
+    var folder = store.Stacks.Single(s => s.Kind == StackKind.Folder);
+    store.Decide(StackDecision.Suggested(folder).WithChoice("receipt.html", ConflictChoice.Both));
+    Assert.Single(store.Plan);
+
+    // Another copy turns up on the desktop; the stack's identity changes with its copies.
+    _tree.Project(@"desk\invoice-tool-main (1)");
+    await store.ScanSourceAsync(store.Sources.Single(s => s.RootPath == _tree.PathOf("desk")).Id);
+    await store.WaitForScansAsync(Timeout);
+    store.RefreshNow();
+
+    var reopened = Assert.Single(store.Stacks, s => s.Kind == StackKind.Folder);
+    Assert.NotEqual(folder.Id, reopened.Id);
+    Assert.Equal(4, reopened.Copies.Count);
+    Assert.Equal(StackStatus.Open, reopened.Status);
+    Assert.Equal([_tree.PathOf(@"desk\invoice-tool-main (1)")], reopened.NewCopyIds.Select(id => reopened.Copies.Single(c => c.Id == id).Path));
+    Assert.Empty(store.Plan);
+    var carried = store.DecisionFor(reopened.Id);
+    Assert.NotNull(carried);
+    Assert.Equal(ConflictChoice.Both, carried!.ChoiceFor("receipt.html"));
+
+    // Deciding again records the new membership; the stack is pending without the "new copy" mark.
+    store.Decide(carried);
+    var pending = store.Stacks.Single(s => s.Id == reopened.Id);
+    Assert.Equal(StackStatus.Pending, pending.Status);
+    Assert.Empty(pending.NewCopyIds);
+  }
+
+  [Fact]
   public async Task Nested_Or_Repeated_Folders_Are_Not_Added_Twice()
   {
     _tree.Write(@"root\inner\a.txt", "a");
