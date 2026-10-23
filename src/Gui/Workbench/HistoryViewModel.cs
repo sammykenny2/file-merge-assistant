@@ -333,7 +333,8 @@ public sealed partial class HistoryViewModel : PageViewModel
       var title = stack?.Title ?? "這疊";
       var stackId = group.Key;
       Skipped.Add(new SkippedViewModel(
-        $"{string.Join("、", group.Select(i => i.Target))}：你決定之後有變動。{title} 這疊已放回待整理，其他項目照常完成。",
+        $"{string.Join("、", group.Select(i => i.Target))}：{string.Join(string.Empty, group.Select(i => i.FailureReason ?? "這次略過。").Distinct(StringComparer.Ordinal))}"
+          + $"{title} 這疊已放回待整理，其他項目照常完成。",
         new RelayCommand(() => Navigator.ShowStack(stackId))));
     }
 

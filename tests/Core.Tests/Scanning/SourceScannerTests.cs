@@ -34,6 +34,24 @@ public sealed class SourceScannerTests : IDisposable
     return new ScanSource(id, root, true, true, RegenerableFolders.Defaults, ["*.tmp", "Thumbs.db"]);
   }
 
+  [Fact]
+  public void Generic_Folder_Names_Count_As_Regenerable_Only_Next_To_A_Project_Marker()
+  {
+    _tree.Write(@"Music\Library\song.mp3", "music");
+    _tree.Write(@"Music\bin\old.txt", "kept on purpose");
+    _tree.Write(@"app\package.json", "{}");
+    _tree.Write(@"app\dist\bundle.js", "built");
+    _tree.Write(@"loose\node_modules\x\index.js", "module");
+    var filter = new ScanFilter(new ScanSource("s", _tree.Root, true, true, RegenerableFolders.Defaults, []), []);
+
+    EntryKind Kind(string relative) => filter.Classify(new DirectoryInfo(_tree.PathOf(relative)), relative);
+
+    Assert.Equal(EntryKind.Index, Kind(@"Music\Library"));
+    Assert.Equal(EntryKind.Index, Kind(@"Music\bin"));
+    Assert.Equal(EntryKind.Regenerable, Kind(@"app\dist"));
+    Assert.Equal(EntryKind.Regenerable, Kind(@"loose\node_modules"));
+  }
+
   private ScanStop Scan(ScanSource source, Func<bool>? pause = null, List<ScanProgress>? progress = null)
   {
     var roots = new Dictionary<string, string>();

@@ -11,7 +11,7 @@ namespace FileMergeAssistant.Index;
 public sealed class IndexDatabase
 {
   /// <summary>Version of the schema this build writes.</summary>
-  public const int SchemaVersion = 2;
+  public const int SchemaVersion = 3;
 
   private static readonly string[] Migrations =
   [
@@ -156,6 +156,11 @@ public sealed class IndexDatabase
       current_bytes INTEGER NOT NULL,
       resolution TEXT
     );
+    """,
+
+    // Version 3: each journalled item records its stack's keeper, so a retry can check the keeper is still there.
+    """
+    ALTER TABLE batch_items ADD COLUMN keeper_path TEXT;
     """,
   ];
 

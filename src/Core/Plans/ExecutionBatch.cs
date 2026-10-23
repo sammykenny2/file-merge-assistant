@@ -49,10 +49,16 @@ public sealed record BatchItem(string Id, string StackId, PlanItemKind Kind, str
   /// <summary>Copy, save-as and replace: the file this run created in the keeper (recycled again on restore).</summary>
   public string? CreatedPath { get; init; }
 
+  /// <summary>The keeper of the item's stack when it ran.</summary>
+  public string? KeeperPath { get; init; }
+
   /// <summary>Copy-like items: the file that was copied.</summary>
   public string? SourcePath { get; init; }
 
-  /// <summary>Copy-like items: size and time (<c>size|ticks</c>) of what was copied; the created file must still match to be undone.</summary>
+  /// <summary>
+  /// Size and time (<c>size|ticks</c>) when the item ran. Copy-like items: of what was copied; the created file must still
+  /// match to be undone. A recycled single file: of that file; a retry moves it only if it still matches.
+  /// </summary>
   public string? SourceStamp { get; init; }
 
   /// <summary>Copy-like items after a restore: where the created file went in the recycle area.</summary>

@@ -70,6 +70,16 @@ public sealed class PlanExecutorTests : IDisposable
   private static BatchItem Desk(ExecutionBatch batch) =>
     batch.Items.Single(i => i.OriginalPath?.EndsWith("desk", StringComparison.Ordinal) == true);
 
+  /// <summary>The same temp path through the administrative share, or null when that share is not reachable here.</summary>
+  private static string? Unc(string path)
+  {
+    var unc = $@"\\localhost\{path[0]}${path[2..]}";
+    return Directory.Exists(Path.GetDirectoryName(unc)) ? unc : null;
+  }
+
+  private static PlanEntry Only(PlanEntry entry, Func<PlanItem, bool> enabled) =>
+    entry with { Items = entry.Items.Select(i => i with { Enabled = enabled(i) }).ToList() };
+
   private static void CreateJunction(string junctionPath, string targetPath)
   {
     using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -168,7 +178,7 @@ public sealed class PlanExecutorTests : IDisposable
       Assert.False(File.Exists(_tree.PathOf(@"desk\a.txt")));
     }
 
-    var retried = PlanExecutor.Retry(desk);
+    var retried = _executor.Retry("b1", desk);
 
     Assert.Equal(BatchItemState.Done, retried.State);
     Assert.True(retried.Retried);
@@ -182,7 +192,15 @@ public sealed class PlanExecutorTests : IDisposable
     var entry = Plan(BuildStack());
     var batch = Run(entry);
 
-    foreach (var item in batch.Items)
+    // While the backup (the file's source) is in the recycle area, the copy is not undone: that would leave the file
+    // only in a recycle area.
+    var copy = batch.Items.Single(i => i.Kind == PlanItemKind.Copy);
+    var refused = _executor.Restore("b1", copy, Now);
+    Assert.Equal(BatchItemState.Done, refused.Item.State);
+    Assert.NotNull(refused.Item.FailureReason);
+    Assert.True(File.Exists(_tree.PathOf(@"keeper\only-backup.txt")));
+
+    foreach (var item in batch.Items.OrderBy(i => i.Kind == PlanItemKind.Recycle ? 0 : 1))
     {
       var outcome = _executor.Restore("b1", item, Now);
       Assert.Null(outcome.Conflict);
@@ -299,7 +317,7 @@ public sealed class PlanExecutorTests : IDisposable
     _tree.Write(@"desk\sub\b.txt", "edited after the run", new DateTime(2026, 10, 23, 8, 0, 0, DateTimeKind.Utc));
     _tree.Write(@"desk\new.txt", "made after the run");
 
-    var retried = PlanExecutor.Retry(desk);
+    var retried = _executor.Retry("b1", desk);
 
     Assert.Equal(BatchItemState.Failed, retried.State);
     Assert.Equal(2, retried.FailedFiles);
@@ -318,7 +336,7 @@ public sealed class PlanExecutorTests : IDisposable
     File.Delete(_tree.PathOf(@"keeper\only-backup.txt"));
     _tree.Write(@"backup\only-backup.txt", "edited after the run", new DateTime(2026, 10, 23, 8, 0, 0, DateTimeKind.Utc));
 
-    var retried = PlanExecutor.Retry(copy);
+    var retried = _executor.Retry("b1", copy);
 
     Assert.Equal(BatchItemState.Failed, retried.State);
     Assert.False(File.Exists(_tree.PathOf(@"keeper\only-backup.txt")));
@@ -397,11 +415,149 @@ public sealed class PlanExecutorTests : IDisposable
     Assert.Equal("backup's newer report", File.ReadAllText(_tree.PathOf(@"keeper\report.txt")));
     Assert.Equal("keeper's older report", File.ReadAllText(replace.RecycledPath!));
 
+    // The backup's version only exists in the keeper while the backup is recycled, so it comes back first.
+    Assert.Equal(BatchItemState.Done, _executor.Restore("b1", replace, Now).Item.State);
+    Assert.Equal(BatchItemState.Restored, _executor.Restore("b1", batch.Items.Single(i => i.Kind == PlanItemKind.Recycle), Now).Item.State);
     var restored = _executor.Restore("b1", replace, Now);
 
     Assert.Equal(BatchItemState.Restored, restored.Item.State);
     Assert.Equal("keeper's older report", File.ReadAllText(_tree.PathOf(@"keeper\report.txt")));
     Assert.Equal("backup's newer report", File.ReadAllText(restored.Item.UndonePath!));
+  }
+
+  [Fact]
+  public void A_Copy_That_Is_The_Keeper_Under_Another_Name_Is_Never_Recycled()
+  {
+    _tree.Write(@"keeper\a.txt", "a");
+    _tree.Write(@"keeper\sub\b.txt", "b");
+    CreateJunction(_tree.PathOf("alias"), _tree.PathOf("keeper"));
+    var stack = new Stack("stack", "project", StackKind.Folder,
+      [Copy("keeper", _tree.PathOf("keeper")), Copy("alias", _tree.PathOf("alias"))], [], 0, StackAction.KeepKeeperOnly) { SameFileCount = 2 };
+
+    var batch = Run(Plan(stack, StackDecision.Suggested(stack).WithAction(StackAction.KeepKeeperOnly)));
+
+    Assert.Equal(BatchItemState.Failed, Assert.Single(batch.Items).State);
+    Assert.Null(batch.Items[0].RecycledPath);
+    Assert.True(File.Exists(_tree.PathOf(@"keeper\sub\b.txt")));
+    Directory.Delete(_tree.PathOf("alias"));
+  }
+
+  [Fact]
+  public void A_Copy_That_Is_The_Keeper_Through_A_Network_Path_Is_Never_Recycled()
+  {
+    _tree.Write(@"keeper\a.txt", "a");
+    if (Unc(_tree.PathOf("keeper")) is not { } alias || Unc(_appData) is not { } appData)
+    {
+      return; // The administrative share is turned off on this machine; the junction test covers the same check.
+    }
+    Directory.CreateDirectory(_appData);
+    var executor = new PlanExecutor(new RecycleAreaLocator(appData));
+    var stack = new Stack("stack", "project", StackKind.Folder,
+      [Copy("keeper", _tree.PathOf("keeper")), Copy("alias", alias)], [], 0, StackAction.KeepKeeperOnly) { SameFileCount = 1 };
+    var entry = Plan(stack, StackDecision.Suggested(stack).WithAction(StackAction.KeepKeeperOnly));
+
+    var batch = executor.Execute("b1", Now, [entry], (_, _) => null, _ => { }, CancellationToken.None);
+
+    Assert.Equal(BatchItemState.Failed, Assert.Single(batch.Items).State);
+    Assert.True(File.Exists(_tree.PathOf(@"keeper\a.txt")));
+  }
+
+  [Fact]
+  public void A_Copy_Holding_The_Apps_Own_Folder_Is_Never_Recycled()
+  {
+    var entry = KeepKeeperOnly();
+    var executor = new PlanExecutor(new RecycleAreaLocator(_tree.PathOf(@"desk\app-data")));
+
+    var batch = executor.Execute("b1", Now, [entry], (_, _) => null, _ => { }, CancellationToken.None);
+
+    Assert.Equal(BatchItemState.Failed, Desk(batch).State);
+    Assert.True(File.Exists(_tree.PathOf(@"desk\a.txt")));
+  }
+
+  [Fact]
+  public void Undoing_A_Copy_Waits_Until_Its_Source_Is_Back_Even_When_Another_Run_Recycled_It()
+  {
+    var entry = Plan(BuildStack());
+    // Run 1 copies the backup's only file into the keeper but keeps the backup; run 2 recycles the backup.
+    var copy = Run(Only(entry, i => i.Kind != PlanItemKind.Recycle)).Items.Single(i => i.Kind == PlanItemKind.Copy);
+    var second = _executor.Execute("b2", Now, [Only(entry, i => i.Kind == PlanItemKind.Recycle && i.SourcePath.EndsWith("backup", StringComparison.Ordinal))],
+      (_, _) => null, _ => { }, CancellationToken.None);
+    Assert.Equal(BatchItemState.Done, second.Items.Single(i => i.State != BatchItemState.Skipped).State);
+
+    var outcome = _executor.Restore("b1", copy, Now);
+
+    Assert.Equal(BatchItemState.Done, outcome.Item.State);
+    Assert.Contains("先還原", outcome.Item.FailureReason, StringComparison.Ordinal);
+    Assert.Equal("only here", File.ReadAllText(_tree.PathOf(@"keeper\only-backup.txt")));
+  }
+
+  [Fact]
+  public void Emptying_Keeps_What_It_Cannot_Reach_And_It_Stays_Restorable()
+  {
+    var batch = Run(KeepKeeperOnly());
+    var area = Path.Combine(_appData, "recycle-areas", "b1");
+    // As if the drive holding the recycle area were unplugged.
+    Directory.Move(area, area + "-away");
+
+    var (emptied, complete) = _executor.Empty(batch);
+
+    Assert.Empty(emptied);
+    Assert.False(complete);
+    Directory.Move(area + "-away", area);
+    Assert.Equal(BatchItemState.Restored, _executor.Restore("b1", Desk(batch), Now).Item.State);
+    Assert.True(File.Exists(_tree.PathOf(@"desk\sub\b.txt")));
+  }
+
+  [Fact]
+  public void Unchecked_And_Cancelled_Items_Are_Recorded_As_Skipped()
+  {
+    var entry = Only(KeepKeeperOnly(), i => !i.SourcePath.EndsWith("desk", StringComparison.Ordinal));
+
+    var batch = Run(entry);
+
+    Assert.Equal(BatchItemState.Skipped, Desk(batch).State);
+    Assert.True(Directory.Exists(_tree.PathOf("desk")));
+    using var cancel = new CancellationTokenSource();
+    cancel.Cancel();
+    var cancelled = _executor.Execute("b2", Now, [KeepKeeperOnly()], (_, _) => null, _ => { }, cancel.Token);
+    Assert.All(cancelled.Items, i => Assert.Equal(BatchItemState.Skipped, i.State));
+  }
+
+  [Fact]
+  public void A_Locked_Single_File_Moves_On_Retry_Only_While_Unchanged()
+  {
+    _tree.Write(@"keeper\報價單.xlsx", "sheet");
+    _tree.Write(@"desk\報價單 (1).xlsx", "sheet");
+    var stack = new Stack("file", "報價單.xlsx", StackKind.File,
+      [Copy("keeper", _tree.PathOf(@"keeper\報價單.xlsx")), Copy("desk", _tree.PathOf(@"desk\報價單 (1).xlsx"))], [], 0, StackAction.KeepKeeperOnly);
+    var entry = Plan(stack, StackDecision.Suggested(stack).WithAction(StackAction.KeepKeeperOnly));
+    BatchItem desk;
+    using (new FileStream(_tree.PathOf(@"desk\報價單 (1).xlsx"), FileMode.Open, FileAccess.Read, FileShare.None))
+    {
+      desk = Assert.Single(Run(entry).Items);
+    }
+    Assert.Equal(BatchItemState.Failed, desk.State);
+    Assert.False(desk.CanRestore);
+
+    var retried = _executor.Retry("b1", desk);
+
+    Assert.Equal(BatchItemState.Done, retried.State);
+    Assert.False(File.Exists(_tree.PathOf(@"desk\報價單 (1).xlsx")));
+    Assert.Equal("sheet", File.ReadAllText(retried.RecycledPath!));
+    Assert.True(File.Exists(_tree.PathOf(@"keeper\報價單.xlsx")));
+  }
+
+  [Fact]
+  public void A_Leftover_Partial_File_Does_Not_Block_A_Copy()
+  {
+    var source = _tree.Write("s.txt", "source");
+    var destination = _tree.PathOf(@"keeper\d.txt");
+    _tree.Write(@"keeper\d.txt" + ".fma-partial", "left by a crash");
+
+    PlanExecutor.CopyVerified(source, destination);
+
+    Assert.Equal("source", File.ReadAllText(destination));
+    Assert.False(File.Exists(destination + ".fma-partial"));
   }
 
   [Fact]

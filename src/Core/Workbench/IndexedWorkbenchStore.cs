@@ -53,6 +53,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   private readonly Dictionary<string, StoredDecision> _decisions = new(StringComparer.Ordinal);
   private readonly Dictionary<string, (bool Enabled, bool Skip)> _toggles = new(StringComparer.Ordinal);
   private readonly Dictionary<string, (PlanCheck Check, string? Detail)> _checks = new(StringComparer.Ordinal);
+  private readonly List<Task> _snapshotting = [];
 
   private IReadOnlyList<ExecutionBatch> _history = [];
   private IReadOnlyList<RestoreConflict> _conflicts = [];
@@ -225,20 +226,32 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
           continue;
         }
         var real = PathIdentity.Resolve(path);
-        if (LocationSuggester.Same(real, appData) || LocationSuggester.Inside(real, appData))
+        if (LocationSuggester.Same(real, appData) || LocationSuggester.Inside(real, appData) || PathIdentity.SameOrInside(path, _areas.AppDataRoot) == true)
         {
           problems.Add($"{path}：這是 File Merge Assistant 自己的資料夾，不能加入。");
           continue;
         }
-        var clash = existing.FirstOrDefault(e => LocationSuggester.Same(e.Root, real) || LocationSuggester.Inside(real, e.Root) || LocationSuggester.Inside(e.Root, real));
-        if (clash.Root is not null)
+        // Names first (they also work for sources that are offline), then identity: a UNC path, junction, subst or mapped
+        // drive can name a folder that is already a source.
+        var self = PathIdentity.Identify(path);
+        string? clash = null;
+        foreach (var e in existing)
         {
-          var alias = LocationSuggester.Same(real, path) ? string.Empty : $"（實際位置是 {real}）";
-          problems.Add(LocationSuggester.Same(clash.Root, real)
-            ? $"{path}{alias}：已經是來源「{clash.Name}」。"
-            : LocationSuggester.Inside(real, clash.Root)
-              ? $"{path}{alias}：已經包含在來源「{clash.Name}」裡。"
-              : $"{path}{alias}：包含已加入的來源「{clash.Name}」。同一個檔不能屬於兩個來源，請改加其他資料夾或先移除那個來源。");
+          var same = LocationSuggester.Same(e.Root, real) || (self is not null && PathIdentity.Identify(e.Root) == self);
+          var inside = !same && (LocationSuggester.Inside(real, e.Root) || PathIdentity.SameOrInside(path, e.Root) == true);
+          var around = !same && !inside && (LocationSuggester.Inside(e.Root, real) || PathIdentity.SameOrInside(e.Root, path) == true);
+          clash = same ? $"已經是來源「{e.Name}」（{e.Root}）。"
+            : inside ? $"已經包含在來源「{e.Name}」（{e.Root}）裡。"
+            : around ? $"包含已加入的來源「{e.Name}」（{e.Root}）。同一個檔不能屬於兩個來源，請改加其他資料夾或先移除那個來源。"
+            : null;
+          if (clash is not null)
+          {
+            break;
+          }
+        }
+        if (clash is not null)
+        {
+          problems.Add($"{path}：{clash}");
           continue;
         }
 
@@ -405,10 +418,15 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         // Remember what the user saw: the copies and each copy's file list, to notice any change before acting.
         var stored = new StoredDecision(decision, decision.Action == StackAction.KeepAll ? KeptAll : Pending, Now,
           stack.Copies.Select(c => c.Id).ToList(),
-          stack.Copies.Where(c => c.Digest is not null).ToDictionary(c => c.Id, c => c.Digest!, StringComparer.Ordinal));
+          stack.Copies.Where(c => c.Digest is not null).ToDictionary(c => c.Id, c => c.Digest!, StringComparer.Ordinal),
+          new Dictionary<string, string>(StringComparer.Ordinal));
         _decisions[stack.Id] = stored;
         Save(stack.Id, stored);
         PlanCheckedAt = null;
+        if (stored.Status == Pending)
+        {
+          TakeSnapshots(stack, stored);
+        }
       }
     }
     ApplyDecisions();
@@ -455,6 +473,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   public async Task RecheckPlanAsync()
   {
+    await SnapshotsTaken().ConfigureAwait(true);
     var plan = _plan.ToList();
     var results = await Task.Run(() =>
     {
@@ -536,7 +555,9 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     {
       return;
     }
-    var items = await Task.Run(() => batch.Items.Select(i => i.State == BatchItemState.Failed ? PlanExecutor.Retry(i) : i).ToList()).ConfigureAwait(true);
+    var items = await Task.Run(() => batch.Items
+      .Select(i => i.State != BatchItemState.Failed ? i : RetryRefused(i) is { } reason ? i with { FailureReason = reason } : _executor.Retry(batchId, i))
+      .ToList()).ConfigureAwait(true);
     SaveItems(batchId, items);
     lock (_stateGate)
     {
@@ -658,16 +679,11 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     {
       var items = batch.Items.ToDictionary(i => i.Id, StringComparer.Ordinal);
       var conflicts = new List<RestoreConflict>();
-      // Recycled copies come back first; a file copied into the keeper is only undone once the copy it came from is back.
-      foreach (var item in batch.Items.OrderBy(i => i.IsCopyKind() ? 1 : 0))
+      // Recycled copies come back first: a copied or replacing file is only undone while the file it came from is in place.
+      foreach (var item in batch.Items.OrderBy(i => i.Kind == PlanItemKind.Recycle ? 0 : 1))
       {
         if (!which(item) || !item.CanRestore || open.Contains(item.Id))
         {
-          continue;
-        }
-        if (item.IsCopyKind() && SourceStillRecycled(items.Values, item) is { } holder)
-        {
-          items[item.Id] = item with { FailureReason = $"先還原「{holder}」，再還原這個複製，以免這個檔只剩在回收區裡。" };
           continue;
         }
         try
@@ -701,12 +717,85 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     Changed?.Invoke(this, WorkbenchChangedEventArgs.Everything);
   }
 
-  /// <summary>The recycled copy that still holds the source of a copied file, if it has not been put back yet.</summary>
-  private static string? SourceStillRecycled(IEnumerable<BatchItem> items, BatchItem copy) =>
-    copy.SourcePath is not { } source
-      ? null
-      : items.FirstOrDefault(i => i.Kind == PlanItemKind.Recycle && i.State is BatchItemState.Done or BatchItemState.Failed && i.OriginalPath is { } original
-        && (LocationSuggester.Same(original, source) || LocationSuggester.Inside(source, original)))?.OriginalPath;
+  /// <summary>
+  /// Why a failed recycle must not be retried now: its keeper is gone, or the copy has since become a keeper itself.
+  /// Copies are always safe to retry (they never remove anything).
+  /// </summary>
+  private string? RetryRefused(BatchItem item)
+  {
+    if (item.Kind == PlanItemKind.Recycle && item.KeeperPath is { } keeper && !File.Exists(keeper) && !Directory.Exists(keeper))
+    {
+      return $"正本 {keeper} 已經不在原處，所以沒有重試。請重新比對這疊。";
+    }
+    if (item.Kind == PlanItemKind.Recycle && item.OriginalPath is { } original)
+    {
+      List<string> keepers;
+      lock (_stateGate)
+      {
+        keepers = _decisions.Values.Where(d => d.Status is Pending or Reopened).Select(d => CopyPath(d.Decision.KeeperCopyId))
+          .Where(p => p is not null).Select(p => p!).ToList();
+      }
+      if (keepers.Any(k => LocationSuggester.Same(k, original) || LocationSuggester.Inside(k, original) || LocationSuggester.Inside(original, k)))
+      {
+        return "這份現在是另一個決定裡的正本，所以沒有重試。";
+      }
+    }
+    return null;
+  }
+
+  /// <summary>The full path of a copy id (<c>sourceId:relative path</c>), or null when its source is gone.</summary>
+  private string? CopyPath(string copyId)
+  {
+    var cut = copyId.IndexOf(':', StringComparison.Ordinal);
+    var source = cut < 0 ? null : _sources.FirstOrDefault(s => s.Id == copyId[..cut]);
+    return source is null ? null : Path.Combine(source.RootPath, copyId[(cut + 1)..]);
+  }
+
+  /// <summary>
+  /// Records, in the background, everything inside each copy that may be recycled (<see cref="CopySnapshot"/>), as it is
+  /// now that the user decided. A run recycles a copy only if it still matches.
+  /// </summary>
+  private void TakeSnapshots(Stack stack, StoredDecision stored)
+  {
+    var copies = stack.Copies.Where(c => c.Id != stored.Decision.KeeperCopyId && !c.IsOffline).ToList();
+    var task = Task.Run(() =>
+    {
+      var snapshots = new Dictionary<string, string>(StringComparer.Ordinal);
+      foreach (var copy in copies)
+      {
+        try
+        {
+          snapshots[copy.Id] = CopySnapshot.Of(copy.Path, IsAppOwned);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+          // No snapshot: that copy is not recycled until the stack is decided again.
+        }
+      }
+      lock (_stateGate)
+      {
+        if (_decisions.TryGetValue(stack.Id, out var current) && current.At == stored.At)
+        {
+          var updated = current with { Snapshots = snapshots };
+          _decisions[stack.Id] = updated;
+          Save(stack.Id, updated);
+        }
+      }
+    });
+    lock (_snapshotting)
+    {
+      _snapshotting.RemoveAll(t => t.IsCompleted);
+      _snapshotting.Add(task);
+    }
+  }
+
+  private Task SnapshotsTaken()
+  {
+    lock (_snapshotting)
+    {
+      return Task.WhenAll(_snapshotting.ToArray());
+    }
+  }
 
   /// <summary>A restored stack goes back to the list: its copies are where they were.</summary>
   private void Reopen(string stackId)
@@ -758,6 +847,11 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     }
     foreach (var (batchId, item) in running)
     {
+      // A drive that is not here cannot tell what happened: the item stays interrupted until a start when it is back.
+      if (new[] { item.OriginalPath, item.RecycledPath, item.CreatedPath }.Any(p => p is not null && !Directory.Exists(RecycleAreaLocator.Volume(p))))
+      {
+        continue;
+      }
       var settled = item.Kind switch
       {
         PlanItemKind.Recycle when item.OriginalPath is { } original && item.RecycledPath is { } recycled
@@ -767,10 +861,6 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
           => item with { State = BatchItemState.Done },
         _ => item with { State = BatchItemState.Failed, FailureReason = "程式在處理這一項時結束了。可以還原放回已移動的部分，或重試。" },
       };
-      if (settled.State == BatchItemState.Failed && settled.RecycledPath is { } path && !File.Exists(path) && !Directory.Exists(path))
-      {
-        settled = settled with { RecycledPath = null };
-      }
       SaveItem(batchId, settled, null);
     }
   }
@@ -1149,7 +1239,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       }
       return expected is not null && CopyDigest.Of([(file.Name, file.Length, file.LastWriteTimeUtc.Ticks)]) != expected
         ? $"你在 {entry.DecidedAt:HH:mm} 決定之後，{who}（{copy.Path}）在 {file.LastWriteTime:MM/dd HH:mm} 被修改了，所以先停下來。"
-        : null;
+        : SnapshotChanged(entry, copy, who);
     }
 
     if (!Directory.Exists(copy.Path))
@@ -1170,10 +1260,44 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     }
     if (expected is null || CopyDigest.Of(files) == expected)
     {
-      return null;
+      return SnapshotChanged(entry, copy, who);
     }
     return $"你在 {entry.DecidedAt:HH:mm} 決定之後，{who}（{copy.Path}）裡的檔有新增、刪除或修改，已經和你看到的不一樣，所以先停下來。"
       + (Difference(sourceId, relativeRoot, files) is { } detail ? $"例如：{detail}" : string.Empty);
+  }
+
+  /// <summary>
+  /// For a copy that will be recycled: compares everything inside it, including what scans skip (<c>.git</c>, regenerable
+  /// folders, excluded files), with the snapshot taken when the user decided. The keeper is not compared this way; work
+  /// in it (new commits, rebuilt folders) never puts the other copies at risk.
+  /// </summary>
+  private string? SnapshotChanged(PlanEntry entry, StackCopy copy, string who)
+  {
+    if (copy.Id == entry.Keeper.Id)
+    {
+      return null;
+    }
+    string? snapshot;
+    lock (_stateGate)
+    {
+      snapshot = _decisions.TryGetValue(entry.Stack.Id, out var stored) && stored.Snapshots.TryGetValue(copy.Id, out var taken) ? taken : null;
+    }
+    if (snapshot is null)
+    {
+      return $"沒有{who}（{copy.Path}）在你決定時的完整紀錄，所以先不移動。請再確認一次這疊。";
+    }
+    string now;
+    try
+    {
+      now = CopySnapshot.Of(copy.Path, IsAppOwned);
+    }
+    catch (Exception e) when (e is UnauthorizedAccessException or IOException)
+    {
+      return $"無法讀取{who}（{e.Message}），所以先停下來。";
+    }
+    return now == snapshot
+      ? null
+      : $"你在 {entry.DecidedAt:HH:mm} 決定之後，{who}（{copy.Path}）裡有變動，包括比較時沒有列出的部分（例如 .git、node_modules 或排除的檔），所以先不移動。";
   }
 
   /// <summary>Names one file that differs between the disk and the index, to make a change notice concrete.</summary>
@@ -1344,7 +1468,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   private const string ItemColumns =
     """
     SELECT batch_id, id, stack_id, kind, target, detail, state, bytes, file_count, failed_files, failure_reason, retried,
-      recycle_volume, original_path, recycled_path, created_path, source_path, source_stamp, undone_path, manifest
+      recycle_volume, original_path, recycled_path, created_path, source_path, source_stamp, undone_path, manifest, keeper_path
     FROM batch_items
     """;
 
@@ -1368,46 +1492,60 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       SourceStamp = Text(17),
       UndonePath = Text(18),
       Manifest = Text(19),
+      KeeperPath = Text(20),
     };
   }
 
   /// <summary>Writes one item of a run's journal; <paramref name="position"/> is only used when the item is new.</summary>
-  private void SaveItem(string batchId, BatchItem item, int? position)
-  {
-    using var connection = _database.Open();
-    WriteItem(connection, batchId, item, position ?? 0);
-  }
+  private void SaveItem(string batchId, BatchItem item, int? position) =>
+    Journal(connection => WriteItem(connection, batchId, item, position ?? 0));
 
-  private void SaveItems(string batchId, List<BatchItem> items)
-  {
-    using var connection = _database.Open();
-    IndexDatabase.InTransaction(connection, () =>
+  private void SaveItems(string batchId, List<BatchItem> items) =>
+    Journal(connection => IndexDatabase.InTransaction(connection, () =>
     {
       for (var i = 0; i < items.Count; i++)
       {
         WriteItem(connection, batchId, items[i], i);
       }
-    });
+    }));
+
+  /// <summary>
+  /// Writes to the journal with a full flush to disk: an entry must survive a power cut as surely as the move it
+  /// describes, or a recycled folder could be left in a recycle area with no record of it.
+  /// </summary>
+  private void Journal(Action<SqliteConnection> write)
+  {
+    using var connection = _database.Open();
+    IndexDatabase.Execute(connection, "PRAGMA synchronous = FULL");
+    try
+    {
+      write(connection);
+    }
+    finally
+    {
+      IndexDatabase.Execute(connection, "PRAGMA synchronous = NORMAL");
+    }
   }
 
   private static void WriteItem(SqliteConnection connection, string batchId, BatchItem item, int position) =>
     IndexDatabase.Execute(connection,
       """
       INSERT INTO batch_items(batch_id, id, position, stack_id, kind, target, detail, state, bytes, file_count, failed_files,
-        failure_reason, retried, recycle_volume, original_path, recycled_path, created_path, source_path, source_stamp, undone_path, manifest)
+        failure_reason, retried, recycle_volume, original_path, recycled_path, created_path, source_path, source_stamp, undone_path, manifest,
+        keeper_path)
       VALUES ($b, $id, $pos, $stack, $kind, $target, $detail, $state, $bytes, $files, $failed, $reason, $retried, $volume,
-        $original, $recycled, $created, $source, $stamp, $undone, $manifest)
+        $original, $recycled, $created, $source, $stamp, $undone, $manifest, $keeper)
       ON CONFLICT(batch_id, id) DO UPDATE SET state = excluded.state, failed_files = excluded.failed_files,
         failure_reason = excluded.failure_reason, retried = excluded.retried, recycle_volume = excluded.recycle_volume,
         original_path = excluded.original_path, recycled_path = excluded.recycled_path, created_path = excluded.created_path,
         source_path = excluded.source_path, source_stamp = excluded.source_stamp, undone_path = excluded.undone_path,
-        manifest = excluded.manifest
+        manifest = excluded.manifest, keeper_path = excluded.keeper_path
       """,
       ("$b", batchId), ("$id", item.Id), ("$pos", position), ("$stack", item.StackId), ("$kind", item.Kind.ToString()), ("$target", item.Target),
       ("$detail", item.Detail), ("$state", item.State.ToString()), ("$bytes", item.Bytes), ("$files", item.FileCount),
       ("$failed", item.FailedFiles), ("$reason", item.FailureReason), ("$retried", item.Retried ? 1 : 0), ("$volume", item.RecycleVolume),
       ("$original", item.OriginalPath), ("$recycled", item.RecycledPath), ("$created", item.CreatedPath), ("$source", item.SourcePath),
-      ("$stamp", item.SourceStamp), ("$undone", item.UndonePath), ("$manifest", item.Manifest));
+      ("$stamp", item.SourceStamp), ("$undone", item.UndonePath), ("$manifest", item.Manifest), ("$keeper", item.KeeperPath));
 
   private void SaveConflict(RestoreConflict c) =>
     Execute(
@@ -1477,7 +1615,8 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       if (dto is not null)
       {
         _decisions[reader.GetString(0)] = new StoredDecision(ToDecision(dto), reader.GetString(2), ParseStamp(reader, 3) ?? DateTimeOffset.Now,
-          dto.CopyIds ?? [], dto.Digests ?? new Dictionary<string, string>(StringComparer.Ordinal));
+          dto.CopyIds ?? [], dto.Digests ?? new Dictionary<string, string>(StringComparer.Ordinal),
+          dto.Snapshots ?? new Dictionary<string, string>(StringComparer.Ordinal));
       }
     }
   }
@@ -1489,21 +1628,22 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   }
 
   /// <summary>
-  /// A decision as stored: its status (Pending, KeptAll, Reopened or Converged), the copies the stack had then, and each
-  /// copy's file-list digest at that moment.
+  /// A decision as stored: its status (Pending, KeptAll, Reopened or Converged), the copies the stack had then, each
+  /// copy's indexed file-list digest at that moment, and the full snapshot of each copy that may be recycled.
   /// </summary>
   private sealed record StoredDecision(StackDecision Decision, string Status, DateTimeOffset At, IReadOnlyList<string> CopyIds,
-    IReadOnlyDictionary<string, string> Digests);
+    IReadOnlyDictionary<string, string> Digests, Dictionary<string, string> Snapshots);
 
   private sealed record DecisionDto(string StackId, string KeeperCopyId, StackAction Action, string[] AlsoKeep, string[] Removed,
-    Dictionary<string, ConflictChoice> Choices, bool FromSuggestion, string[]? CopyIds, Dictionary<string, string>? Digests);
+    Dictionary<string, ConflictChoice> Choices, bool FromSuggestion, string[]? CopyIds, Dictionary<string, string>? Digests,
+    Dictionary<string, string>? Snapshots);
 
   private static string Serialize(StoredDecision stored)
   {
     var d = stored.Decision;
     return JsonSerializer.Serialize(
       new DecisionDto(d.StackId, d.KeeperCopyId, d.Action, [.. d.AlsoKeep], [.. d.Removed], d.Choices.ToDictionary(), d.FromSuggestion,
-        [.. stored.CopyIds], stored.Digests.ToDictionary()),
+        [.. stored.CopyIds], stored.Digests.ToDictionary(), stored.Snapshots.ToDictionary()),
       Json);
   }
 

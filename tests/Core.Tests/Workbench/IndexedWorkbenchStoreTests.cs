@@ -460,6 +460,109 @@ public sealed class IndexedWorkbenchStoreTests : IDisposable
   }
 
   [Fact]
+  public async Task A_Network_Path_To_A_Source_Is_Not_Added_As_Another_Source()
+  {
+    _tree.Write(@"real\a.txt", "a");
+    var real = _tree.PathOf("real");
+    var unc = $@"\\localhost\{real[0]}${real[2..]}";
+    if (!Directory.Exists(unc))
+    {
+      return; // The administrative share is turned off on this machine; the junction test covers the same check.
+    }
+    using var store = Open();
+    await store.AddSourcesAsync([real], new SourceOptions(true, true, []), startScan: false);
+
+    var problems = await store.AddSourcesAsync([unc, Path.Combine(unc, "..")], new SourceOptions(true, true, []), startScan: false);
+
+    Assert.Equal(2, problems.Count);
+    Assert.Single(store.Sources);
+  }
+
+  [Fact]
+  public async Task Changes_The_Scan_Does_Not_List_Still_Keep_A_Copy_From_Being_Recycled()
+  {
+    using var store = await ScannedStore();
+    var folder = store.Stacks.Single(s => s.Kind == StackKind.Folder);
+    store.Decide(StackDecision.Suggested(folder).WithChoice("receipt.html", ConflictChoice.Both));
+    await store.RecheckPlanAsync();
+    // Unpushed work and a hand-made patch: neither is indexed (.git and node_modules are not compared file by file).
+    _tree.Write(@"desk\invoice-tool - 複製\.git\refs\heads\unpushed-work", "0123456789abcdef");
+    _tree.Write(@"desk\invoice-tool - 複製\node_modules\my-patch.js", "patched by hand");
+
+    var batch = await store.ExecutePlanAsync(CancellationToken.None);
+
+    var desk = batch.Items.Single(i => i.OriginalPath == _tree.PathOf(@"desk\invoice-tool - 複製"));
+    Assert.Equal(BatchItemState.Skipped, desk.State);
+    Assert.True(File.Exists(_tree.PathOf(@"desk\invoice-tool - 複製\.git\refs\heads\unpushed-work")));
+    Assert.Equal(0, store.ConvergedCount);
+  }
+
+  [Fact]
+  public async Task A_Retry_Is_Refused_Once_The_Keeper_Is_Gone()
+  {
+    using var store = await ScannedStore();
+    var folder = store.Stacks.Single(s => s.Kind == StackKind.Folder);
+    store.Decide(StackDecision.Suggested(folder).WithChoice("receipt.html", ConflictChoice.Both));
+    ExecutionBatch batch;
+    using (new FileStream(_tree.PathOf(@"desk\invoice-tool - 複製\src\module01.ts"), FileMode.Open, FileAccess.Read, FileShare.None))
+    {
+      batch = await store.ExecutePlanAsync(CancellationToken.None);
+    }
+    await store.WaitForScansAsync(Timeout);
+    Directory.Move(_tree.PathOf(@"work\invoice-tool"), _tree.PathOf(@"work\invoice-tool-moved"));
+
+    await store.RetryFailedAsync(batch.Id);
+
+    var desk = store.History.Single(b => b.Id == batch.Id).Items.Single(i => i.State == BatchItemState.Failed);
+    Assert.Contains("正本", desk.FailureReason, StringComparison.Ordinal);
+    Assert.True(File.Exists(_tree.PathOf(@"desk\invoice-tool - 複製\src\module01.ts")));
+  }
+
+  [Fact]
+  public async Task Unchecked_Items_Keep_The_Stack_From_Counting_As_Done()
+  {
+    using var store = await ScannedStore();
+    var folder = store.Stacks.Single(s => s.Kind == StackKind.Folder);
+    store.Decide(StackDecision.Suggested(folder).WithChoice("receipt.html", ConflictChoice.Both));
+    var desk = store.Plan[0].Items.Single(i => i.Kind == PlanItemKind.Recycle && i.SourcePath == _tree.PathOf(@"desk\invoice-tool - 複製"));
+    store.SetPlanItemEnabled(desk.Id, false);
+
+    var batch = await store.ExecutePlanAsync(CancellationToken.None);
+
+    Assert.Equal(BatchItemState.Skipped, batch.Items.Single(i => i.Id == desk.Id).State);
+    Assert.Equal(0, store.ConvergedCount);
+    Assert.True(Directory.Exists(_tree.PathOf(@"desk\invoice-tool - 複製")));
+  }
+
+  [Fact]
+  public async Task An_Interrupted_Item_On_An_Unplugged_Drive_Waits_For_It()
+  {
+    var missing = Enumerable.Range('D', 23).Select(c => $"{(char)c}:\\").First(d => !Directory.Exists(d));
+    using (var store = Open())
+    {
+      await store.AddSourcesAsync([], new SourceOptions(true, true, []), startScan: false);
+    }
+    var database = FileMergeAssistant.Index.IndexDatabase.OpenOrCreate(_indexPath);
+    using (var connection = database.Open())
+    {
+      FileMergeAssistant.Index.IndexDatabase.Execute(connection, "INSERT INTO batches(id, ran_at) VALUES ('b20261023-120000-abcd', '2026-10-23T12:00:00+08:00')");
+      FileMergeAssistant.Index.IndexDatabase.Execute(connection,
+        """
+        INSERT INTO batch_items(batch_id, id, position, stack_id, kind, target, detail, state, bytes, file_count, failed_files, retried,
+          original_path, recycled_path)
+        VALUES ('b20261023-120000-abcd', 'i1', 0, 'd:x', 'Recycle', 'project', '', 'Running', 10, 3, 0, 0, $original, $recycled)
+        """,
+        ("$original", missing + @"backup\project"), ("$recycled", missing + @".fma-recycle\b20261023-120000-abcd\001\project"));
+    }
+
+    using var reopened = Open();
+
+    var item = Assert.Single(reopened.History.Single().Items);
+    Assert.Equal(BatchItemState.Running, item.State);
+    Assert.Equal(missing + @".fma-recycle\b20261023-120000-abcd\001\project", item.RecycledPath);
+  }
+
+  [Fact]
   public async Task Keep_All_And_Later_Change_The_Status_Without_A_Plan()
   {
     using var store = await ScannedStore();

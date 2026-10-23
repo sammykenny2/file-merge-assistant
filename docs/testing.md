@@ -209,6 +209,20 @@ When a test hangs, VSTest writes a sequence attachment under
     app's own folder, recycle areas and partial files never scanned; a crashed run settled from the disk on
     the next start; a copy not undone while its source is still recycled.
   - Core.Tests has 338 tests, Gui.Tests 3; all 341 pass.
+- 2026-10-23, fixes from the second Phase 5 review:
+  - `PlanExecutorTests` add: a copy that is the keeper under another name (a junction, and `\\localhost\C$`
+    when the administrative share is reachable) is never recycled; a copy holding the app's own folder is never
+    recycled; undoing a copy waits until its source is back even when another run recycled it; emptying keeps
+    what it cannot reach and it stays restorable; unchecked and cancelled items are recorded as skipped; a
+    locked single file moves on retry only while unchanged; a leftover partial file does not block a copy.
+  - `IndexedWorkbenchStoreTests` add: a network path to a source is not added as another source; changes the
+    scan does not list (`.git`, `node_modules`) keep a copy from being recycled; a retry is refused once the
+    keeper is gone; unchecked items keep the stack from counting as done; an interrupted item on an unplugged
+    drive waits for it.
+  - `SourceScannerTests` add: generic folder names count as regenerable only next to a project marker.
+  - With the identity check switched off, the junction and app-folder tests fail and the UNC test is still
+    stopped by the after-move backstop; with the snapshot check switched off, the `.git` test fails.
+  - Core.Tests has 352 tests, Gui.Tests 3; all 355 pass, three runs in a row.
 
 ## Bootstrap Validation
 

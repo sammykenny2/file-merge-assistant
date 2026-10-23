@@ -86,7 +86,8 @@ public sealed class ScanFilter
       {
         return EntryKind.Skip;
       }
-      if (_source.SkipRegenerable && RegenerableFolders.IsRegenerable(directory.Name, _source.RegenerableNames))
+      if (_source.SkipRegenerable && RegenerableFolders.IsRegenerable(directory.Name, _source.RegenerableNames)
+        && (!RegenerableFolders.NeedsProject(directory.Name) || NextToProjectMarker(directory)))
       {
         return EntryKind.Regenerable;
       }
@@ -137,6 +138,20 @@ public sealed class ScanFilter
   }
 
   /// <summary>True when a project marker file (package.json, *.csproj, ...) names this file.</summary>
+  /// <summary>True when the folder's parent holds a project marker file (package.json, *.csproj, Cargo.toml, ...).</summary>
+  private static bool NextToProjectMarker(DirectoryInfo directory)
+  {
+    try
+    {
+      return directory.Parent?.EnumerateFiles().Any(f => ProjectMarker(f.Name) is not null) == true;
+    }
+    catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+    {
+      // Unknown: index it, which is the safe side.
+      return false;
+    }
+  }
+
   public static string? ProjectMarker(string fileName) =>
     SourceScanner.ProjectMarkers.FirstOrDefault(m => FileSystemName.MatchesSimpleExpression(m, fileName, ignoreCase: true));
 }
