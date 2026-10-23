@@ -13,7 +13,7 @@
 ## Related Spec
 
 - [SPEC-001：多來源掃描與持續索引工作流程](../specs/SPEC-001-persistent-scan-workbench.md)（Draft）
-- [ADR-001 至 ADR-013](../decisions/README.md)（001、004、005、006、009、013 已接受，012 部分接受，其餘 Proposed）
+- [ADR-001 至 ADR-013](../decisions/README.md)（001、004、005、006、008、009、010、013 已接受，012 部分接受，其餘 Proposed）
 - [產品需求](../requirements.md)與 [GUI 流程 mock](../gui-flow-mock.md)
 
 [plans 目錄的說明](./README.md)寫明：計畫應在規格核准後建立。目前 SPEC-001 是 Draft，12 份 ADR 都是 Proposed，所以這份計畫是草稿。每個階段開始前，都要先通過下面的決策閘門。
@@ -85,7 +85,7 @@
 ### Phase 2：資料位置、持久索引與來源身份
 
 - [x] Task 2.1（2026-10-23 隨安裝檔提前完成）：新增 `AppDataPaths`，所有程式資料統一放到 `%LOCALAPPDATA%\FileMergeAssistant\`，取代快取、回收區、記錄檔與 GUI 中的相對路徑 `fma-results`（FR-010）。CLI 明確指定的 `--output` 維持原行為。
-- [ ] Task 2.2：決定直接寫 SQL 或使用 ORM，記錄在 ADR-008 與本計畫的 Technical Decisions。
+- [x] Task 2.2：決定直接寫 SQL 或使用 ORM，記錄在 ADR-008 與本計畫的 Technical Decisions。決定：直接寫 SQL（Microsoft.Data.Sqlite）。
 - [ ] Task 2.3：建立 SQLite 索引與第一版結構，包括來源、磁碟區、掃描工作、檔案與指紋（含演算法與版本）。啟用 WAL。
 - [ ] Task 2.4：**索引遷移**。資料庫記錄自己的結構版本，遷移依序執行，遷移前備份索引檔。依 ADR-008 的決定，匯入或捨棄舊的 JSON 結果與快取。
 - [ ] Task 2.5：**來源身份**。以 `IVolumeIdentityProvider` 包裝 Win32 呼叫，讀取磁碟區序號、磁碟區 GUID 與 NTFS 檔案 ID，並實作 ADR-010 的比對規則（自動對應、請使用者確認、不沿用）。
@@ -198,6 +198,7 @@
 ## Technical Decisions
 
 - 決策理由見各 ADR，這裡只列本計畫自己的安排。
+- **索引存取**：直接寫 SQL（Microsoft.Data.Sqlite），不使用 ORM（Task 2.2）。疊不存進資料庫，每次由索引與「決定」資料表推導；疊的 id 由各份複本的身份算出，所以「不屬於這疊」的記憶存在決定裡。
 - **CLI 範圍**：CLI 維持可建置、既有測試通過，但不新增功能；來源、疊與待執行等新流程只在 GUI 提供。這需要產品負責人確認。
 - **不在第一階段流程內的既有程式**：同名分組（`SmartMergeService`）、`WatchService`、報告產生器與 Reports 畫面、感知雜湊與影片指紋（FR-011、FR-012、AC-11）。它們保持可建置，但不接入新的 GUI 流程。
 - **可測試性**：Win32 呼叫、檔案系統與時間都放在介面後面，讓競態、離線與身份比對可以用測試替身重現。ViewModel 盡量不直接引用 WPF 型別。
@@ -269,6 +270,7 @@
 | 2026-10-23 | 完成 Task 0.1 至 0.3：solution 建置通過，測試全部通過；新增 Task 0.5（ImageSharp 授權金鑰）。依獨立審閱修正 junction 問題後，測試增為 149 個 |
 | 2026-10-23 | 產品負責人指示升級 .NET 10；完成 Task 0.4：`net10.0-windows` 上建置與 149 個測試通過，沒有已知漏洞的套件 |
 | 2026-10-23 | 產品負責人要求 NSIS 安裝檔、release workflow 與檢查更新：提前完成 Task 2.1，完成 Task 7.1、7.4、7.5、7.6；0.1.0 先以 Debug 設定打包 |
+| 2026-10-23 | ADR-008、ADR-010 改為 Accepted；Task 2.2 決定直接寫 SQL。下一批：真實的索引、分段掃描與疊偵測（只讀），執行與還原仍待 ADR-002、003、007 |
 | 2026-10-23 | 新介面第一批：新視窗外殼與 7 個畫面（加入來源、來源與掃描工作、工作台、一疊、待執行、執行結果與還原、自上次以來）接上 `IWorkbenchStore` 與 `DemoWorkbenchStore`。Core 新增 `Sources/`、`Stacks/`（`StackReview`、`StackTriage`）、`Plans/`（`PlanBuilder`）與 `Workbench/`。新增 `tests/Gui.Tests`，逐一繪製每個畫面並檢查沒有繫結錯誤。測試共 272 個。舊的 Scan、Results、Reports 暫放在「舊版掃描」，等真實掃描接上後移除 |
 | 2026-10-23 | 產品負責人要求依 GUI 流程 mock 實作新介面。ADR-001、004、005、006、009 改為 Accepted；ADR-002、003、007、008、010 在會用到它們的 PR 前再確認。順序改為先做畫面：新外殼與 7 個畫面先接上 `IWorkbenchStore` 的示範資料，接著以真實的分段掃描、索引與疊偵測取代示範資料，最後才是會改動檔案的執行與還原 |
 
