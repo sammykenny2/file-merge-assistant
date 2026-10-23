@@ -137,6 +137,22 @@ restore with only the managed engine registered; the native module can still be
 resident in that test process. A cold-start missing-DLL restore test and process
 termination/recovery remain Slice 3c requirements, so G3 is not complete yet.
 
+Slice 3c completes the Windows x64 G3 scope: 444 Core and 16 GUI tests pass,
+zero skips, with independent review and a separate 4-test recovery/compatibility
+run. [The test-only host](../tests/scan-host/README.md) is built automatically.
+The parent terminates only its own child after a real-DLL 200-file checkpoint
+and entry into the next native upload. Reopening preserves the original snapshot,
+450 active legacy fingerprints and saved inventory; the missing engine waits,
+and the original version resumes the same job as generation 2. Checkpoint events
+bypass the UI progress throttle explicitly rather than relying on wall-clock time.
+
+The native history/restore case now starts a fresh process with an absent native
+installation directory and no native-test environment variables. The child
+asserts zero FMA native modules before and after successful restoration. This is
+cold-start recovery evidence, not a claim that native process aborts are caught.
+All process markers and source files are isolated fixtures; test hosts and native
+fault fixtures must not be included in application packages.
+
 ## CI Pause
 
 GitHub Actions CI is temporarily disabled for this repository. The `CI` workflow

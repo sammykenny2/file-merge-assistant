@@ -48,7 +48,7 @@ public sealed class EnginePlanCompatibilityTests : IDisposable
     SwitchExecuteRestore(AnalysisEngineRegistry.ManagedOnly(), ManagedAnalysisEngine.EngineId, ContentFingerprints.Sha256);
 
   [NativeFact]
-  public Task Native_Analysis_History_And_Restore_Work_With_Only_Managed_Engine_Registered() =>
+  public Task Native_Analysis_History_Can_Restore_In_A_Fresh_Process_With_The_Native_Library_Absent() =>
     SwitchExecuteRestore(new AnalysisEngineRegistry([new ManagedAnalysisEngine(),
       new NativeAnalysisEngine(Environment.GetEnvironmentVariable(NativeFactAttribute.LibraryDirectoryVariable))]),
       NativeAnalysisEngine.EngineId, ContentFingerprints.Blake3);
@@ -87,11 +87,23 @@ public sealed class EnginePlanCompatibilityTests : IDisposable
       await store.WaitForScansAsync(Timeout);
     }
 
-    // Only the managed implementation is registered: historical inspection and restore remain independent.
+    if (engineId == NativeAnalysisEngine.EngineId)
+    {
+      var reportPath = _tree.PathOf("cold-restore.json");
+      await using var child = ScanHostProcess.Start("restore", _index, batchId, _tree.PathOf("missing-native"), reportPath);
+      await child.ExitSuccessfully();
+      var report = await child.Marker(reportPath);
+      Assert.Equal(child.Id, report.GetProperty("processId").GetInt32());
+      Assert.NotEqual(Environment.ProcessId, report.GetProperty("processId").GetInt32());
+      Assert.Equal("MissingDependency", report.GetProperty("nativeAvailability").GetString());
+      Assert.Equal(0, report.GetProperty("nativeModules").GetInt32());
+      Assert.True(report.GetProperty("restored").GetInt32() > 0);
+    }
+    // Historical inspection and restore remain independent of the registered analysis engines.
     using var reopened = Open();
     Assert.DoesNotContain(reopened.Engines.Descriptors, descriptor => descriptor.Id == NativeAnalysisEngine.EngineId);
     Assert.Equal(batchId, Assert.Single(reopened.History).Id);
-    await reopened.RestoreBatchAsync(batchId);
+    if (engineId != NativeAnalysisEngine.EngineId) { await reopened.RestoreBatchAsync(batchId); }
     Assert.All(reopened.History.Single().Items, item => Assert.Equal(BatchItemState.Restored, item.State));
     Assert.True(Directory.Exists(_tree.PathOf(@"backup\project")));
     Assert.False(File.Exists(_tree.PathOf(@"work\project\notes.md")));

@@ -39,7 +39,10 @@ public sealed record ScanProgress(
   long Errors,
   string? CurrentPath,
   long CurrentSize,
-  DateTimeOffset? CheckpointAt);
+  DateTimeOffset? CheckpointAt)
+{
+  public bool IsCheckpoint { get; init; }
+}
 
 /// <summary>
 /// Scans one source in the stages of ADR-004. Discovery records path, size and time for every file in batches; each
@@ -605,7 +608,10 @@ public sealed class SourceScanner
       {
         CheckpointAt = DateTimeOffset.Now;
       }
-      report(new ScanProgress(phase, Discovered, Candidates, Hashed, Succeeded, Skipped, Errors, Current.Path, Current.Size, CheckpointAt));
+      report(new ScanProgress(phase, Discovered, Candidates, Hashed, Succeeded, Skipped, Errors, Current.Path, Current.Size, CheckpointAt)
+      {
+        IsCheckpoint = checkpoint,
+      });
     }
 
     public void RecordError(string path, string message)

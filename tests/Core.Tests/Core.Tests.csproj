@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Core.csproj" />
+    <ProjectReference Include="..\scan-host\ScanHost.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,5 +26,12 @@
     <None Include="..\Fixtures\index\schema-v3.sql" Link="Fixtures\index\schema-v3.sql" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Fixtures\index\migration-v4.sql" Link="Fixtures\index\migration-v4.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <Target Name="CopyScanHost" AfterTargets="Build">
+    <ItemGroup>
+      <ScanHostFile Include="$(MSBuildProjectDirectory)/../scan-host/bin/$(Configuration)/$(TargetFramework)/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ScanHostFile)" DestinationFiles="@(ScanHostFile->'$(OutDir)scan-host/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

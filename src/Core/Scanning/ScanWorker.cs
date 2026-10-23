@@ -242,7 +242,7 @@ public sealed class ScanWorker : IDisposable
     void Report(ScanProgress progress)
     {
       last = progress;
-      if (lastSave.Elapsed < ProgressInterval)
+      if (lastSave.Elapsed < ProgressInterval && !progress.IsCheckpoint)
       {
         return;
       }
