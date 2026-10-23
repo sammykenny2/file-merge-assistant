@@ -176,38 +176,39 @@ public partial class MainViewModel : ObservableObject, INavigator
     Strip.Clear();
     if (_store.Sources.Count == 0)
     {
-      Strip.Add(new StripItem("還沒有來源。加入資料夾後，會在背景建立索引，這段時間仍可以操作。", StripTone.Plain));
+      Strip.Add(new StripItem(AppText.Get("header.strip.noSources"), StripTone.Plain));
       return;
     }
 
-    Strip.Add(new StripItem($"已索引 {Fmt.Count(_store.Sources.Sum(s => s.IndexedFiles))} 個檔", StripTone.Plain));
+    var indexed = _store.Sources.Sum(s => s.IndexedFiles);
+    Strip.Add(new StripItem(AppText.Plural("header.strip.indexed", indexed, ("count", Fmt.Count(indexed))), StripTone.Plain));
     var active = _store.Jobs.FirstOrDefault(j => j.IsActive);
     if (active is not null)
     {
-      Strip.Add(new StripItem($"{active.Title}：{JobProgress(active)}", StripTone.Busy));
+      Strip.Add(new StripItem(AppText.Get("header.strip.job", ("title", active.Title), ("progress", JobProgress(active))), StripTone.Busy));
     }
     var next = _store.Jobs.FirstOrDefault(j => j.State == ScanJobState.Queued);
     if (next is not null)
     {
-      Strip.Add(new StripItem($"下一個：{next.Title}", StripTone.Plain));
+      Strip.Add(new StripItem(AppText.Get("header.strip.next", ("title", next.Title)), StripTone.Plain));
     }
     foreach (var source in _store.Sources.Where(s => s.State == SourceState.Offline))
     {
-      Strip.Add(new StripItem($"{source.RootPath} {source.Name}離線", StripTone.Offline));
+      Strip.Add(new StripItem(AppText.Get("header.strip.offline", ("path", source.RootPath), ("name", source.Name)), StripTone.Offline));
     }
     var open = _store.Stacks.Count(s => s.Status == StackStatus.Open);
     if (open > 0)
     {
-      Strip.Add(new StripItem($"待整理 {Fmt.Count(open)} 疊", StripTone.Plain));
+      Strip.Add(new StripItem(AppText.Plural("header.strip.open", open, ("count", Fmt.Count(open))), StripTone.Plain));
     }
   }
 
   internal static string JobProgress(ScanJobInfo job) => job.State switch
   {
-    ScanJobState.Pausing => "正在暫停",
-    ScanJobState.Paused => "已暫停",
+    ScanJobState.Pausing => AppText.Get("header.job.pausing"),
+    ScanJobState.Paused => AppText.Get("header.job.paused"),
     _ => job.Phase == ScanPhase.Discover
-      ? $"探索中，已找到 {Fmt.Count(job.Discovered)} 個檔"
-      : $"確認內容中，已處理 {Fmt.Count(job.Hashed)} 個",
+      ? AppText.Plural("header.job.discovering", job.Discovered, ("count", Fmt.Count(job.Discovered)))
+      : AppText.Get("header.job.checking", ("count", Fmt.Count(job.Hashed))),
   };
 }

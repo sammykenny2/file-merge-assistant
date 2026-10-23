@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Sources;
 using FileMergeAssistant.Stacks;
 using FileMergeAssistant.Workbench;
@@ -23,42 +24,52 @@ public sealed partial class SourceCardViewModel : ObservableObject
     Scan = scan;
     Status = source.State switch
     {
-      SourceState.Scanning => new ChipInfo("掃描中", Tone.Busy),
-      SourceState.Offline => new ChipInfo("離線", Tone.Offline),
-      SourceState.Interrupted => new ChipInfo("中斷待處理", Tone.Warn),
-      SourceState.NeedsUpdate => new ChipInfo("需要更新", Tone.Warn),
-      SourceState.Queued => new ChipInfo("等候更新", Tone.Wait),
-      _ => new ChipInfo("在線", Tone.Ok),
+      SourceState.Scanning => new ChipInfo(AppText.Get("sources.state.scanning"), Tone.Busy),
+      SourceState.Offline => new ChipInfo(AppText.Get("sources.state.offline"), Tone.Offline),
+      SourceState.Interrupted => new ChipInfo(AppText.Get("sources.state.interrupted"), Tone.Warn),
+      SourceState.NeedsUpdate => new ChipInfo(AppText.Get("sources.state.needsUpdate"), Tone.Warn),
+      SourceState.Queued => new ChipInfo(AppText.Get("sources.state.queued"), Tone.Wait),
+      _ => new ChipInfo(AppText.Get("sources.state.online"), Tone.Ok),
     };
-    (ScanLabel, ScanEnabled) = source.State switch
+    var (scanKey, scanEnabled) = source.State switch
     {
-      SourceState.Scanning => ("掃描中", false),
-      SourceState.Offline => ("接上後更新", false),
-      SourceState.Interrupted => ("繼續掃描", true),
-      SourceState.Queued or SourceState.NeedsUpdate => ("已在佇列", false),
-      _ => ("更新", true),
+      SourceState.Scanning => ("sources.scan.scanning", false),
+      SourceState.Offline => ("sources.scan.whenConnected", false),
+      SourceState.Interrupted => ("sources.scan.resume", true),
+      SourceState.Queued or SourceState.NeedsUpdate => ("sources.scan.queued", false),
+      _ => ("sources.scan.update", true),
     };
+    ScanLabel = AppText.Get(scanKey);
+    ScanEnabled = scanEnabled;
 
+    var files = Fmt.Count(source.IndexedFiles);
     Indexed = source.State switch
     {
-      SourceState.Scanning when job is not null => $"已探索 {Fmt.Count(job.Discovered)} 個檔，正在確認內容",
-      SourceState.Interrupted => $"已保存 {Fmt.Count(source.IndexedFiles)} 個檔的索引",
-      SourceState.Offline => $"{(source.LastSeenAt is { } seen ? Fmt.Day(seen, now) : "上次")} 的索引：{Fmt.Count(source.IndexedFiles)} 個檔",
+      SourceState.Scanning when job is not null =>
+        AppText.Plural("sources.indexed.discovering", job.Discovered, ("count", Fmt.Count(job.Discovered))),
+      SourceState.Interrupted => AppText.Plural("sources.indexed.saved", source.IndexedFiles, ("count", files)),
+      SourceState.Offline => source.LastSeenAt is { } day
+        ? AppText.Plural("sources.indexed.offline", source.IndexedFiles, ("day", Fmt.Day(day, now)), ("count", files))
+        : AppText.Plural("sources.indexed.offlineLast", source.IndexedFiles, ("count", files)),
       _ => IndexedLine(source),
     };
 
     var lastScan = source.LastScanAt is { } at
-      ? $"最近掃描：{Fmt.When(at, now)}{(source.LastScanErrors > 0 ? $"，有 {source.LastScanErrors} 個錯誤" : string.Empty)}"
-      : "還沒有掃描";
+      ? source.LastScanErrors > 0
+        ? AppText.Plural("sources.lastScanErrors", source.LastScanErrors, ("when", Fmt.When(at, now)), ("count", source.LastScanErrors))
+        : AppText.Get("sources.lastScan", ("when", Fmt.When(at, now)))
+      : AppText.Get("sources.neverScanned");
     When = source.State switch
     {
-      SourceState.Offline => $"最後看到：{(source.LastSeenAt is { } seen ? Fmt.WhenWithTime(seen, now) : "不明")}",
+      SourceState.Offline => source.LastSeenAt is { } seen
+        ? AppText.Get("sources.lastSeen", ("when", Fmt.WhenWithTime(seen, now)))
+        : AppText.Get("sources.lastSeenUnknown"),
       SourceState.Interrupted or SourceState.NeedsUpdate or SourceState.Scanning => source.Remark ?? lastScan,
-      _ => source.Remark is null ? lastScan : $"{lastScan}；{source.Remark}",
+      _ => Fmt.Clauses(lastScan, source.Remark),
     };
 
-    Regenerable = string.Join("、", source.RegenerableNames);
-    Exclusions = source.Exclusions.Count == 0 ? "沒有" : string.Join("、", source.Exclusions);
+    Regenerable = Fmt.List(source.RegenerableNames);
+    Exclusions = source.Exclusions.Count == 0 ? AppText.Get("sources.card.noExclusions") : Fmt.List(source.Exclusions);
     IsExpanded = source.IsProtected && source.LastScanErrors > 0;
   }
 
@@ -68,7 +79,7 @@ public sealed partial class SourceCardViewModel : ObservableObject
   public string Tail { get; }
   public ChipInfo Status { get; }
   public bool IsProtected { get; }
-  public ChipInfo ProtectedChip { get; } = new("受保護", Tone.Protected);
+  public ChipInfo ProtectedChip { get; } = new(AppText.Get("sources.card.protected"), Tone.Protected);
   public bool IsOffline { get; }
   public string ScanLabel { get; }
   public bool ScanEnabled { get; }
@@ -79,25 +90,17 @@ public sealed partial class SourceCardViewModel : ObservableObject
   public string Regenerable { get; }
   public string Exclusions { get; }
 
-  public string OfflineNote { get; } =
-    "離線時可以查看上次的索引，但不能整理這裡的檔案。重新接上後，會用磁碟區序號與資料夾結構確認是同一顆，就算磁碟代號變了也一樣。";
+  public string OfflineNote { get; } = AppText.Get("sources.card.offlineNote");
 
   [RelayCommand]
   private void ToggleSettings() => IsExpanded = !IsExpanded;
 
-  private static string IndexedLine(SourceInfo source)
-  {
-    var line = $"已索引 {Fmt.Count(source.IndexedFiles)} 個檔";
-    if (source.RegenerableFiles > 0)
-    {
-      line += $"；可重建資料夾裡 {Fmt.Count(source.RegenerableFiles)} 個檔只記大小";
-    }
-    if (source.CloudOnlyFiles > 0)
-    {
-      line += $"；{Fmt.Count(source.CloudOnlyFiles)} 個只在雲端，未比對";
-    }
-    return line;
-  }
+  private static string IndexedLine(SourceInfo source) => Fmt.Clauses(
+    AppText.Plural("sources.indexed.files", source.IndexedFiles, ("count", Fmt.Count(source.IndexedFiles))),
+    source.RegenerableFiles > 0
+      ? AppText.Plural("sources.indexed.regenerable", source.RegenerableFiles, ("count", Fmt.Count(source.RegenerableFiles)))
+      : null,
+    source.CloudOnlyFiles > 0 ? AppText.Get("sources.indexed.cloudOnly", ("count", Fmt.Count(source.CloudOnlyFiles))) : null);
 }
 
 /// <summary>The job that is running (or pausing, or paused) at the top of the queue.</summary>
@@ -106,46 +109,49 @@ public sealed class RunningJobViewModel
   public RunningJobViewModel(ScanJobInfo job, DateTimeOffset now, IRelayCommand primary, IRelayCommand cancel)
   {
     Title = job.Title;
-    Kind = job.Kind switch
+    Kind = AppText.Get(job.Kind switch
     {
-      ScanJobKind.FirstScan => "第一次掃描",
-      ScanJobKind.Resume => "繼續上次的掃描",
-      _ => "更新",
-    };
+      ScanJobKind.FirstScan => "sources.job.firstScan",
+      ScanJobKind.Resume => "sources.job.resumeLast",
+      _ => "sources.job.update",
+    });
     State = job.State switch
     {
-      ScanJobState.Pausing => new ChipInfo("正在暫停", Tone.Busy),
-      ScanJobState.Paused => new ChipInfo("已暫停", Tone.Paused),
-      _ => new ChipInfo("執行中", Tone.Busy),
+      ScanJobState.Pausing => new ChipInfo(AppText.Get("sources.job.pausing"), Tone.Busy),
+      ScanJobState.Paused => new ChipInfo(AppText.Get("sources.job.paused"), Tone.Paused),
+      _ => new ChipInfo(AppText.Get("sources.job.running"), Tone.Busy),
     };
     IsPaused = job.State == ScanJobState.Paused;
     var confirming = job.Phase != ScanPhase.Discover;
-    Discover = confirming ? $"完成，找到 {Fmt.Count(job.Discovered)} 個檔" : $"進行中，已找到 {Fmt.Count(job.Discovered)} 個檔";
+    Discover = AppText.Plural(confirming ? "sources.job.discovered" : "sources.job.discovering", job.Discovered, ("count", Fmt.Count(job.Discovered)));
     Confirm = confirming
-      ? $"計算內容指紋：已處理 {Fmt.Count(job.Hashed)} 個，可能是複本的共 {Fmt.Count(job.Candidates)} 個"
-      : "等探索完成後開始";
+      ? AppText.Plural("sources.job.fingerprinting", job.Candidates, ("hashed", Fmt.Count(job.Hashed)), ("count", Fmt.Count(job.Candidates)))
+      : AppText.Get("sources.job.confirmWaits");
+    var unique = Math.Max(0, job.Discovered - job.Candidates);
     ConfirmNote = confirming
-      ? $"其餘 {Fmt.Count(Math.Max(0, job.Discovered - job.Candidates))} 個檔大小都不重複，只記錄大小與日期。候選數可能隨掃描增加。"
-      : "探索時就會先找出大小相同的檔；候選總數要等探索完成才確定。";
+      ? AppText.Plural("sources.job.uniqueSizes", unique, ("count", Fmt.Count(unique)))
+      : AppText.Get("sources.job.sameSizes");
     Progress = confirming && job.Candidates > 0 ? Math.Min(1, (double)job.Hashed / job.Candidates) : 0;
     IsConfirming = confirming;
-    Save = $"每處理 {Fmt.Count(job.CheckpointEvery)} 個保存一次" + (job.LastCheckpointAt is { } at ? $"；最近一次 {Fmt.Time(at)}" : string.Empty);
-    Counts = $"成功 {Fmt.Count(job.Succeeded)}　略過 {Fmt.Count(job.Skipped)}{(job.SkippedReason is null ? string.Empty : $"（{job.SkippedReason}）")}　錯誤 {Fmt.Count(job.Errors)}";
+    Save = job.LastCheckpointAt is { } at
+      ? AppText.Plural("sources.job.saveLast", job.CheckpointEvery, ("count", Fmt.Count(job.CheckpointEvery)), ("time", Fmt.Time(at)))
+      : AppText.Plural("sources.job.save", job.CheckpointEvery, ("count", Fmt.Count(job.CheckpointEvery)));
+    Counts = CountsText(job);
     Current = job.State == ScanJobState.Paused
-      ? $"進度已保存到 {Fmt.Count(job.Hashed)} 個。"
-      : job.CurrentPath is null ? string.Empty : $"目前：{job.CurrentPath}（{Fmt.Size(job.CurrentSize)}）";
+      ? AppText.Plural("sources.job.savedTo", job.Hashed, ("count", Fmt.Count(job.Hashed)))
+      : job.CurrentPath is null ? string.Empty : AppText.Get("sources.job.current", ("path", job.CurrentPath), ("size", Fmt.Size(job.CurrentSize)));
     Note = job.State switch
     {
-      ScanJobState.Pausing => "正在把這一批處理完並保存，完成後就會停下。這段時間仍可以瀏覽其他畫面。",
-      ScanJobState.Paused => "已暫停，不會再安排新檔案。佇列裡的其他工作也會等這個繼續或取消。",
+      ScanJobState.Pausing => AppText.Get("sources.job.pausingNote"),
+      ScanJobState.Paused => AppText.Get("sources.job.pausedNote"),
       _ => null,
     };
-    PrimaryLabel = job.State switch
+    PrimaryLabel = AppText.Get(job.State switch
     {
-      ScanJobState.Paused => "繼續",
-      ScanJobState.Pausing => "正在暫停…",
-      _ => "暫停",
-    };
+      ScanJobState.Paused => "sources.job.resume",
+      ScanJobState.Pausing => "sources.job.pausingButton",
+      _ => "sources.job.pause",
+    });
     PrimaryEnabled = job.State != ScanJobState.Pausing;
     Primary = primary;
     Cancel = cancel;
@@ -168,13 +174,17 @@ public sealed class RunningJobViewModel
   public bool PrimaryEnabled { get; }
   public IRelayCommand Primary { get; }
   public IRelayCommand Cancel { get; }
+
+  /// <summary>Succeeded, skipped (with the reason, when there is one) and errors of a job, running or finished.</summary>
+  internal static string CountsText(ScanJobInfo job) => AppText.Get(job.SkippedReason is null ? "sources.job.counts" : "sources.job.countsReason",
+    ("succeeded", Fmt.Count(job.Succeeded)), ("skipped", Fmt.Count(job.Skipped)), ("reason", job.SkippedReason), ("errors", Fmt.Count(job.Errors)));
 }
 
 public sealed record QueuedJobViewModel(string Position, string Name, string Description, bool IsFirst, bool IsLast,
   IRelayCommand Up, IRelayCommand Down, IRelayCommand Cancel)
 {
-  public string UpLabel => $"把「{Name}」往前移";
-  public string DownLabel => $"把「{Name}」往後移";
+  public string UpLabel => AppText.Get("sources.waiting.up", ("name", Name));
+  public string DownLabel => AppText.Get("sources.waiting.down", ("name", Name));
 }
 
 public sealed record AttentionJobViewModel(ChipInfo State, string Name, string Description, IReadOnlyList<ActionInfo> Actions);
@@ -186,13 +196,15 @@ public sealed partial class FinishedJobViewModel : ObservableObject
 
   public FinishedJobViewModel(ScanJobInfo job, string sourceName, DateTimeOffset now, IRelayCommand rescan)
   {
-    State = job.Errors > 0 ? new ChipInfo($"完成，有 {Fmt.Count(job.Errors)} 個錯誤", Tone.Warn) : new ChipInfo("完成", Tone.Ok);
+    State = job.Errors > 0
+      ? new ChipInfo(AppText.Plural("sources.finished.doneErrors", job.Errors, ("count", Fmt.Count(job.Errors))), Tone.Warn)
+      : new ChipInfo(AppText.Get("sources.finished.done"), Tone.Ok);
     Name = sourceName;
     When = job.FinishedAt is { } at ? Fmt.When(at, now) : string.Empty;
-    Counts = $"成功 {Fmt.Count(job.Succeeded)}　略過 {Fmt.Count(job.Skipped)}{(job.SkippedReason is null ? string.Empty : $"（{job.SkippedReason}）")}　錯誤 {Fmt.Count(job.Errors)}";
+    Counts = RunningJobViewModel.CountsText(job);
     Summary = job.ErrorSummary ?? job.Reason;
     HasErrors = job.Errors > 0;
-    ErrorsLabel = $"查看 {Fmt.Count(job.Errors)} 個錯誤";
+    ErrorsLabel = AppText.Plural("sources.finished.viewErrors", job.Errors, ("count", Fmt.Count(job.Errors)));
     Rescan = rescan;
   }
 
@@ -253,8 +265,11 @@ public sealed partial class SourcesViewModel : PageViewModel
 
     var sources = Store.Sources;
     var regenerable = sources.Sum(s => s.RegenerableFiles);
-    Summary = $"{sources.Count} 個來源，已索引 {Fmt.Count(sources.Sum(s => s.IndexedFiles))} 個檔。"
-      + (regenerable > 0 ? $"另有 {Fmt.Count(regenerable)} 個檔在可重建的資料夾裡，只記錄大小。" : string.Empty);
+    var indexed = sources.Sum(s => s.IndexedFiles);
+    Summary = Fmt.Sentences(
+      AppText.Plural("sources.summary", sources.Count, ("count", sources.Count),
+        ("files", AppText.Plural("sources.files", indexed, ("count", Fmt.Count(indexed))))),
+      regenerable > 0 ? AppText.Plural("sources.summary.regenerable", regenerable, ("count", Fmt.Count(regenerable))) : null);
 
     Sources.Clear();
     foreach (var source in sources)
@@ -282,8 +297,11 @@ public sealed partial class SourcesViewModel : PageViewModel
     for (var i = 0; i < queued.Count; i++)
     {
       var job = queued[i];
+      var description = job.Reason is { } reason
+        ? AppText.Get("sources.waiting.description", ("kind", KindText(job.Kind)), ("reason", reason))
+        : AppText.Get("sources.waiting.noReason", ("kind", KindText(job.Kind)));
       Waiting.Add(new QueuedJobViewModel((i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), job.Title,
-        $"{KindText(job.Kind)}：{job.Reason ?? "等候中"}", i == 0, i == queued.Count - 1,
+        description, i == 0, i == queued.Count - 1,
         new RelayCommand(() => Store.MoveJob(job.Id, -1)), new RelayCommand(() => Store.MoveJob(job.Id, 1)),
         new AsyncRelayCommand(() => Store.CancelJobAsync(job.Id))));
     }
@@ -291,16 +309,16 @@ public sealed partial class SourcesViewModel : PageViewModel
     Attention.Clear();
     foreach (var job in Store.Jobs.Where(j => j.State is ScanJobState.Interrupted or ScanJobState.WaitingForSource || (j.State == ScanJobState.Paused && j != running)))
     {
-      var cancel = new ActionInfo("取消", new AsyncRelayCommand(() => Store.CancelJobAsync(job.Id)));
+      var cancel = new ActionInfo(AppText.Get("sources.cancel"), new AsyncRelayCommand(() => Store.CancelJobAsync(job.Id)));
       Attention.Add(job.State switch
       {
-        ScanJobState.Interrupted => new AttentionJobViewModel(new ChipInfo("中斷待處理", Tone.Warn), job.Title, job.Reason ?? string.Empty,
-          [new ActionInfo("繼續掃描", new AsyncRelayCommand(() => Store.ResumeJobAsync(job.Id)), true),
-           new ActionInfo("從頭重新掃描", new AsyncRelayCommand(() => Store.RestartJobAsync(job.Id))), cancel]),
-        ScanJobState.WaitingForSource => new AttentionJobViewModel(new ChipInfo("等待來源", Tone.Offline), job.Title, job.Reason ?? string.Empty,
-          [new ActionInfo("我已經接上了", new AsyncRelayCommand(() => Store.ResumeJobAsync(job.Id))), cancel]),
-        _ => new AttentionJobViewModel(new ChipInfo("已暫停", Tone.Paused), job.Title, job.Reason ?? string.Empty,
-          [new ActionInfo("繼續", new AsyncRelayCommand(() => Store.ResumeJobAsync(job.Id)), true), cancel]),
+        ScanJobState.Interrupted => new AttentionJobViewModel(new ChipInfo(AppText.Get("sources.state.interrupted"), Tone.Warn), job.Title, job.Reason ?? string.Empty,
+          [new ActionInfo(AppText.Get("sources.scan.resume"), new AsyncRelayCommand(() => Store.ResumeJobAsync(job.Id)), true),
+           new ActionInfo(AppText.Get("sources.attention.restart"), new AsyncRelayCommand(() => Store.RestartJobAsync(job.Id))), cancel]),
+        ScanJobState.WaitingForSource => new AttentionJobViewModel(new ChipInfo(AppText.Get("sources.attention.waitingForSource"), Tone.Offline), job.Title,
+          job.Reason ?? string.Empty, [new ActionInfo(AppText.Get("sources.attention.connected"), new AsyncRelayCommand(() => Store.ResumeJobAsync(job.Id))), cancel]),
+        _ => new AttentionJobViewModel(new ChipInfo(AppText.Get("sources.job.paused"), Tone.Paused), job.Title, job.Reason ?? string.Empty,
+          [new ActionInfo(AppText.Get("sources.job.resume"), new AsyncRelayCommand(() => Store.ResumeJobAsync(job.Id)), true), cancel]),
       });
     }
 
@@ -311,7 +329,8 @@ public sealed partial class SourcesViewModel : PageViewModel
       Finished.Add(new FinishedJobViewModel(job, name, now, new AsyncRelayCommand(() => Store.RescanFailedAsync(job.Id))));
     }
 
-    HubLinkLabel = $"到工作台整理已找到的 {Fmt.Count(Store.Stacks.Count(s => s.Status == StackStatus.Open))} 疊";
+    var open = Store.Stacks.Count(s => s.Status == StackStatus.Open);
+    HubLinkLabel = AppText.Plural("sources.hubLink", open, ("count", Fmt.Count(open)));
     OnPropertyChanged(nameof(HasWaiting));
     OnPropertyChanged(nameof(HasAttention));
     OnPropertyChanged(nameof(HasFinished));
@@ -323,10 +342,10 @@ public sealed partial class SourcesViewModel : PageViewModel
   [RelayCommand]
   private void GoToHub() => Navigator.ShowHub();
 
-  private static string KindText(ScanJobKind kind) => kind switch
+  private static string KindText(ScanJobKind kind) => AppText.Get(kind switch
   {
-    ScanJobKind.FirstScan => "第一次掃描",
-    ScanJobKind.Resume => "繼續",
-    _ => "更新",
-  };
+    ScanJobKind.FirstScan => "sources.job.firstScan",
+    ScanJobKind.Resume => "sources.job.resume",
+    _ => "sources.job.update",
+  });
 }

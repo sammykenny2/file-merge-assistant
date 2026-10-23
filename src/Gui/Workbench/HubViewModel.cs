@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Sources;
 using FileMergeAssistant.Stacks;
 using FileMergeAssistant.Workbench;
@@ -33,8 +34,8 @@ public sealed record HubItemViewModel(
   IRelayCommand Open)
 {
   public bool IsReady => BlockedText is null;
-  public string OpenLabel => IsReady ? "整理" : "先看看";
-  public string OpenName => $"{OpenLabel} {Title}";
+  public string OpenLabel => AppText.Get(IsReady ? "hub.item.review" : "hub.item.look");
+  public string OpenName => AppText.Get(IsReady ? "hub.item.reviewName" : "hub.item.lookName", ("title", Title));
 }
 
 public sealed partial class HubGroupViewModel : ObservableObject
@@ -50,11 +51,9 @@ public sealed partial class HubGroupViewModel : ObservableObject
     var ready = items.Count(i => i.IsReady);
     var blocked = items.Count - ready;
     HasBulk = offersBulk && ready > 0;
-    BulkLabel = $"依建議加入 {ready} 疊…";
-    BulkGo = $"加入這 {ready} 疊";
-    BulkText = $"會把這一區目前列出、可以整理的 {ready} 疊，用建議的正本與做法加入待執行"
-      + (blocked > 0 ? $"；離線而不能整理的 {blocked} 疊不包含在內" : string.Empty)
-      + "。還沒載入的疊也不包含。它們會標記為「依建議加入」，執行前可以逐項檢查或移除。";
+    BulkLabel = AppText.Plural("hub.bulk.label", ready, ("count", ready));
+    BulkGo = AppText.Plural("hub.bulk.go", ready, ("count", ready));
+    BulkText = AppText.Plural(blocked > 0 ? "hub.bulk.textOffline" : "hub.bulk.text", ready, ("count", ready), ("offline", blocked));
     Bulk = bulk;
   }
 
@@ -100,7 +99,16 @@ public enum KindFilter
   File,
 }
 
-public sealed record SortOption(StackSort Sort, string Label);
+/// <summary>One choice of the sort list; its label follows the display language.</summary>
+public sealed partial class SortOption(StackSort sort, string labelKey) : ObservableObject
+{
+  public StackSort Sort { get; } = sort;
+
+  public string LabelKey { get; } = labelKey;
+
+  [ObservableProperty]
+  private string _label = AppText.Get(labelKey);
+}
 
 public sealed record TrayItem(string Title, string Detail);
 
@@ -145,6 +153,9 @@ public sealed partial class HubViewModel : PageViewModel
   [ObservableProperty]
   private string _trayActionLabel = string.Empty;
 
+  [ObservableProperty]
+  private string _loadMoreLabel = string.Empty;
+
   public HubViewModel(IWorkbenchStore store, INavigator navigator)
     : base(store, navigator)
   {
@@ -154,10 +165,10 @@ public sealed partial class HubViewModel : PageViewModel
 
   public IReadOnlyList<SortOption> SortOptions { get; } =
   [
-    new(StackSort.Suggested, "建議順序：省空間又少決定的先"),
-    new(StackSort.MostSpace, "可省空間最多"),
-    new(StackSort.RecentlyChanged, "最近有變動"),
-    new(StackSort.MostCopies, "複本份數最多"),
+    new(StackSort.Suggested, "hub.sort.suggested"),
+    new(StackSort.MostSpace, "hub.sort.mostSpace"),
+    new(StackSort.RecentlyChanged, "hub.sort.recent"),
+    new(StackSort.MostCopies, "hub.sort.mostCopies"),
   ];
 
   public ObservableCollection<HubGroupViewModel> Groups { get; } = [];
@@ -196,10 +207,21 @@ public sealed partial class HubViewModel : PageViewModel
     var keptAll = stacks.Count(s => s.Status == StackStatus.KeptAll);
     var pending = stacks.Count(s => s.Status == StackStatus.Pending);
     var scanning = Store.Sources.Where(s => s.State == SourceState.Scanning).Select(s => s.RootPath).ToList();
-    Summary = $"找到 {Fmt.Count(stacks.Count(s => s.Status is not (StackStatus.Dissolved or StackStatus.Converged)) + converged)} 疊。已收斂 {Fmt.Count(converged)} 疊、都保留 {Fmt.Count(keptAll)} 疊"
-      + (pending > 0 ? $"、待執行 {Fmt.Count(pending)} 疊" : string.Empty)
-      + $"，還有 {Fmt.Count(open.Count)} 疊待整理。"
-      + (scanning.Count > 0 ? $"{string.Join("、", scanning)} 還在掃描，之後可能再多幾疊。" : string.Empty);
+    var found = stacks.Count(s => s.Status is not (StackStatus.Dissolved or StackStatus.Converged)) + converged;
+    (string, object?)[] progress =
+    [
+      ("settled", Fmt.Count(converged)), ("keptAll", Fmt.Count(keptAll)), ("pending", Fmt.Count(pending)), ("open", Fmt.Count(open.Count)),
+    ];
+    Summary = Fmt.Sentences(
+      AppText.Plural("hub.summary.found", found, ("count", Fmt.Count(found))),
+      AppText.Get(pending > 0 ? "hub.summary.progressPending" : "hub.summary.progress", progress),
+      scanning.Count > 0 ? AppText.Get("hub.summary.scanning", ("sources", Fmt.List(scanning))) : null);
+
+    foreach (var option in SortOptions)
+    {
+      option.Label = AppText.Get(option.LabelKey);
+    }
+    LoadMoreLabel = AppText.Get("hub.list.loadMore", ("count", PageSize));
 
     BuildFeatured(open);
     BuildPairs(open);
@@ -209,10 +231,10 @@ public sealed partial class HubViewModel : PageViewModel
     if (Store.SinceLastVisit is { } since && since.Notices.Any(n => n.NeedsAttention && n.HandledText is null))
     {
       var count = since.Notices.Count(n => n.NeedsAttention && n.HandledText is null);
-      SinceTitle = $"自 {Fmt.Day(since.LastVisit, since.Now)} 以來，有 {count} 件事需要你看一下";
+      SinceTitle = AppText.Plural("hub.since.title", count, ("day", Fmt.Day(since.LastVisit, since.Now)), ("count", count));
       SinceNote = Store.IsDemo
-        ? $"示範：模擬 {Fmt.Day(since.Now, since.Now)} 回來時，程式會先告訴你這段時間的變化。"
-        : "檔案在這段時間有增有減。先看看變了什麼，再繼續下一疊。";
+        ? AppText.Get("hub.since.demoNote", ("day", Fmt.Day(since.Now, since.Now)))
+        : AppText.Get("hub.since.note");
     }
     else
     {
@@ -287,7 +309,7 @@ public sealed partial class HubViewModel : PageViewModel
     var pick = candidates[_skip % candidates.Count];
     var stack = pick.Stack;
     Featured = new FeaturedStackViewModel(stack.Id, stack.Title, StackText.Kind(stack), StackText.Reason(pick), StackText.Explanation(pick),
-      stack.Copies.Count, StackText.Places(stack).Select(p => new PlaceChip(p.Name + (p.Offline ? "（離線）" : string.Empty), p.Offline)).ToList());
+      stack.Copies.Count, StackText.Places(stack).Select(p => new PlaceChip(p.Offline ? AppText.Get("hub.place.offline", ("name", p.Name)) : p.Name, p.Offline)).ToList());
   }
 
   private void BuildPairs(List<StackSummary> open)
@@ -302,8 +324,8 @@ public sealed partial class HubViewModel : PageViewModel
       {
         var parts = key.Split('+');
         var label = parts.Length == 1
-          ? $"{names.GetValueOrDefault(parts[0], parts[0])}內部"
-          : $"{names.GetValueOrDefault(parts[0], parts[0])} 與 {names.GetValueOrDefault(parts[1], parts[1])}";
+          ? AppText.Get("hub.pairs.within", ("name", names.GetValueOrDefault(parts[0], parts[0])))
+          : AppText.Get("hub.pairs.between", ("first", names.GetValueOrDefault(parts[0], parts[0])), ("second", names.GetValueOrDefault(parts[1], parts[1])));
         counts[key] = (label, counts.GetValueOrDefault(key).Count + 1);
       }
     }
@@ -314,7 +336,7 @@ public sealed partial class HubViewModel : PageViewModel
     {
       Pairs.Add(new PairFilterViewModel(key, value.Label, value.Count, (double)value.Count / max, key == _pair, PickPair));
     }
-    PairsNote = $"一疊可能橫跨好幾個位置，所以加總會超過 {Fmt.Count(open.Count)}。";
+    PairsNote = AppText.Get("hub.pairs.note", ("count", Fmt.Count(open.Count)));
   }
 
   private void BuildGroups(List<StackSummary> open)
@@ -340,9 +362,11 @@ public sealed partial class HubViewModel : PageViewModel
       })));
     }
 
-    ListNote = $"目前列出 {Fmt.Count(shown.Count)} 疊，共 {Fmt.Count(open.Count)} 疊";
+    ListNote = AppText.Plural("hub.list.note", open.Count, ("shown", Fmt.Count(shown.Count)), ("total", Fmt.Count(open.Count)));
     var pair = Pairs.FirstOrDefault(p => p.Key == _pair);
-    PairNote = pair is null ? null : $"只看「{pair.Label}」：共 {Fmt.Count(pair.Count)} 疊，目前列出 {Fmt.Count(shown.Count)} 疊";
+    PairNote = pair is null
+      ? null
+      : AppText.Plural("hub.list.pairNote", pair.Count, ("pair", pair.Label), ("total", Fmt.Count(pair.Count)), ("shown", Fmt.Count(shown.Count)));
   }
 
   private void BuildTray()
@@ -350,10 +374,13 @@ public sealed partial class HubViewModel : PageViewModel
     Tray.Clear();
     foreach (var entry in Store.Plan)
     {
-      var what = entry.Decision.Action == StackAction.Merge ? "合併到正本" : "只保留正本";
-      Tray.Add(new TrayItem(entry.Stack.Title, entry.Decision.FromSuggestion ? $"{what}（依建議加入）" : what));
+      var merge = entry.Decision.Action == StackAction.Merge;
+      var what = entry.Decision.FromSuggestion
+        ? (merge ? "hub.tray.mergeSuggested" : "hub.tray.keeperOnlySuggested")
+        : (merge ? "hub.tray.merge" : "hub.tray.keeperOnly");
+      Tray.Add(new TrayItem(entry.Stack.Title, AppText.Get(what)));
     }
-    TrayActionLabel = $"檢查並執行 {Fmt.Count(Store.Plan.Count)} 疊";
+    TrayActionLabel = AppText.Plural("hub.tray.run", Store.Plan.Count, ("count", Fmt.Count(Store.Plan.Count)));
     OnPropertyChanged(nameof(HasTray));
   }
 
@@ -361,7 +388,9 @@ public sealed partial class HubViewModel : PageViewModel
   {
     var stack = summary.Stack;
     var blocked = StackText.Blocked(stack);
-    var size = summary.Group == StackGroup.StillComparing ? $"至少 {Fmt.Size(summary.DuplicateBytes)}" : Fmt.Size(summary.DuplicateBytes);
+    var size = summary.Group == StackGroup.StillComparing
+      ? AppText.Get("hub.item.atLeast", ("size", Fmt.Size(summary.DuplicateBytes)))
+      : Fmt.Size(summary.DuplicateBytes);
     return new HubItemViewModel(stack.Id, stack.Title, StackText.Kind(stack), StackText.Where(stack), StackText.Detail(summary), size,
       stack.Copies.Count, blocked, stack.Block == StackBlock.SourceOffline, new RelayCommand(() => Navigator.ShowStack(stack.Id)));
   }
