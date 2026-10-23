@@ -167,6 +167,22 @@ algorithms and frozen scope remain visible after changing the new-job choice.
 These tests cover exact-content UI only; CLI and similar-image acceptance are
 separate Phase 4 work.
 
+Slice 4b adds `tests/cli-tests/` to the solution and a shared read-only analysis
+session in Core. Full results are Core 453 / GUI 19 / CLI 8, zero skips with the
+native environment enabled; independent focused results are Core 9 / CLI 8.
+The new cases verify the known-answer oracle across two registered sources for
+both managed algorithms and real Rust, unchanged source bytes, retained unique
+files, missing-engine rejection, cancellation acknowledgement and canonical
+data-folder exclusions through a junction with a newly created leaf. Migration
+fixtures create their own parent directory and do not depend on test ordering.
+
+CLI tests assert versioned metadata/JSON, nonzero diagnostics instead of empty
+success, explicit native selection, and unchanged legacy `scan` defaults with
+lazy optional-library resolution. A real `fma.dll` process smoke test also parsed
+its stdout as JSON. [analysis-cli.md](analysis-cli.md) describes the command and
+process-metric limits. Engine comparison and similar-image acceptance remain
+pending.
+
 ## CI Pause
 
 GitHub Actions CI is temporarily disabled for this repository. The `CI` workflow

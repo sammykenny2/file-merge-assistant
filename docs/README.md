@@ -45,6 +45,7 @@ cross-platform UI options are reassessed.
 |----------|--------|-------------|
 | [setup-guide.md](./setup-guide.md) | Template | Environment setup |
 | [testing.md](./testing.md) | Complete | .NET test commands, validation results, and known baseline issues |
+| [analysis-cli.md](./analysis-cli.md) | Implemented: exact content | Versioned engine metadata and read-only analysis commands, scope, JSON outcomes and measurement limits |
 | [deployment.md](./deployment.md) | Draft | Building the Windows setup program, versions, in-app updates, start at sign-in and publishing releases |
 | [i18n.md](./i18n.md) | Complete | Display languages, the language catalogs and how the window switches language |
 | [release-notes.md](./release-notes.md) | Draft | Release notes per version; the source of the update summary and release text |

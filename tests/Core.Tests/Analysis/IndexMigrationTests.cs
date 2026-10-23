@@ -6,6 +6,8 @@ namespace FileMergeAssistant.Tests.Analysis;
 
 public sealed class IndexMigrationTests
 {
+  public IndexMigrationTests() => Directory.CreateDirectory(TestEnvironment.DataRoot);
+
   [Fact]
   public void Schema_4_Upgrade_Preserves_Unpublished_Checkpoints_Without_Inventing_Observations()
   {

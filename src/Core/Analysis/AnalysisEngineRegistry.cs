@@ -19,6 +19,8 @@ public sealed class AnalysisEngineRegistry
 
   public static AnalysisEngineRegistry CreateDefault() => new([new ManagedAnalysisEngine(), new NativeAnalysisEngine()]);
 
+  public string ToJson() => JsonSerializer.Serialize(new { formatVersion = 1, engines = Descriptors }, AnalysisJson.Options);
+
   public AnalysisEngineSnapshot Snapshot(string engineId, AnalysisCapability capability, string algorithm,
     string parametersJson = "{}", string scopeJson = "{}")
   {
