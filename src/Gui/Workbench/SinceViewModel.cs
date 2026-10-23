@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Workbench;
 
 namespace FileMergeAssistant.Gui.Workbench;
@@ -64,20 +65,20 @@ public sealed partial class SinceViewModel : PageViewModel
     Deltas.Clear();
     if (Store.SinceLastVisit is not { } since)
     {
-      Title = "沒有新的變化";
+      Title = AppText.Get("since.none");
       Kicker = string.Empty;
       return;
     }
 
     var days = (since.Now.Date - since.LastVisit.Date).Days;
-    Kicker = $"{Fmt.Day(since.Now, since.Now)}，距離上次整理 {days} 天";
-    Title = $"自 {Fmt.Day(since.LastVisit, since.Now)} 以來";
-    DemoNote = Store.IsDemo ? "示範畫面：用模擬資料呈現一週後回來時會看到的內容，日期是模擬的。" : null;
-    Sections.Add(new NoticeSection("需要你看一下", since.Notices.Where(n => n.NeedsAttention).Select(ToViewModel).ToList()));
-    Sections.Add(new NoticeSection("只是讓你知道", since.Notices.Where(n => !n.NeedsAttention).Select(ToViewModel).ToList()));
+    Kicker = AppText.Plural("since.kicker", days, ("day", Fmt.Day(since.Now, since.Now)), ("days", days));
+    Title = AppText.Get("since.title", ("day", Fmt.Day(since.LastVisit, since.Now)));
+    DemoNote = Store.IsDemo ? AppText.Get("since.demoNote") : null;
+    Sections.Add(new NoticeSection(AppText.Get("since.section.attention"), since.Notices.Where(n => n.NeedsAttention).Select(ToViewModel).ToList()));
+    Sections.Add(new NoticeSection(AppText.Get("since.section.info"), since.Notices.Where(n => !n.NeedsAttention).Select(ToViewModel).ToList()));
 
-    CountTitle = $"待整理：{Fmt.Count(since.OpenNow)} 疊";
-    CountStart = $"上次開始時是 {Fmt.Count(since.OpenAtLastVisit)} 疊。";
+    CountTitle = AppText.Plural("since.open", since.OpenNow, ("count", Fmt.Count(since.OpenNow)));
+    CountStart = AppText.Plural("since.openAtStart", since.OpenAtLastVisit, ("count", Fmt.Count(since.OpenAtLastVisit)));
     foreach (var delta in since.Deltas)
     {
       Deltas.Add(delta);
@@ -94,22 +95,22 @@ public sealed partial class SinceViewModel : PageViewModel
     switch (notice.Kind)
     {
       case NoticeKind.DriveReconnected:
-        actions.Add(new ActionInfo("是同一顆，開始更新", new RelayCommand(() => Respond(NoticeResponse.SameDrive)), true));
-        actions.Add(new ActionInfo("不是，當成新的來源", new RelayCommand(() => Respond(NoticeResponse.NewSource))));
+        actions.Add(new ActionInfo(AppText.Get("since.action.sameDrive"), new RelayCommand(() => Respond(NoticeResponse.SameDrive)), true));
+        actions.Add(new ActionInfo(AppText.Get("since.action.newSource"), new RelayCommand(() => Respond(NoticeResponse.NewSource))));
         break;
       case NoticeKind.NewCopy:
-        actions.Add(new ActionInfo("打開這疊", new RelayCommand(() => OpenStack(notice)), true));
-        actions.Add(new ActionInfo("不屬於這疊", new RelayCommand(() => Respond(NoticeResponse.NotInStack))));
+        actions.Add(new ActionInfo(AppText.Get("since.action.openStack"), new RelayCommand(() => OpenStack(notice)), true));
+        actions.Add(new ActionInfo(AppText.Get("since.action.notInStack"), new RelayCommand(() => Respond(NoticeResponse.NotInStack))));
         break;
       case NoticeKind.KeptAllChanged:
-        actions.Add(new ActionInfo("重新看看", new RelayCommand(() => OpenStack(notice))));
-        actions.Add(new ActionInfo("維持都保留", new RelayCommand(() => Respond(NoticeResponse.KeepAllAgain))));
+        actions.Add(new ActionInfo(AppText.Get("since.action.lookAgain"), new RelayCommand(() => OpenStack(notice))));
+        actions.Add(new ActionInfo(AppText.Get("since.action.keepAll"), new RelayCommand(() => Respond(NoticeResponse.KeepAllAgain))));
         break;
       case NoticeKind.StackReady:
-        actions.Add(new ActionInfo("打開這疊", new RelayCommand(() => OpenStack(notice)), true));
+        actions.Add(new ActionInfo(AppText.Get("since.action.openStack"), new RelayCommand(() => OpenStack(notice)), true));
         break;
       case NoticeKind.RecycleReminder:
-        actions.Add(new ActionInfo("檢視回收區", new RelayCommand(() => Navigator.ShowHistory())));
+        actions.Add(new ActionInfo(AppText.Get("since.action.viewRecycle"), new RelayCommand(() => Navigator.ShowHistory())));
         break;
     }
     var icon = notice.Kind switch

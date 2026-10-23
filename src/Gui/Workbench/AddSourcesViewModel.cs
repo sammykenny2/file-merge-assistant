@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FileMergeAssistant.Localization;
 using FileMergeAssistant.Workbench;
 using Microsoft.Win32;
 
@@ -11,10 +12,15 @@ public sealed partial class LocationOption : ObservableObject
   [ObservableProperty]
   private bool _isChecked;
 
-  public LocationOption(string path, string description, bool isChecked)
+  [ObservableProperty]
+  private string _description;
+
+  /// <param name="isChosen">Picked with the folder dialog rather than suggested; its description is ours, not Core's.</param>
+  public LocationOption(string path, string description, bool isChecked, bool isChosen = false)
   {
     Path = path;
-    Description = description;
+    _description = description;
+    IsChosen = isChosen;
     (Prefix, Tail) = Fmt.SplitPath(path);
     _isChecked = isChecked;
   }
@@ -22,12 +28,15 @@ public sealed partial class LocationOption : ObservableObject
   public string Path { get; }
   public string Prefix { get; }
   public string Tail { get; }
-  public string Description { get; }
+  public bool IsChosen { get; }
 }
 
 /// <summary>Screen 1, 「第一次開啟：加入來源」; also used to add folders later.</summary>
 public sealed partial class AddSourcesViewModel : PageViewModel
 {
+  private string _locale;
+  private IReadOnlyList<string>? _problemList;
+
   [ObservableProperty]
   private bool _skipRegenerable = true;
 
@@ -43,25 +52,28 @@ public sealed partial class AddSourcesViewModel : PageViewModel
   [ObservableProperty]
   private string? _problems;
 
+  [ObservableProperty]
+  private IReadOnlyList<HowStep> _steps = [];
+
   public AddSourcesViewModel(IWorkbenchStore store, INavigator navigator)
     : base(store, navigator)
   {
     IsFirstRun = store.Sources.Count == 0;
+    _locale = AppText.Locale;
     var suggestions = store.SuggestLocations();
     foreach (var location in suggestions.Where(l => !store.Sources.Any(s => string.Equals(s.RootPath, l.Path, StringComparison.OrdinalIgnoreCase))))
     {
       Add(new LocationOption(location.Path, location.Description, location.SelectedByDefault));
     }
     ProtectPath = suggestions.FirstOrDefault(l => l.Description.Contains("git", StringComparison.OrdinalIgnoreCase))?.Path;
+    Refresh();
   }
 
   public bool IsFirstRun { get; }
 
-  public string Title => IsFirstRun ? "先加入你常放東西的地方" : "加入資料夾";
+  public string Title => AppText.Get(IsFirstRun ? "addSources.title.first" : "addSources.title.more");
 
-  public string Lead => IsFirstRun
-    ? "不用一次掃完。加入的資料夾會在背景建立索引；同一份東西只要在兩個地方都被掃到，就會變成「一疊」出現在工作台，你可以一疊一疊整理。"
-    : "加入的資料夾會排在掃描佇列最後。掃描時可以照常在工作台整理已經找到的疊。";
+  public string Lead => AppText.Get(IsFirstRun ? "addSources.lead.first" : "addSources.lead.more");
 
   public ObservableCollection<LocationOption> Locations { get; } = [];
 
@@ -69,22 +81,49 @@ public sealed partial class AddSourcesViewModel : PageViewModel
 
   public bool CanProtect => ProtectPath is not null;
 
-  public string ProtectLabel => $"把 {ProtectPath} 設為受保護";
+  public string ProtectLabel => AppText.Get("addSources.options.protect", ("path", ProtectPath));
 
   public int SelectedCount => Locations.Count(l => l.IsChecked);
 
   public bool HasSelection => SelectedCount > 0;
 
-  public string AddAndScanLabel => $"加入 {SelectedCount} 個來源並開始掃描";
+  public string AddAndScanLabel => AppText.Plural("addSources.addAndScan", SelectedCount, ("count", SelectedCount));
 
+  /// <summary>Redraws the text in the current display language; the user's choices stay as they are.</summary>
   public override void Refresh()
   {
+    if (_locale != AppText.Locale)
+    {
+      _locale = AppText.Locale;
+      // Core describes the suggested places in the language of the moment, so ask again for their descriptions.
+      var suggestions = Store.SuggestLocations();
+      foreach (var location in Locations)
+      {
+        location.Description = location.IsChosen
+          ? AppText.Get("addSources.chosen")
+          : suggestions.FirstOrDefault(s => string.Equals(s.Path, location.Path, StringComparison.OrdinalIgnoreCase))?.Description ?? location.Description;
+      }
+    }
+    Steps =
+    [
+      new("1", AppText.Get("addSources.how.discover"), AppText.Get("addSources.how.discoverText")),
+      new("2", AppText.Get("addSources.how.candidates"), AppText.Get("addSources.how.candidatesText")),
+      new("3", AppText.Get("addSources.how.confirm"), AppText.Get("addSources.how.confirmText")),
+      new("4", AppText.Get("addSources.how.workbench"), AppText.Get("addSources.how.workbenchText")),
+    ];
+    Problems = _problemList is null
+      ? null
+      : AppText.Get("addSources.problems") + Environment.NewLine + string.Join(Environment.NewLine, _problemList);
+    OnPropertyChanged(nameof(Title));
+    OnPropertyChanged(nameof(Lead));
+    OnPropertyChanged(nameof(ProtectLabel));
+    OnPropertyChanged(nameof(AddAndScanLabel));
   }
 
   [RelayCommand]
   private void ChooseFolder()
   {
-    var dialog = new OpenFolderDialog { Title = "選擇要加入的資料夾", Multiselect = true };
+    var dialog = new OpenFolderDialog { Title = AppText.Get("addSources.pickerTitle"), Multiselect = true };
     if (dialog.ShowDialog() != true)
     {
       return;
@@ -97,7 +136,7 @@ public sealed partial class AddSourcesViewModel : PageViewModel
         existing.IsChecked = true;
         continue;
       }
-      Add(new LocationOption(path, "你選的資料夾", true));
+      Add(new LocationOption(path, AppText.Get("addSources.chosen"), true, isChosen: true));
     }
   }
 
@@ -127,7 +166,8 @@ public sealed partial class AddSourcesViewModel : PageViewModel
         Navigator.ShowSources();
         return;
       }
-      Problems = "有些資料夾沒有加入：" + Environment.NewLine + string.Join(Environment.NewLine, problems);
+      _problemList = problems;
+      Problems = AppText.Get("addSources.problems") + Environment.NewLine + string.Join(Environment.NewLine, problems);
       foreach (var location in Locations.Where(l => l.IsChecked && !problems.Any(p => p.StartsWith(l.Path, StringComparison.OrdinalIgnoreCase))).ToList())
       {
         Locations.Remove(location);
