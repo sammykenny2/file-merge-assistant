@@ -50,7 +50,8 @@ Use [000-template.md](./000-template.md) as the starting point for new ADRs.
 | [ADR-009](./ADR-009-ui-technology.md) | 正式版的 UI 技術（D-03） | Proposed | 2026-10-23 |
 | [ADR-010](./ADR-010-source-identity.md) | 來源身份與重新連接（D-05） | Proposed | 2026-10-23 |
 | [ADR-011](./ADR-011-acceptance-dataset-and-measurement.md) | 驗收資料集與效能量測（D-06 之一） | Proposed | 2026-10-23 |
-| [ADR-012](./ADR-012-release-packaging.md) | 發佈格式與資料位置（D-06 之二） | Proposed | 2026-10-23 |
+| [ADR-012](./ADR-012-release-packaging.md) | 發佈格式與資料位置（D-06 之二） | Partly accepted | 2026-10-23 |
+| [ADR-013](./ADR-013-in-app-updates.md) | 從 GitHub Releases 檢查並安裝更新 | Accepted | 2026-10-23 |
 <!-- Add new ADRs above this line -->
 
 ## For AI Agents

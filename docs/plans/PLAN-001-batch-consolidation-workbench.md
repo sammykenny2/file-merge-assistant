@@ -84,7 +84,7 @@
 
 ### Phase 2：資料位置、持久索引與來源身份
 
-- [ ] Task 2.1：新增 `AppDataPaths`，所有程式資料統一放到 `%LOCALAPPDATA%\FileMergeAssistant\`，取代快取、回收區、記錄檔與 GUI 中的相對路徑 `fma-results`（FR-010）。CLI 明確指定的 `--output` 維持原行為。
+- [x] Task 2.1（2026-10-23 隨安裝檔提前完成）：新增 `AppDataPaths`，所有程式資料統一放到 `%LOCALAPPDATA%\FileMergeAssistant\`，取代快取、回收區、記錄檔與 GUI 中的相對路徑 `fma-results`（FR-010）。CLI 明確指定的 `--output` 維持原行為。
 - [ ] Task 2.2：決定直接寫 SQL 或使用 ORM，記錄在 ADR-008 與本計畫的 Technical Decisions。
 - [ ] Task 2.3：建立 SQLite 索引與第一版結構，包括來源、磁碟區、掃描工作、檔案與指紋（含演算法與版本）。啟用 WAL。
 - [ ] Task 2.4：**索引遷移**。資料庫記錄自己的結構版本，遷移依序執行，遷移前備份索引檔。依 ADR-008 的決定，匯入或捨棄舊的 JSON 結果與快取。
@@ -157,10 +157,12 @@
 
 ### Phase 7：發佈
 
-- [ ] Task 7.1：建立內含 .NET 執行環境的 win-x64 發佈設定與 zip 打包，並驗證能否打包成單一執行檔。
+- [x] Task 7.1（依 ADR-012 的 2026-10-23 決定改為 NSIS）：`scripts/windows/Build-Installer.ps1` 打包個人安裝的 NSIS 安裝檔，GUI 與 CLI 都內含 .NET 執行環境，CLI 是單一執行檔。0.1.0 目前只建置了 Debug 版。
 - [ ] Task 7.2：依 ADR-012 的決定處理程式碼簽章。
-- [ ] Task 7.3：在乾淨的 Windows 環境（例如 Windows Sandbox）做冒煙測試，確認免安裝也能啟動，資料寫入固定位置。
-- [ ] Task 7.4：撰寫 [deployment.md](../deployment.md)，並請 Conductor 或產品負責人更新 README 的 Current Status。
+- [ ] Task 7.3：在乾淨的 Windows 環境（例如 Windows Sandbox）做冒煙測試，確認安裝、啟動、資料寫入固定位置與解除安裝。
+- [x] Task 7.4：撰寫 [deployment.md](../deployment.md)。README 的 Current Status 仍由 Conductor 或產品負責人更新。
+- [x] Task 7.5：手動觸發的 release workflow（`.github/workflows/release.yml`），尚未執行；第一次執行前需要授權金鑰 secret，而且更新來源 repository 必須公開。
+- [x] Task 7.6：程式內「檢查更新」（[ADR-013](../decisions/ADR-013-in-app-updates.md)）。
 
 **Deliverables**：可以下載、直接啟動的第一個版本。
 
@@ -266,6 +268,7 @@
 | 2026-10-23 | 建立草稿；等待 ADR 決定後再開始 Phase 0 以外的工作 |
 | 2026-10-23 | 完成 Task 0.1 至 0.3：solution 建置通過，測試全部通過；新增 Task 0.5（ImageSharp 授權金鑰）。依獨立審閱修正 junction 問題後，測試增為 149 個 |
 | 2026-10-23 | 產品負責人指示升級 .NET 10；完成 Task 0.4：`net10.0-windows` 上建置與 149 個測試通過，沒有已知漏洞的套件 |
+| 2026-10-23 | 產品負責人要求 NSIS 安裝檔、release workflow 與檢查更新：提前完成 Task 2.1，完成 Task 7.1、7.4、7.5、7.6；0.1.0 先以 Debug 設定打包 |
 
 ---
 

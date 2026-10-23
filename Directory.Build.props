@@ -6,4 +6,19 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
   </PropertyGroup>
+
+  <!-- Product identity. The installer, the release workflow and the in-app update check read these values. -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Product>File Merge Assistant</Product>
+    <Company>sammykenny2</Company>
+    <Authors>sammykenny2</Authors>
+    <Copyright>Copyright (c) 2025-2026 sammykenny2</Copyright>
+    <!-- GitHub repository (owner/name) whose public releases the update check reads. -->
+    <UpdateRepository>sammykenny2/file-merge-assistant</UpdateRepository>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="UpdateRepository" Value="$(UpdateRepository)" />
+  </ItemGroup>
 </Project>

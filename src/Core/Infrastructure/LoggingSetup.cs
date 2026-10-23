@@ -10,7 +10,7 @@ public static class LoggingSetup
     return new LoggerConfiguration()
       .MinimumLevel.Information()
       .WriteTo.File(
-        Path.Combine("fma-results", "fma.log"),
+        Path.Combine(AppDataPaths.LogDirectory, "fma.log"),
         rollingInterval: RollingInterval.Day,
         formatProvider: CultureInfo.InvariantCulture,
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")

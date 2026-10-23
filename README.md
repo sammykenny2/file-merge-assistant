@@ -70,6 +70,8 @@ See [docs/](./docs/) for detailed documentation:
 - [Product Requirements](./docs/requirements.md) — current gaps and proposed scope
 - [GUI Workflow Specification](./docs/specs/SPEC-001-persistent-scan-workbench.md) — draft workflow and acceptance scenarios
 - [GUI Flow Mock](./docs/gui-flow-mock.md) — clickable prototype link, stack-by-stack review proposal, and open questions
+- [Deployment](./docs/deployment.md) — build the Windows setup program, in-app updates, and the release workflow
+- [Release Notes](./docs/release-notes.md) — changes per version
 
 The next GUI's multi-source queue, persistent index, and reviewed operation plans
 are draft requirements. They are not implemented by the current preview; see the
@@ -112,7 +114,7 @@ file-merge-assistant/
 ## New Features
 
 ### Recycle Bin & Undo
-Files are moved to `fma-results/.recycle-bin/` instead of being permanently deleted. Use the "Undo (Restore All)" button in the GUI or the recycle bin API to restore files.
+Files are moved to the recycle bin in `%LOCALAPPDATA%\FileMergeAssistant\recycle-bin` instead of being permanently deleted. Use the "Undo (Restore All)" button in the GUI or the recycle bin API to restore files.
 
 ### Metadata-Driven Resolution
 The "Smart (Metadata)" button analyzes EXIF data to keep the best file: highest resolution, earliest date taken, files with camera model info, and largest file size.

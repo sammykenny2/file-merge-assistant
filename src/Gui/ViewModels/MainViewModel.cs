@@ -1,6 +1,8 @@
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FileMergeAssistant.Models;
+using FileMergeAssistant.Updates;
 
 namespace FileMergeAssistant.Gui.ViewModels;
 
@@ -9,6 +11,7 @@ public partial class MainViewModel : ObservableObject
   private readonly Func<ScanViewModel> _scanViewModelFactory;
   private readonly Func<ResultsViewModel> _resultsViewModelFactory;
   private readonly Func<ReportsViewModel> _reportsViewModelFactory;
+  private readonly Func<UpdateWindow> _updateWindowFactory;
 
   private ScanViewModel? _scanViewModel;
   private ResultsViewModel? _resultsViewModel;
@@ -29,15 +32,27 @@ public partial class MainViewModel : ObservableObject
   public MainViewModel(
     Func<ScanViewModel> scanViewModelFactory,
     Func<ResultsViewModel> resultsViewModelFactory,
-    Func<ReportsViewModel> reportsViewModelFactory)
+    Func<ReportsViewModel> reportsViewModelFactory,
+    Func<UpdateWindow> updateWindowFactory)
   {
     _scanViewModelFactory = scanViewModelFactory;
     _resultsViewModelFactory = resultsViewModelFactory;
     _reportsViewModelFactory = reportsViewModelFactory;
+    _updateWindowFactory = updateWindowFactory;
 
     _scanViewModel = _scanViewModelFactory();
     _scanViewModel.ScanCompleted += OnScanCompleted;
     CurrentView = _scanViewModel;
+  }
+
+  public string VersionText { get; } = $"Version {UpdateService.CurrentVersion.ToString(3)}";
+
+  [RelayCommand]
+  private void CheckForUpdates()
+  {
+    var window = _updateWindowFactory();
+    window.Owner = Application.Current.MainWindow;
+    window.ShowDialog();
   }
 
   [RelayCommand]
