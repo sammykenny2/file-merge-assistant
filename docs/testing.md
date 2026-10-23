@@ -119,6 +119,24 @@ zero skips, and independent review passed after correcting both races. This does
 not yet validate staged publication of a new analysis
 generation or process-loss recovery; those are the remaining Phase 3 slices.
 
+Slice 3b passes the full suite: 443 Core and 16 GUI tests, zero skips. The evidence,
+plan-compatibility and schema migration group has 14 tests with the real native
+DLL enabled. The 450-file interruption fixture saves 200 inactive SHA-256 results,
+preserves all 450 active XxHash128 results, then reobserves/reuses those 200 and
+hashes the remaining 250 on resume. A separate test replaces a prior-cohort file
+with identical size/time but another identity before publication; the new
+generation stays inactive. Coverage also includes pause, failed/malformed final
+results, true zero-byte files, frozen comparison exclusions, algorithm-specific
+cache reuse and retained computation provenance. Both archived schema 3 and
+schema 4 migration fixtures check backups and retained history/checkpoints.
+
+Changing analysis evidence reopens pending plans even when the filesystem
+metadata digest is unchanged. New evidence and physical metadata changes have
+separate GUI explanations. Plan tests execute after fresh confirmation and
+restore with only the managed engine registered; the native module can still be
+resident in that test process. A cold-start missing-DLL restore test and process
+termination/recovery remain Slice 3c requirements, so G3 is not complete yet.
+
 ## CI Pause
 
 GitHub Actions CI is temporarily disabled for this repository. The `CI` workflow

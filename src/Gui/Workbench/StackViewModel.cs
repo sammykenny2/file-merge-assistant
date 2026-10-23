@@ -575,6 +575,10 @@ public sealed partial class StackViewModel : PageViewModel
       reasons.Add(AppText.Get("stack.reopened.newCopies",
         ("paths", StackText.JoinList(_stack.Copies.Where(c => _stack.NewCopyIds.Contains(c.Id)).Select(c => c.Path)))));
     }
+    if (_stack.EvidenceChangedCopyIds.Count > 0 && _stack.ChangedCopyIds.Count == 0)
+    {
+      reasons.Add(AppText.Get("stack.reopened.analysisChanged"));
+    }
     if (_keeperUnavailable)
     {
       reasons.Add(AppText.Get("stack.reopened.keeperUnavailable"));

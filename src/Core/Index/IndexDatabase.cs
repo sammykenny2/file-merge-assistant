@@ -11,7 +11,7 @@ namespace FileMergeAssistant.Index;
 public sealed class IndexDatabase
 {
   /// <summary>Version of the schema this build writes.</summary>
-  public const int SchemaVersion = 4;
+  public const int SchemaVersion = 5;
 
   private static readonly string[] Migrations =
   [
@@ -199,6 +199,12 @@ public sealed class IndexDatabase
       mtime INTEGER NOT NULL,
       PRIMARY KEY (job_id, generation, file_id)
     );
+    """,
+
+    // Version 5: the exact staged observation must still match at the final publication boundary.
+    """
+    ALTER TABLE analysis_results ADD COLUMN path TEXT;
+    ALTER TABLE analysis_results ADD COLUMN observation TEXT;
     """,
   ];
 

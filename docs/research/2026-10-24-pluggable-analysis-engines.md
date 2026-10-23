@@ -61,6 +61,10 @@ Rust 驗證兩個預期群組、`abc` 的 BLAKE3 固定值、200 KB 檔案中段
 
 任務新增不可變的引擎快照。舊 `xxh128:` 可辨識為 legacy C# 證據，舊任務不推定為 Rust；原版本不可用時保留任務並明示重新建立。由 hash 改變而受影響的疊摘要與計畫需重新驗證。`PlanExecutor.CopyVerified` 的 XxHash128 複製驗證獨立保留，歷史及還原不得依賴分析引擎是否存在。
 
+Slice 3b 已實作上述遷移，schema 5 分開保存 `file_fingerprints`（算法／參數／版本專屬證據）、`analysis_results`（Job／世代的核准路徑及原始觀察）與 `files.hash`（最後啟用結果）。整代成功並重新觀察後才啟用；失敗不把未回報檔案當成消失。快取命中保留原計算任務與時間，新世代仍保存本次核對的觀察。`CopyDigest.Of` 保留磁碟 metadata 比對用途，另以 `EvidenceOf` 記錄內容證據並使受影響的待執行計畫重開。
+
+最後觀察採 500 筆分頁，不保留所有檔案 handle，也不是跨來源檔案系統的原子快照；外部程式仍可在之後修改檔案。既有操作前重新驗證與回收／還原流程仍適用。Windows 已驗證；Pi arm64／labwc Wayland 與 Apple Silicon macOS 的驗證將由使用者執行準備好的指令，尚無平台通過報告。ImageSharp 授權尚未取得，Release 應用程式驗收仍待完成。
+
 ### G0 結論與後續限制
 
 公開 API 能支撐候選優先、逐檔覆蓋及完整內容證據；不需為這個能力修改上游。G0 適配驗證通過，可開始共用契約與 C# 抽離。Windows x64 以外、相似媒體、FFI 記憶體生命週期、持久任務及舊資料遷移仍需後續階段驗證。ImageSharp 的既有 Debug 授權警告仍在，不能由 Rust 適配通過推論 Release 已可發佈。

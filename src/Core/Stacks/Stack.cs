@@ -85,6 +85,9 @@ public sealed record StackCopy(
   /// <summary>Fingerprint of the copy's file list as indexed (<see cref="CopyDigest"/>); compared with the decision's.</summary>
   public string? Digest { get; init; }
 
+  /// <summary>Versioned content evidence; changes require a pending decision to be reviewed again.</summary>
+  public string? EvidenceDigest { get; init; }
+
   public long TotalBytes => SizeBytes + RegenerableBytes;
 }
 
@@ -162,6 +165,9 @@ public sealed record Stack(
 
   /// <summary>Copy ids whose files changed after the stack was last decided (ADR-006).</summary>
   public IReadOnlyList<string> ChangedCopyIds { get; init; } = [];
+
+  /// <summary>Copies whose indexed content evidence changed, even when their metadata did not.</summary>
+  public IReadOnlyList<string> EvidenceChangedCopyIds { get; init; } = [];
 
   public StackCopy SuggestedKeeperCopy => Copies[SuggestedKeeper];
 

@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.IO.Hashing;
 using System.Text;
+using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace FileMergeAssistant.Stacks;
 
@@ -11,6 +13,15 @@ namespace FileMergeAssistant.Stacks;
 /// </summary>
 public static class CopyDigest
 {
+  /// <summary>Versioned indexed evidence, separate from the metadata digest used to recheck files on disk.</summary>
+  public static string EvidenceOf(IEnumerable<(string Relative, string? Hash)> files)
+  {
+    ArgumentNullException.ThrowIfNull(files);
+    var bytes = JsonSerializer.SerializeToUtf8Bytes(files.OrderBy(file => file.Relative, StringComparer.Ordinal)
+      .Select(file => new { file.Relative, file.Hash }));
+    return "evidence-v1:" + Convert.ToHexStringLower(SHA256.HashData(bytes));
+  }
+
   public static string Of(IEnumerable<(string Relative, long Size, long ModifiedTicks)> files)
   {
     ArgumentNullException.ThrowIfNull(files);

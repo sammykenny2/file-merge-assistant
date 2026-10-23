@@ -23,6 +23,7 @@
   <ItemGroup>
     <None Include="..\Fixtures\analysis\known-answer.json" Link="Fixtures\analysis\known-answer.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Fixtures\index\schema-v3.sql" Link="Fixtures\index\schema-v3.sql" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Fixtures\index\migration-v4.sql" Link="Fixtures\index\migration-v4.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

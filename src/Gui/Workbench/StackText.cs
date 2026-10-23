@@ -56,6 +56,7 @@ public static class StackText
     ArgumentNullException.ThrowIfNull(summary);
     var detail = PlainDetail(summary);
     return summary.Stack.ChangedCopyIds.Count > 0 ? AppText.Get("stack.detail.changed", ("detail", detail))
+      : summary.Stack.EvidenceChangedCopyIds.Count > 0 ? AppText.Get("stack.detail.analysisChanged", ("detail", detail))
       : summary.Stack.NewCopyIds.Count > 0 ? AppText.Get("stack.detail.newCopies", ("detail", detail))
       : detail;
   }

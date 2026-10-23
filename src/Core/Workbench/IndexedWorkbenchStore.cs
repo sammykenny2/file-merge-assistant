@@ -465,6 +465,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         var stored = new StoredDecision(decision, decision.Action == StackAction.KeepAll ? KeptAll : Pending, Now,
           stack.Copies.Select(c => c.Id).ToList(),
           stack.Copies.Where(c => c.Digest is not null).ToDictionary(c => c.Id, c => c.Digest!, StringComparer.Ordinal),
+          stack.Copies.Where(c => c.EvidenceDigest is not null).ToDictionary(c => c.Id, c => c.EvidenceDigest!, StringComparer.Ordinal),
           new Dictionary<string, string>(StringComparer.Ordinal));
         _decisions[stack.Id] = stored;
         Save(stack.Id, stored);
@@ -1147,9 +1148,12 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
           .Where(c => c.Digest is not null && stored.Digests.TryGetValue(c.Id, out var digest) && digest != c.Digest)
           .Select(c => c.Id)
           .ToList();
-        stack = stack with { NewCopyIds = added, ChangedCopyIds = changed };
+        var evidenceChanged = stack.Copies
+          .Where(c => c.EvidenceDigest is not null && (!stored.EvidenceDigests.TryGetValue(c.Id, out var evidence) || evidence != c.EvidenceDigest))
+          .Select(c => c.Id).ToList();
+        stack = stack with { NewCopyIds = added, ChangedCopyIds = changed, EvidenceChangedCopyIds = evidenceChanged };
 
-        if (stored.Status == Pending && changed.Count > 0)
+        if (stored.Status == Pending && (changed.Count > 0 || evidenceChanged.Count > 0))
         {
           // The files changed after the user looked (ADR-006): never run the old decision on new content.
           stored = stored with { Status = Reopened };
@@ -1738,6 +1742,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       {
         _decisions[reader.GetString(0)] = new StoredDecision(ToDecision(dto), reader.GetString(2), ParseStamp(reader, 3) ?? DateTimeOffset.Now,
           dto.CopyIds ?? [], dto.Digests ?? new Dictionary<string, string>(StringComparer.Ordinal),
+          dto.EvidenceDigests ?? new Dictionary<string, string>(StringComparer.Ordinal),
           dto.Snapshots ?? new Dictionary<string, string>(StringComparer.Ordinal));
       }
     }
@@ -1754,18 +1759,18 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   /// copy's indexed file-list digest at that moment, and the full snapshot of each copy that may be recycled.
   /// </summary>
   private sealed record StoredDecision(StackDecision Decision, string Status, DateTimeOffset At, IReadOnlyList<string> CopyIds,
-    IReadOnlyDictionary<string, string> Digests, Dictionary<string, string> Snapshots);
+    IReadOnlyDictionary<string, string> Digests, IReadOnlyDictionary<string, string> EvidenceDigests, Dictionary<string, string> Snapshots);
 
   private sealed record DecisionDto(string StackId, string KeeperCopyId, StackAction Action, string[] AlsoKeep, string[] Removed,
     Dictionary<string, ConflictChoice> Choices, bool FromSuggestion, string[]? CopyIds, Dictionary<string, string>? Digests,
-    Dictionary<string, string>? Snapshots);
+    Dictionary<string, string>? Snapshots, Dictionary<string, string>? EvidenceDigests);
 
   private static string Serialize(StoredDecision stored)
   {
     var d = stored.Decision;
     return JsonSerializer.Serialize(
       new DecisionDto(d.StackId, d.KeeperCopyId, d.Action, [.. d.AlsoKeep], [.. d.Removed], d.Choices.ToDictionary(), d.FromSuggestion,
-        [.. stored.CopyIds], stored.Digests.ToDictionary(), stored.Snapshots.ToDictionary()),
+        [.. stored.CopyIds], stored.Digests.ToDictionary(), stored.Snapshots.ToDictionary(), stored.EvidenceDigests.ToDictionary()),
       Json);
   }
 

@@ -296,6 +296,7 @@ public static partial class StackDetector
         IndexedAt = source.IsOffline ? source.IndexedAt : null,
         Notes = context.IsProject(m.SourceId, m.RelativePath) ? [AppText.Get("detect.note.project")] : [],
         Digest = CopyDigest.Of(contents[i].Select(kv => (kv.Key, kv.Value.Size, kv.Value.ModifiedTicks))),
+        EvidenceDigest = CopyDigest.EvidenceOf(contents[i].Select(kv => (kv.Key, kv.Value.Hash))),
       };
     }).ToList();
 
@@ -340,6 +341,7 @@ public static partial class StackDetector
         {
           IndexedAt = source.IsOffline ? source.IndexedAt : null,
           Digest = CopyDigest.Of([(Path.GetFileName(f.RelativePath), f.Size, f.ModifiedTicks)]),
+          EvidenceDigest = CopyDigest.EvidenceOf([(Path.GetFileName(f.RelativePath), f.Hash)]),
         };
       }).ToList();
       var (keeper, reason) = SuggestKeeper(copies, c => Path.GetFileNameWithoutExtension(c.Path));

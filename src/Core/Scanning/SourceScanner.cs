@@ -80,8 +80,10 @@ public sealed class SourceScanner
   /// <param name="pauseRequested">Checked between batches; when true the scan stops after the current batch.</param>
   /// <param name="cancellationToken">Stops the scan as soon as possible; committed batches stay.</param>
   /// <param name="checkScope">Rechecks frozen source identities before reading or committing a batch.</param>
+  /// <param name="scopeSources">Frozen policies for comparison sources; defaults to the current source's policies.</param>
   public ScanStop Run(ScanSource source, string jobId, IReadOnlyDictionary<string, string> onlineRoots, Action<ScanProgress> report,
-    Func<bool> pauseRequested, CancellationToken cancellationToken, Action? checkScope = null)
+    Func<bool> pauseRequested, CancellationToken cancellationToken, Action? checkScope = null,
+    IReadOnlyDictionary<string, ScanSource>? scopeSources = null)
   {
     ArgumentNullException.ThrowIfNull(source);
     ArgumentNullException.ThrowIfNull(onlineRoots);
@@ -89,14 +91,16 @@ public sealed class SourceScanner
     ArgumentNullException.ThrowIfNull(pauseRequested);
 
     using var connection = _database.Open();
-    var state = new State(source, jobId, connection, report, checkScope ?? (() => { }));
+    checkScope?.Invoke();
+    var state = new State(source, jobId, connection, report, checkScope ?? (() => { }), _analysis);
     state.CheckScope();
     var stop = Discover(state, pauseRequested, cancellationToken);
     if (stop != ScanStop.Completed)
     {
       return stop;
     }
-    return ConfirmAsync(state, onlineRoots, pauseRequested, cancellationToken).GetAwaiter().GetResult();
+    var policies = scopeSources ?? onlineRoots.ToDictionary(pair => pair.Key, pair => source with { Id = pair.Key, Root = pair.Value }, StringComparer.Ordinal);
+    return ConfirmAsync(state, onlineRoots, policies, pauseRequested, cancellationToken).GetAwaiter().GetResult();
   }
 
   /// <summary>Content fingerprint of a file: XxHash128 over all its bytes, tagged with the algorithm.</summary>
@@ -285,7 +289,8 @@ public sealed class SourceScanner
     }
   }
 
-  private async Task<ScanStop> ConfirmAsync(State state, IReadOnlyDictionary<string, string> onlineRoots, Func<bool> pauseRequested,
+  private async Task<ScanStop> ConfirmAsync(State state, IReadOnlyDictionary<string, string> onlineRoots,
+    IReadOnlyDictionary<string, ScanSource> policies, Func<bool> pauseRequested,
     CancellationToken cancellationToken)
   {
     var connection = state.Connection;
@@ -293,8 +298,8 @@ public sealed class SourceScanner
     using (var command = IndexDatabase.Command(connection,
       """
       SELECT f.id, f.source_id, f.rel_path, f.size, f.mtime FROM files f
-      WHERE f.hash IS NULL AND f.cloud_only = 0 AND f.size > 0
-        AND f.size IN (SELECT size FROM files WHERE cloud_only = 0 AND size > 0 GROUP BY size HAVING COUNT(*) > 1)
+      WHERE f.cloud_only = 0 AND f.size >= 0
+        AND f.size IN (SELECT size FROM files WHERE cloud_only = 0 GROUP BY size HAVING COUNT(*) > 1)
       ORDER BY (f.source_id = $s) DESC, f.size
       """,
       ("$s", state.Source.Id)))
@@ -303,36 +308,53 @@ public sealed class SourceScanner
       while (reader.Read())
       {
         var sourceId = reader.GetString(1);
-        if (onlineRoots.ContainsKey(sourceId))
+        if (onlineRoots.ContainsKey(sourceId) && policies.ContainsKey(sourceId))
         {
           candidates.Add((reader.GetInt64(0), sourceId, reader.GetString(2), reader.GetInt64(3), reader.GetInt64(4)));
         }
       }
     }
-    state.Candidates = candidates.Count + IndexDatabase.Scalar<long>(connection,
-      "SELECT COUNT(*) FROM files WHERE source_id = $s AND hash IS NOT NULL", ("$s", state.Source.Id));
+    state.Candidates = candidates.Count;
     state.Report(ScanPhase.Confirm, checkpoint: false);
 
-    var hashed = new List<(long Id, string Hash)>(HashBatchSize);
+    var hashed = new List<(AnalysisInput Input, string Hash)>(HashBatchSize);
     var changed = new List<(long Id, long Size, long Mtime)>();
     var becameCloud = new List<long>();
+    var invalid = new List<long>();
+    var complete = state.Errors == 0;
+    long confirmed = 0;
     var sinceCommit = Stopwatch.StartNew();
     void Commit()
     {
-      if (hashed.Count == 0 && changed.Count == 0 && becameCloud.Count == 0)
+      cancellationToken.ThrowIfCancellationRequested();
+      foreach (var result in hashed.ToArray())
+      {
+        try
+        {
+          var current = FileObservation.Capture(result.Input.Path);
+          if (result.Input.Observation.Matches(current)) { continue; }
+          changed.Add((result.Input.Id, current.Size, current.ModifiedUtcTicks));
+          state.Skipped++;
+        }
+        catch (Exception error) when (error is UnauthorizedAccessException or IOException)
+        {
+          state.RecordError(result.Input.Path, error.Message);
+          invalid.Add(result.Input.Id);
+        }
+        hashed.Remove(result);
+        state.Hashed--;
+        state.Succeeded--;
+        confirmed--;
+        complete = false;
+      }
+      if (hashed.Count == 0 && changed.Count == 0 && becameCloud.Count == 0 && invalid.Count == 0)
       {
         return;
       }
       IndexDatabase.InTransaction(connection, () =>
       {
         state.CheckScope();
-        using var update = IndexDatabase.Command(connection, "UPDATE files SET hash = $h WHERE id = $id", ("$h", string.Empty), ("$id", 0L));
-        foreach (var (id, hash) in hashed)
-        {
-          update.Parameters["$h"].Value = hash;
-          update.Parameters["$id"].Value = id;
-          update.ExecuteNonQuery();
-        }
+        state.Evidence.Checkpoint(hashed);
         using var stale = IndexDatabase.Command(connection, "UPDATE files SET size = $size, mtime = $mtime, hash = NULL WHERE id = $id",
           ("$size", 0L), ("$mtime", 0L), ("$id", 0L));
         foreach (var (id, size, mtime) in changed)
@@ -348,10 +370,15 @@ public sealed class SourceScanner
           cloud.Parameters["$id"].Value = id;
           cloud.ExecuteNonQuery();
         }
+        foreach (var id in invalid)
+        {
+          IndexDatabase.Execute(connection, "UPDATE files SET hash=NULL WHERE id=$id", ("$id", id));
+        }
       });
       becameCloud.Clear();
       hashed.Clear();
       changed.Clear();
+      invalid.Clear();
       sinceCommit.Restart();
       state.Report(ScanPhase.Confirm, checkpoint: true);
     }
@@ -368,77 +395,108 @@ public sealed class SourceScanner
         try
         {
           var file = new FileInfo(path);
-          if (!file.Exists) { state.Skipped++; continue; }
+          if (!Approved(policies[sourceId], relative, file)) { state.Skipped++; continue; }
+          if (!file.Exists) { state.Skipped++; invalid.Add(id); complete = false; continue; }
           if (file.Length != size || file.LastWriteTimeUtc.Ticks != mtime)
           {
             changed.Add((id, file.Length, file.LastWriteTimeUtc.Ticks));
             state.Skipped++;
+            complete = false;
             continue;
           }
           if ((file.Attributes & CloudPlaceholder) != 0)
           {
             becameCloud.Add(id);
             state.Skipped++;
+            complete = false;
             continue;
           }
-          inputs.Add(new(id, sourceId, path, new(size, mtime, OperatingSystem.IsWindows() ? PathIdentity.Identify(path) : null)));
+          var input = new AnalysisInput(id, sourceId, path, FileObservation.Capture(path));
+          if (input.Observation.Size != size || input.Observation.ModifiedUtcTicks != mtime)
+          {
+            changed.Add((id, input.Observation.Size, input.Observation.ModifiedUtcTicks));
+            state.Skipped++; complete = false; continue;
+          }
+          var cached = state.Evidence.Cached(input);
+          if (cached is not null)
+          {
+            hashed.Add((input, cached));
+            state.Hashed++;
+            state.Succeeded++;
+            confirmed++;
+          }
+          else { inputs.Add(input); }
         }
         catch (Exception error) when (error is UnauthorizedAccessException or IOException)
         {
           state.RecordError(path, error.Message);
+          invalid.Add(id);
+          complete = false;
         }
       }
       var request = new AnalysisRequest(state.JobId, _analysis, inputs.ToImmutable());
       var validator = new AnalysisResultValidator(request);
       var byId = request.Files.ToDictionary(file => file.Id);
-      await foreach (var batch in _engine.AnalyzeAsync(request, cancellationToken).ConfigureAwait(false))
+      if (!request.Files.IsEmpty)
       {
-        validator.Accept(batch);
-        foreach (var result in batch.Files)
+        await foreach (var batch in _engine.AnalyzeAsync(request, cancellationToken).ConfigureAwait(false))
         {
-          var input = byId[result.FileId];
-          state.Current = (input.Path, input.Observation.Size);
-          if (result.Status == AnalysisFileStatus.Succeeded)
+          validator.Accept(batch);
+          if (batch.IsFinal && !batch.IsComplete) { complete = false; }
+          foreach (var result in batch.Files)
           {
-            try
+            var input = byId[result.FileId];
+            state.Current = (input.Path, input.Observation.Size);
+            if (result.Status == AnalysisFileStatus.Succeeded)
             {
-              var current = FileObservation.Capture(input.Path);
-              if (input.Observation.Matches(current))
+              try
               {
-                hashed.Add((input.Id, result.Fingerprint!));
-                state.Hashed++;
-                state.Succeeded++;
+                var current = FileObservation.Capture(input.Path);
+                if (input.Observation.Matches(current))
+                {
+                  hashed.Add((input, result.Fingerprint!));
+                  state.Hashed++;
+                  state.Succeeded++;
+                  confirmed++;
+                }
+                else { changed.Add((input.Id, current.Size, current.ModifiedUtcTicks)); state.Skipped++; complete = false; }
               }
-              else { changed.Add((input.Id, current.Size, current.ModifiedUtcTicks)); state.Skipped++; }
+              catch (Exception error) when (error is UnauthorizedAccessException or IOException)
+              {
+                state.RecordError(input.Path, error.Message); invalid.Add(input.Id); complete = false;
+              }
             }
-            catch (Exception error) when (error is UnauthorizedAccessException or IOException) { state.RecordError(input.Path, error.Message); }
-          }
-          else if (result.Status == AnalysisFileStatus.Changed)
-          {
-            try
+            else if (result.Status == AnalysisFileStatus.Changed)
             {
-              var current = FileObservation.Capture(input.Path);
-              changed.Add((input.Id, current.Size, current.ModifiedUtcTicks));
+              try
+              {
+                var current = FileObservation.Capture(input.Path);
+                changed.Add((input.Id, current.Size, current.ModifiedUtcTicks));
+              }
+              catch (Exception error) when (error is UnauthorizedAccessException or IOException) { state.RecordError(input.Path, error.Message); }
+              state.Skipped++;
+              invalid.Add(input.Id);
+              complete = false;
             }
-            catch (Exception error) when (error is UnauthorizedAccessException or IOException) { state.RecordError(input.Path, error.Message); }
-            state.Skipped++;
-          }
-          else if (result.Status == AnalysisFileStatus.Skipped)
-          {
-            state.Skipped++;
-            try
+            else if (result.Status == AnalysisFileStatus.Skipped)
             {
-              var current = new FileInfo(input.Path);
-              if (current.Exists && (current.Attributes & CloudPlaceholder) != 0) { becameCloud.Add(input.Id); }
+              state.Skipped++;
+              invalid.Add(input.Id);
+              complete = false;
+              try
+              {
+                var current = new FileInfo(input.Path);
+                if (current.Exists && (current.Attributes & CloudPlaceholder) != 0) { becameCloud.Add(input.Id); }
+              }
+              catch (Exception error) when (error is UnauthorizedAccessException or IOException) { state.RecordError(input.Path, error.Message); }
             }
-            catch (Exception error) when (error is UnauthorizedAccessException or IOException) { state.RecordError(input.Path, error.Message); }
+            else { state.RecordError(input.Path, result.Error!); invalid.Add(input.Id); complete = false; }
+            state.Report(ScanPhase.Confirm, checkpoint: false);
           }
-          else { state.RecordError(input.Path, result.Error!); }
-          state.Report(ScanPhase.Confirm, checkpoint: false);
         }
+        validator.RequireFinal();
       }
-      validator.RequireFinal();
-      if (hashed.Count > 0 || changed.Count > 0 || becameCloud.Count > 0 || sinceCommit.Elapsed > TimeSpan.FromSeconds(10))
+      if (hashed.Count > 0 || changed.Count > 0 || becameCloud.Count > 0 || invalid.Count > 0 || sinceCommit.Elapsed > TimeSpan.FromSeconds(10))
       {
         Commit();
         if (pauseRequested())
@@ -448,6 +506,8 @@ public sealed class SourceScanner
       }
     }
     Commit();
+    cancellationToken.ThrowIfCancellationRequested();
+    if (complete) { state.Evidence.Publish(confirmed, state.CheckScope, state.RecordError, cancellationToken); }
     state.Report(ScanPhase.Done, checkpoint: true);
     return ScanStop.Completed;
   }
@@ -504,8 +564,28 @@ public sealed class SourceScanner
 
   private static string WithSeparator(string root) => root.EndsWith('\\') ? root : root + "\\";
 
-  private sealed class State(ScanSource source, string jobId, SqliteConnection connection, Action<ScanProgress> report, Action checkScope)
+  private static bool Approved(ScanSource source, string relative, FileInfo file)
   {
+    var root = WithSeparator(Path.GetFullPath(source.Root));
+    if (Path.IsPathRooted(relative) || !Path.GetFullPath(file.FullName).StartsWith(root, StringComparison.OrdinalIgnoreCase))
+    {
+      throw new InvalidDataException("An indexed file is outside its frozen source scope.");
+    }
+    var filter = new ScanFilter(source, source.ExcludedRoots);
+    if (filter.Classify(file, relative) != EntryKind.Index) { return false; }
+    var parent = Path.GetDirectoryName(relative);
+    while (!string.IsNullOrEmpty(parent))
+    {
+      if (filter.Classify(new DirectoryInfo(Path.Combine(source.Root, parent)), parent) != EntryKind.Index) { return false; }
+      parent = Path.GetDirectoryName(parent);
+    }
+    return true;
+  }
+
+  private sealed class State(ScanSource source, string jobId, SqliteConnection connection, Action<ScanProgress> report,
+    Action checkScope, AnalysisEngineSnapshot analysis)
+  {
+    public AnalysisEvidenceStore Evidence { get; } = new(connection, jobId, analysis);
     public Action CheckScope { get; } = checkScope;
     public string JobId { get; } = jobId;
     public ScanSource Source { get; } = source;

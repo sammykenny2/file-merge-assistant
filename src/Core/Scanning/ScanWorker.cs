@@ -274,7 +274,7 @@ public sealed class ScanWorker : IDisposable
         {
           return _pauseRequested;
         }
-      }, cancel.Token, CheckScope);
+      }, cancel.Token, CheckScope, snapshot.Sources.ToDictionary(item => item.Source.Id, item => item.Source, StringComparer.Ordinal));
     }
     catch (OperationCanceledException)
     {
