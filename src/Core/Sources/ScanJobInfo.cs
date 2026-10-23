@@ -1,3 +1,5 @@
+using FileMergeAssistant.Scanning;
+
 namespace FileMergeAssistant.Sources;
 
 public enum ScanJobKind
@@ -22,6 +24,17 @@ public enum ScanJobState
 
   /// <summary>The source is offline; the job starts after the volume is confirmed.</summary>
   WaitingForSource,
+
+  /// <summary>The exact engine version required by the snapshot is unavailable.</summary>
+  WaitingForEngine,
+
+  /// <summary>A legacy or invalid snapshot cannot be resumed safely.</summary>
+  NeedsNewJob,
+
+  /// <summary>Cancellation requested; the analysis worker has not acknowledged stopping.</summary>
+  Cancelling,
+
+  Failed,
 
   Completed,
   Canceled,
@@ -68,6 +81,10 @@ public sealed record ScanJobInfo(
   /// <summary>Files already saved to the index when the job stopped (interrupted or paused jobs).</summary>
   public long Saved { get; init; }
 
-  public bool IsActive => State is ScanJobState.Running or ScanJobState.Pausing or ScanJobState.Paused;
-  public bool IsFinished => State is ScanJobState.Completed or ScanJobState.Canceled;
+  public ScanJobSnapshot? Snapshot { get; init; }
+  public long AnalysisGeneration { get; init; }
+  public bool AnalysisComplete { get; init; }
+
+  public bool IsActive => State is ScanJobState.Running or ScanJobState.Pausing or ScanJobState.Paused or ScanJobState.Cancelling;
+  public bool IsFinished => State is ScanJobState.Completed or ScanJobState.Canceled or ScanJobState.Failed;
 }

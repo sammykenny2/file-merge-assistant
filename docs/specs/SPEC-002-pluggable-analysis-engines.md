@@ -27,6 +27,8 @@
 
 目前契約使用不可變 record 與 `ImmutableArray`：`AnalysisRequest` 包含 Job ID、`AnalysisEngineSnapshot` 及明確候選；`IFileAnalysisEngine.AnalyzeAsync` 非同步逐批回傳 `AnalysisBatch`，帶序號、逐檔證據、群組、進度及 final／complete 標記。`AnalysisResultValidator` 驗證全部輸出及完整覆蓋；未收到 final、未知／重複 ID、算法不符、無完整相同證據的精確群組均拒絕。C# 目前僅宣告精確內容分析（xxh128-v1、sha256-v1），成熟度為 Experimental，沒有提供相似圖片能力。
 
+Slice 3a 的 schema 4 已加入任務快照及版本化證據表。新任務凍結全部來源、排除／保護設定、磁碟序號與可取得的根目錄身份；恢復先查精確版本，無隱藏切換。舊版未完成任務標為 `NeedsNewJob`，原始備份、完成歷史與回收紀錄保留。重新開始會建立新 ID。證據表的世代提交及程序中斷恢復仍待後續 slice，不把建表視為完成 G3。
+
 ## 目標
 
 - 可明確選擇引擎，支援功能與驗證程度不必相同。

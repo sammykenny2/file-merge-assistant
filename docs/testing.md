@@ -107,6 +107,18 @@ completion requires actual worker exit. Process-level recovery after termination
 is a separate Phase 3 test, not covered by these results. No Release application
 validation has passed: a valid ImageSharp license has not been obtained.
 
+Slice 3a adds an archived schema-3 SQL fixture (from `9ba0275`) and a migration
+test that checks the pre-upgrade backup, legacy fingerprint attribution, pending
+decisions and completed/recycled journal fields. Nine focused snapshot/migration
+tests also cover fixed queue-time scope after settings changes and reopening,
+missing original engine versions, new IDs on restart, malformed/legacy snapshots,
+replacement root identity, volume changes before a checkpoint and cancellation
+acknowledgement, including source changes between initial probes and cancellation
+during a blocked preflight. The full suite passes 430 Core and 16 GUI tests,
+zero skips, and independent review passed after correcting both races. This does
+not yet validate staged publication of a new analysis
+generation or process-loss recovery; those are the remaining Phase 3 slices.
+
 ## CI Pause
 
 GitHub Actions CI is temporarily disabled for this repository. The `CI` workflow

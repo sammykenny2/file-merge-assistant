@@ -118,6 +118,7 @@ public sealed class RunningJobViewModel
     State = job.State switch
     {
       ScanJobState.Pausing => new ChipInfo(AppText.Get("sources.job.pausing"), Tone.Busy),
+      ScanJobState.Cancelling => new ChipInfo(AppText.Get("sources.job.cancelling"), Tone.Busy),
       ScanJobState.Paused => new ChipInfo(AppText.Get("sources.job.paused"), Tone.Paused),
       _ => new ChipInfo(AppText.Get("sources.job.running"), Tone.Busy),
     };
@@ -152,7 +153,7 @@ public sealed class RunningJobViewModel
       ScanJobState.Pausing => "sources.job.pausingButton",
       _ => "sources.job.pause",
     });
-    PrimaryEnabled = job.State != ScanJobState.Pausing;
+    PrimaryEnabled = job.State is not (ScanJobState.Pausing or ScanJobState.Cancelling);
     Primary = primary;
     Cancel = cancel;
   }
@@ -307,7 +308,7 @@ public sealed partial class SourcesViewModel : PageViewModel
     }
 
     Attention.Clear();
-    foreach (var job in Store.Jobs.Where(j => j.State is ScanJobState.Interrupted or ScanJobState.WaitingForSource || (j.State == ScanJobState.Paused && j != running)))
+    foreach (var job in Store.Jobs.Where(j => j.State is ScanJobState.Interrupted or ScanJobState.WaitingForSource or ScanJobState.WaitingForEngine or ScanJobState.NeedsNewJob or ScanJobState.Failed || (j.State == ScanJobState.Paused && j != running)))
     {
       var cancel = new ActionInfo(AppText.Get("sources.cancel"), new AsyncRelayCommand(() => Store.CancelJobAsync(job.Id)));
       Attention.Add(job.State switch
@@ -317,6 +318,13 @@ public sealed partial class SourcesViewModel : PageViewModel
            new ActionInfo(AppText.Get("sources.attention.restart"), new AsyncRelayCommand(() => Store.RestartJobAsync(job.Id))), cancel]),
         ScanJobState.WaitingForSource => new AttentionJobViewModel(new ChipInfo(AppText.Get("sources.attention.waitingForSource"), Tone.Offline), job.Title,
           job.Reason ?? string.Empty, [new ActionInfo(AppText.Get("sources.attention.connected"), new AsyncRelayCommand(() => Store.ResumeJobAsync(job.Id))), cancel]),
+        ScanJobState.WaitingForEngine or ScanJobState.Failed => new AttentionJobViewModel(
+          new ChipInfo(AppText.Get(job.State == ScanJobState.WaitingForEngine ? "sources.state.waitingForEngine" : "sources.state.failed"), Tone.Warn), job.Title,
+          job.Reason ?? string.Empty,
+          [new ActionInfo(AppText.Get("sources.scan.resume"), new AsyncRelayCommand(() => Store.ResumeJobAsync(job.Id)), true),
+           new ActionInfo(AppText.Get("sources.attention.restart"), new AsyncRelayCommand(() => Store.RestartJobAsync(job.Id))), cancel]),
+        ScanJobState.NeedsNewJob => new AttentionJobViewModel(new ChipInfo(AppText.Get("sources.state.needsNewJob"), Tone.Warn), job.Title,
+          job.Reason ?? string.Empty, [new ActionInfo(AppText.Get("sources.attention.restart"), new AsyncRelayCommand(() => Store.RestartJobAsync(job.Id)), true), cancel]),
         _ => new AttentionJobViewModel(new ChipInfo(AppText.Get("sources.job.paused"), Tone.Paused), job.Title, job.Reason ?? string.Empty,
           [new ActionInfo(AppText.Get("sources.job.resume"), new AsyncRelayCommand(() => Store.ResumeJobAsync(job.Id)), true), cancel]),
       });

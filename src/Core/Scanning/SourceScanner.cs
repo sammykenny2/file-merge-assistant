@@ -79,8 +79,9 @@ public sealed class SourceScanner
   /// <param name="report">Receives progress after each file and each checkpoint.</param>
   /// <param name="pauseRequested">Checked between batches; when true the scan stops after the current batch.</param>
   /// <param name="cancellationToken">Stops the scan as soon as possible; committed batches stay.</param>
+  /// <param name="checkScope">Rechecks frozen source identities before reading or committing a batch.</param>
   public ScanStop Run(ScanSource source, string jobId, IReadOnlyDictionary<string, string> onlineRoots, Action<ScanProgress> report,
-    Func<bool> pauseRequested, CancellationToken cancellationToken)
+    Func<bool> pauseRequested, CancellationToken cancellationToken, Action? checkScope = null)
   {
     ArgumentNullException.ThrowIfNull(source);
     ArgumentNullException.ThrowIfNull(onlineRoots);
@@ -88,7 +89,8 @@ public sealed class SourceScanner
     ArgumentNullException.ThrowIfNull(pauseRequested);
 
     using var connection = _database.Open();
-    var state = new State(source, jobId, connection, report);
+    var state = new State(source, jobId, connection, report, checkScope ?? (() => { }));
+    state.CheckScope();
     var stop = Discover(state, pauseRequested, cancellationToken);
     if (stop != ScanStop.Completed)
     {
@@ -156,6 +158,7 @@ public sealed class SourceScanner
     while (directories.Count > 0)
     {
       cancellationToken.ThrowIfCancellationRequested();
+      state.CheckScope();
       var relativeDirectory = directories.Pop();
       var fullDirectory = relativeDirectory.Length == 0 ? root : root + relativeDirectory;
       try
@@ -214,6 +217,8 @@ public sealed class SourceScanner
     }
 
     WriteFiles(state, scan, pending);
+    cancellationToken.ThrowIfCancellationRequested();
+    state.CheckScope();
     IndexDatabase.InTransaction(connection, () =>
     {
       foreach (var (path, name, bytes, files) in regenerable)
@@ -268,6 +273,7 @@ public sealed class SourceScanner
       }
       IndexDatabase.InTransaction(connection, () =>
       {
+        state.CheckScope();
         using var delete = IndexDatabase.Command(connection, $"DELETE FROM {table} WHERE source_id = $s AND rel_path = $p",
           ("$s", state.Source.Id), ("$p", string.Empty));
         foreach (var path in remove)
@@ -319,6 +325,7 @@ public sealed class SourceScanner
       }
       IndexDatabase.InTransaction(connection, () =>
       {
+        state.CheckScope();
         using var update = IndexDatabase.Command(connection, "UPDATE files SET hash = $h WHERE id = $id", ("$h", string.Empty), ("$id", 0L));
         foreach (var (id, hash) in hashed)
         {
@@ -351,6 +358,7 @@ public sealed class SourceScanner
 
     foreach (var cohort in candidates.Chunk(HashBatchSize))
     {
+      state.CheckScope();
       var inputs = ImmutableArray.CreateBuilder<AnalysisInput>();
       foreach (var (id, sourceId, relative, size, mtime) in cohort)
       {
@@ -453,6 +461,7 @@ public sealed class SourceScanner
     var connection = state.Connection;
     IndexDatabase.InTransaction(connection, () =>
     {
+      state.CheckScope();
       // Size and time unchanged keeps the fingerprint (ADR-004); anything else clears it.
       using var upsert = IndexDatabase.Command(connection,
         """
@@ -495,8 +504,9 @@ public sealed class SourceScanner
 
   private static string WithSeparator(string root) => root.EndsWith('\\') ? root : root + "\\";
 
-  private sealed class State(ScanSource source, string jobId, SqliteConnection connection, Action<ScanProgress> report)
+  private sealed class State(ScanSource source, string jobId, SqliteConnection connection, Action<ScanProgress> report, Action checkScope)
   {
+    public Action CheckScope { get; } = checkScope;
     public string JobId { get; } = jobId;
     public ScanSource Source { get; } = source;
     public SqliteConnection Connection { get; } = connection;

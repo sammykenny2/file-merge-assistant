@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Text.Json;
+using FileMergeAssistant.Analysis;
 using FileMergeAssistant.Index;
 using FileMergeAssistant.Localization;
 using FileMergeAssistant.Sources;
@@ -16,7 +18,7 @@ public sealed class ScanWorker : IDisposable
   private static readonly TimeSpan ProgressInterval = TimeSpan.FromMilliseconds(400);
 
   private readonly IndexDatabase _database;
-  private readonly SourceScanner _scanner;
+  private readonly AnalysisEngineRegistry _engines;
   private readonly IVolumeInfoProvider _volumes;
   private readonly IReadOnlyList<string> _excludedRoots;
   private readonly SemaphoreSlim _signal = new(0);
@@ -26,14 +28,15 @@ public sealed class ScanWorker : IDisposable
   private string? _runningJob;
   private CancellationTokenSource? _jobCancel;
   private bool _pauseRequested;
+  private bool _cancelRequested;
 
   /// <param name="database">The index.</param>
   /// <param name="volumes">Checks that a source's folder is on the volume it was added from (ADR-010).</param>
   /// <param name="excludedRoots">Folders never scanned, such as the app's data folder with its recycle area.</param>
-  public ScanWorker(IndexDatabase database, IVolumeInfoProvider volumes, IReadOnlyList<string> excludedRoots)
+  public ScanWorker(IndexDatabase database, IVolumeInfoProvider volumes, IReadOnlyList<string> excludedRoots, AnalysisEngineRegistry? engines = null)
   {
     _database = database;
-    _scanner = new SourceScanner(database);
+    _engines = engines ?? AnalysisEngineRegistry.ManagedOnly();
     _volumes = volumes;
     _excludedRoots = excludedRoots;
   }
@@ -47,7 +50,7 @@ public sealed class ScanWorker : IDisposable
     ArgumentNullException.ThrowIfNull(database);
     using var connection = database.Open();
     IndexDatabase.Execute(connection,
-      "UPDATE jobs SET state = 'Interrupted', reason = $reason, saved = discovered WHERE state IN ('Running', 'Pausing')",
+      "UPDATE jobs SET state = 'Interrupted', reason = $reason, saved = discovered WHERE state IN ('Running', 'Pausing', 'Cancelling') AND analysis_snapshot IS NOT NULL",
       ("$reason", AppText.Get("scan.job.recovered")));
   }
 
@@ -79,12 +82,23 @@ public sealed class ScanWorker : IDisposable
   /// <summary>Stops the running job; committed batches stay in the index.</summary>
   public void Cancel(string jobId)
   {
+    var requested = false;
     lock (_gate)
     {
       if (_runningJob == jobId)
       {
+        using var connection = _database.Open();
+        IndexDatabase.Execute(connection, "UPDATE jobs SET state = 'Cancelling' WHERE id = $id AND state NOT IN ('Completed', 'Canceled')", ("$id", jobId));
+        _cancelRequested = true;
+        requested = true;
         _jobCancel?.Cancel();
       }
+    }
+    if (!requested)
+    {
+      // Preflight may have just stopped between the caller's IsRunning check and this request.
+      using var connection = _database.Open();
+      MarkCanceled(connection, jobId, onlyInactive: true);
     }
   }
 
@@ -119,7 +133,7 @@ public sealed class ScanWorker : IDisposable
           await _signal.WaitAsync(_shutdown.Token).ConfigureAwait(false);
           continue;
         }
-        Run(job.Value.JobId, job.Value.Source, job.Value.Serial);
+        Run(job.Value.JobId, job.Value.SourceId, job.Value.Snapshot);
       }
       catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
       {
@@ -145,90 +159,77 @@ public sealed class ScanWorker : IDisposable
   /// Claims the next queued job in one statement, so two workers can never run the same job. A paused job holds the
   /// queue until it is resumed or cancelled.
   /// </summary>
-  private (string JobId, ScanSource Source, string? Serial)? NextJob()
+  private (string JobId, string SourceId, string? Snapshot)? NextJob()
   {
     using var connection = _database.Open();
-    if (IndexDatabase.Scalar<long>(connection, "SELECT COUNT(*) FROM jobs WHERE state IN ('Paused', 'Pausing', 'Running')") > 0)
+    if (IndexDatabase.Scalar<long>(connection, "SELECT COUNT(*) FROM jobs WHERE state IN ('Paused', 'Pausing', 'Running', 'Cancelling')") > 0)
     {
       return null;
-    }
-    var jobId = IndexDatabase.Scalar<string>(connection,
-      """
-      UPDATE jobs SET state = 'Running', phase = 'Discover'
-      WHERE id = (SELECT id FROM jobs WHERE state = 'Queued' ORDER BY position, queued_at LIMIT 1) AND state = 'Queued'
-      RETURNING id
-      """);
-    if (jobId is null)
-    {
-      return null;
-    }
-    lock (_gate)
-    {
-      _runningJob = jobId;
     }
     using var command = IndexDatabase.Command(connection,
       """
-      SELECT s.id, s.root, s.skip_regenerable, s.skip_cloud, s.regenerable_names, s.exclusions, s.volume_serial
-      FROM jobs j JOIN sources s ON s.id = j.source_id WHERE j.id = $id
-      """, ("$id", jobId));
+      UPDATE jobs SET state = 'Running', phase = 'Discover'
+      WHERE id = (SELECT id FROM jobs WHERE state = 'Queued' ORDER BY position, queued_at LIMIT 1) AND state = 'Queued'
+      RETURNING id, source_id, analysis_snapshot
+      """);
     using var reader = command.ExecuteReader();
     if (!reader.Read())
     {
       return null;
     }
-    var source = new ScanSource(reader.GetString(0), reader.GetString(1), reader.GetInt64(2) != 0, reader.GetInt64(3) != 0,
-      SplitLines(reader.GetString(4)), SplitLines(reader.GetString(5)))
+    lock (_gate)
     {
-      ExcludedRoots = _excludedRoots,
-    };
-    return (jobId, source, reader.IsDBNull(6) ? null : reader.GetString(6));
-  }
-
-  /// <summary>True when the folder exists and is on the same volume it was added from.</summary>
-  private bool IsOnline(string root, string? serial) =>
-    Directory.Exists(root) && (serial is null || _volumes.Describe(root)?.Serial is not { } current || current == serial);
-
-  /// <summary>Roots of every source that is online now, read fresh at the start of each job.</summary>
-  private Dictionary<string, string> OnlineRoots()
-  {
-    var roots = new Dictionary<string, string>(StringComparer.Ordinal);
-    using var connection = _database.Open();
-    using var command = IndexDatabase.Command(connection, "SELECT id, root, volume_serial FROM sources");
-    using var reader = command.ExecuteReader();
-    while (reader.Read())
-    {
-      if (IsOnline(reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetString(2)))
-      {
-        roots[reader.GetString(0)] = reader.GetString(1);
-      }
+      _runningJob = reader.GetString(0);
+      _pauseRequested = false;
+      _cancelRequested = false;
     }
-    return roots;
+    return (reader.GetString(0), reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetString(2));
   }
 
-  private void Run(string jobId, ScanSource source, string? serial)
+  private void Run(string jobId, string sourceId, string? snapshot)
   {
     var cancel = CancellationTokenSource.CreateLinkedTokenSource(_shutdown.Token);
     lock (_gate)
     {
       _runningJob = jobId;
       _jobCancel = cancel;
-      _pauseRequested = false;
+      if (_cancelRequested) { cancel.Cancel(); }
     }
     try
     {
-      RunClaimed(jobId, source, serial, cancel);
+      RunClaimed(jobId, sourceId, snapshot, cancel);
     }
     finally
     {
-      Finish(cancel);
+      Finish(jobId, cancel);
       JobChanged?.Invoke(this, true);
     }
   }
 
-  private void RunClaimed(string jobId, ScanSource source, string? serial, CancellationTokenSource cancel)
+  private void RunClaimed(string jobId, string sourceId, string? snapshotJson, CancellationTokenSource cancel)
   {
     using var connection = _database.Open();
-    if (!IsOnline(source.Root, serial))
+    ScanJobSnapshot snapshot;
+    IFileAnalysisEngine engine;
+    try
+    {
+      snapshot = ScanJobSnapshot.Deserialize(snapshotJson ?? throw new InvalidDataException("Legacy job has no engine/scope snapshot."));
+      if (snapshot.SourceId != sourceId) { throw new InvalidDataException("The job source does not match its snapshot."); }
+      engine = _engines.Resolve(snapshot.Engine);
+    }
+    catch (AnalysisEngineUnavailableException error)
+    {
+      SetState(connection, jobId, "WaitingForEngine", AppText.Get("scan.job.engineUnavailable", ("error", error.Message)));
+      return;
+    }
+    catch (Exception error) when (error is JsonException or InvalidDataException or ArgumentException)
+    {
+      SetState(connection, jobId, "NeedsNewJob", AppText.Get("scan.job.invalidSnapshot", ("error", error.Message)));
+      return;
+    }
+    var own = snapshot.Sources.Single(item => item.Source.Id == sourceId);
+    var source = own.Source with { ExcludedRoots = own.Source.ExcludedRoots.Concat(_excludedRoots).Distinct(StringComparer.OrdinalIgnoreCase).ToArray() };
+    if (!ScanJobSnapshot.IsOnline(own, _volumes))
     {
       // Missing, or another disk under the same letter: never index it as this source.
       SetState(connection, jobId, "WaitingForSource", AppText.Get(Directory.Exists(source.Root) ? "scan.job.otherDrive" : "scan.job.offline"));
@@ -252,22 +253,44 @@ public sealed class ScanWorker : IDisposable
 
     ScanStop stop;
     string? failure = null;
+    var failureState = "Failed";
     try
     {
-      var roots = OnlineRoots();
-      // This job's own root passed the volume check just now, whatever the snapshot says.
-      roots[source.Id] = source.Root;
-      stop = _scanner.Run(source, jobId, roots, Report, () =>
+      // The own root must never fall out of the guard between two probes.
+      var available = snapshot.Sources.Where(item => item.Source.Id == sourceId || ScanJobSnapshot.IsOnline(item, _volumes)).ToArray();
+      var roots = available.ToDictionary(item => item.Source.Id, item => item.Source.Root, StringComparer.Ordinal);
+      void CheckScope()
+      {
+        if (available.Any(item => !ScanJobSnapshot.IsOnline(item, _volumes)))
+        {
+          throw new ScanSourceUnavailableException(AppText.Get("scan.job.scopeChanged"));
+        }
+      }
+      CheckScope();
+      var scanner = new SourceScanner(_database, engine, snapshot.Engine);
+      stop = scanner.Run(source, jobId, roots, Report, () =>
       {
         lock (_gate)
         {
           return _pauseRequested;
         }
-      }, cancel.Token);
+      }, cancel.Token, CheckScope);
     }
     catch (OperationCanceledException)
     {
       stop = ScanStop.Canceled;
+    }
+    catch (AnalysisEngineUnavailableException error)
+    {
+      stop = ScanStop.Canceled;
+      failure = error.Message;
+      failureState = "WaitingForEngine";
+    }
+    catch (ScanSourceUnavailableException error)
+    {
+      stop = ScanStop.Canceled;
+      failure = error.Message;
+      failureState = "WaitingForSource";
     }
 #pragma warning disable CA1031 // A scan must never take the worker down; the job is marked interrupted with the reason.
     catch (Exception e)
@@ -289,7 +312,7 @@ public sealed class ScanWorker : IDisposable
     }
     else if (failure is not null)
     {
-      SetState(connection, jobId, "Interrupted", AppText.Get("scan.job.failed", ("error", failure)));
+      SetState(connection, jobId, failureState, AppText.Get("scan.job.failed", ("error", failure)));
     }
     else if (stop == ScanStop.Paused)
     {
@@ -297,7 +320,8 @@ public sealed class ScanWorker : IDisposable
     }
     else if (stop == ScanStop.Canceled)
     {
-      IndexDatabase.Execute(connection, "DELETE FROM jobs WHERE id = $id", ("$id", jobId));
+      IndexDatabase.Execute(connection, "UPDATE jobs SET state = 'Canceled', finished_at = $at, current_path = NULL WHERE id = $id",
+        ("$id", jobId), ("$at", now));
     }
     else
     {
@@ -307,22 +331,45 @@ public sealed class ScanWorker : IDisposable
         ("$at", now), ("$id", jobId));
       IndexDatabase.Execute(connection, "UPDATE sources SET last_scan_at = $at, last_scan_errors = $e, last_seen_at = $at WHERE id = $id",
         ("$at", now), ("$e", errors), ("$id", source.Id));
-      // Keep only the latest finished job per source.
-      IndexDatabase.Execute(connection, "DELETE FROM jobs WHERE source_id = $s AND state = 'Completed' AND id <> $id",
-        ("$s", source.Id), ("$id", jobId));
+      // Completed snapshots remain available as provenance for persisted evidence.
     }
   }
 
-  private void Finish(CancellationTokenSource cancel)
+  private void Finish(string jobId, CancellationTokenSource cancel)
   {
-    lock (_gate)
+    try
     {
-      _runningJob = null;
-      _jobCancel = null;
-      _pauseRequested = false;
+      lock (_gate)
+      {
+        try
+        {
+          // Cancellation wins over a preflight wait/error only once all engine/probe work has stopped.
+          if (cancel.IsCancellationRequested && !_shutdown.IsCancellationRequested)
+          {
+            using var connection = _database.Open();
+            MarkCanceled(connection, jobId);
+          }
+        }
+        finally
+        {
+          _runningJob = null;
+          _jobCancel = null;
+          _pauseRequested = false;
+          _cancelRequested = false;
+        }
+      }
     }
-    cancel.Dispose();
+    finally { cancel.Dispose(); }
   }
+
+  private static void MarkCanceled(SqliteConnection connection, string jobId, bool onlyInactive = false) =>
+    IndexDatabase.Execute(connection,
+      """
+      UPDATE jobs SET state = 'Canceled', finished_at = $at, current_path = NULL
+      WHERE id = $id AND state NOT IN ('Completed', 'Canceled')
+        AND ($inactive = 0 OR state NOT IN ('Running', 'Pausing', 'Cancelling'))
+      """,
+      ("$id", jobId), ("$at", DateTimeOffset.Now.ToString("o", CultureInfo.InvariantCulture)), ("$inactive", onlyInactive ? 1 : 0));
 
   /// <summary>Stores a source's counts for the interface (one pass over the source's rows, after a scan stops).</summary>
   private static void SaveCounts(SqliteConnection connection, string sourceId) =>
@@ -337,7 +384,7 @@ public sealed class ScanWorker : IDisposable
       ("$s", sourceId));
 
   private static void SetState(SqliteConnection connection, string jobId, string state, string reason) =>
-    IndexDatabase.Execute(connection, "UPDATE jobs SET state = $state, reason = $reason, saved = discovered WHERE id = $id",
+    IndexDatabase.Execute(connection, "UPDATE jobs SET state = $state, reason = $reason, saved = discovered WHERE id = $id AND (state <> 'Cancelling' OR $state = 'Interrupted')",
       ("$state", state), ("$reason", reason), ("$id", jobId));
 
   private static void SaveProgress(SqliteConnection connection, string jobId, ScanProgress p) =>

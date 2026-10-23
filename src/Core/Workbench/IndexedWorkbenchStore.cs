@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
+using FileMergeAssistant.Analysis;
 using FileMergeAssistant.Index;
 using FileMergeAssistant.Localization;
 using FileMergeAssistant.Plans;
@@ -43,6 +44,8 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   private readonly IVolumeInfoProvider _volumes;
   private readonly SynchronizationContext? _context;
   private readonly ScanWorker _worker;
+  private readonly AnalysisEngineRegistry _engines;
+  private AnalysisEngineSnapshot _newJobEngine;
   private readonly PlanExecutor _executor;
   private readonly RecycleAreaLocator _areas;
   private readonly object _refreshGate = new();
@@ -72,15 +75,18 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   private long _appliedSequence;
   private long _detectedSequence;
 
-  private IndexedWorkbenchStore(IndexDatabase database, IVolumeInfoProvider volumes, SynchronizationContext? context, bool detectNow)
+  private IndexedWorkbenchStore(IndexDatabase database, IVolumeInfoProvider volumes, SynchronizationContext? context, bool detectNow,
+    AnalysisEngineRegistry? engines)
   {
     _database = database;
     _volumes = volumes;
     _context = context;
+    _engines = engines ?? AnalysisEngineRegistry.ManagedOnly();
+    _newJobEngine = _engines.Snapshot(ManagedAnalysisEngine.EngineId, AnalysisCapability.ExactDuplicates, ContentFingerprints.XxHash128);
     _areas = new RecycleAreaLocator(Path.GetDirectoryName(Path.GetFullPath(database.Path))!);
     _executor = new PlanExecutor(_areas);
     ScanWorker.RecoverInterrupted(database);
-    _worker = new ScanWorker(database, volumes, [_areas.AppDataRoot]);
+    _worker = new ScanWorker(database, volumes, [_areas.AppDataRoot], _engines);
     _worker.JobChanged += (_, ended) => QueueRefresh(detect: ended || _sinceDetect.Elapsed > DetectInterval);
     LoadDecisions();
     RecoverInterruptedRun();
@@ -106,11 +112,12 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   /// <param name="context">Where <see cref="Changed"/> is raised; the caller's context by default.</param>
   /// <param name="startWorker">False keeps queued jobs waiting (tests start it themselves).</param>
   /// <param name="detectNow">True detects stacks before returning; false detects them in the background (the app).</param>
+  /// <param name="engines">The available analysis implementations; managed analysis is required.</param>
   public static IndexedWorkbenchStore Open(string path, IVolumeInfoProvider? volumes = null, SynchronizationContext? context = null,
-    bool startWorker = true, bool detectNow = true)
+    bool startWorker = true, bool detectNow = true, AnalysisEngineRegistry? engines = null)
   {
     var store = new IndexedWorkbenchStore(IndexDatabase.OpenOrCreate(path), volumes ?? new Win32VolumeInfoProvider(),
-      context ?? SynchronizationContext.Current, detectNow);
+      context ?? SynchronizationContext.Current, detectNow, engines);
     if (startWorker)
     {
       store.StartScanning();
@@ -122,6 +129,17 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   public DateTimeOffset Now => DateTimeOffset.Now;
   public IReadOnlyList<SourceInfo> Sources => _sources;
   public IReadOnlyList<ScanJobInfo> Jobs => _jobs;
+
+  public AnalysisEngineRegistry Engines => _engines;
+  public AnalysisEngineSnapshot NewJobEngine => _newJobEngine;
+
+  /// <summary>Changes new jobs only. Existing queued, paused and interrupted snapshots are immutable.</summary>
+  public void SelectNewJobEngine(AnalysisEngineSnapshot snapshot)
+  {
+    _engines.Resolve(snapshot);
+    if (snapshot.Capability != AnalysisCapability.ExactDuplicates) { throw new ArgumentException("The scan queue currently accepts exact-content analysis only.", nameof(snapshot)); }
+    _newJobEngine = snapshot with { ScopeJson = "{}" };
+  }
   public IReadOnlyList<Stack> Stacks => _stacks;
   public IReadOnlyList<PlanEntry> Plan => _plan;
   public DateTimeOffset? PlanCheckedAt { get; private set; }
@@ -168,7 +186,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     {
       using (var connection = _database.Open())
       {
-        var busy = IndexDatabase.Scalar<long>(connection, "SELECT COUNT(*) FROM jobs WHERE state IN ('Queued', 'Running', 'Pausing')");
+        var busy = IndexDatabase.Scalar<long>(connection, "SELECT COUNT(*) FROM jobs WHERE state IN ('Queued', 'Running', 'Pausing', 'Cancelling')");
         if (busy == 0)
         {
           return;
@@ -207,6 +225,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   private List<string> AddSources(IReadOnlyList<string> paths, SourceOptions options, bool startScan, HashSet<string> online)
   {
     var problems = new List<string>();
+    var added = new List<(string Id, string Name)>();
     using (var connection = _database.Open())
     {
       // Compare real locations: a junction, subst drive or mapped drive must not add the same folder twice (ADR-010).
@@ -278,9 +297,13 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
           ("$at", Stamp(Now)), ("$position", position));
         existing.Add((real, name));
         online.Add(real);
-        if (startScan)
+        added.Add((id, name));
+      }
+      if (startScan)
+      {
+        foreach (var source in added)
         {
-          QueueJob(connection, id, name, ScanJobKind.FirstScan, AppText.Get("scan.job.firstScan"));
+          QueueJob(connection, source.Id, source.Name, ScanJobKind.FirstScan, AppText.Get("scan.job.firstScan"));
         }
       }
     }
@@ -326,7 +349,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     Execute(
       """
       UPDATE jobs SET state = 'Queued', kind = 'Resume', reason = $reason, position = (SELECT COALESCE(MIN(position), 0) - 1 FROM jobs)
-      WHERE id = $id AND state IN ('Paused', 'Interrupted', 'WaitingForSource')
+      WHERE id = $id AND state IN ('Paused', 'Interrupted', 'WaitingForSource', 'WaitingForEngine', 'Failed') AND analysis_snapshot IS NOT NULL
       """,
       ("$id", jobId), ("$reason", AppText.Get("scan.job.resume")));
     _worker.Wake();
@@ -344,7 +367,8 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     {
       // A job the worker has just claimed is Running in the index; cancel that one through the worker instead.
       using var connection = _database.Open();
-      if (IndexDatabase.Execute(connection, "DELETE FROM jobs WHERE id = $id AND state NOT IN ('Running', 'Pausing')", ("$id", jobId)) == 0)
+      if (IndexDatabase.Execute(connection, "UPDATE jobs SET state = 'Canceled', finished_at = $at WHERE id = $id AND state NOT IN ('Running', 'Pausing', 'Cancelling')",
+        ("$id", jobId), ("$at", Stamp(Now))) == 0)
       {
         _worker.Cancel(jobId);
       }
@@ -355,8 +379,23 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   public Task RestartJobAsync(string jobId)
   {
-    Execute("UPDATE jobs SET state = 'Queued', kind = 'FirstScan', reason = $reason, saved = 0 WHERE id = $id AND state NOT IN ('Running', 'Pausing')",
-      ("$id", jobId), ("$reason", AppText.Get("scan.job.restart")));
+    using (var connection = _database.Open())
+    {
+      // New settings require a new identity. The old job remains as historical provenance.
+      IndexDatabase.InTransaction(connection, () =>
+      {
+        using var command = IndexDatabase.Command(connection, "SELECT source_id, title FROM jobs WHERE id = $id AND state NOT IN ('Running', 'Pausing', 'Cancelling')", ("$id", jobId));
+        string sourceId, title;
+        using (var reader = command.ExecuteReader())
+        {
+          if (!reader.Read()) { return; }
+          sourceId = reader.GetString(0);
+          title = reader.GetString(1);
+        }
+        IndexDatabase.Execute(connection, "UPDATE jobs SET state = 'Canceled', finished_at = $at WHERE id = $id", ("$id", jobId), ("$at", Stamp(Now)));
+        QueueJob(connection, sourceId, title, ScanJobKind.FirstScan, AppText.Get("scan.job.restart"));
+      });
+    }
     _worker.Wake();
     Apply(Build(detect: false, probe: false));
     return Task.CompletedTask;
@@ -1012,12 +1051,12 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         {
           online[id] = root;
         }
-        var job = jobs.FirstOrDefault(j => j.SourceId == id && j.State != ScanJobState.Completed);
+        var job = jobs.FirstOrDefault(j => j.SourceId == id && j.State is not (ScanJobState.Completed or ScanJobState.Canceled));
         var lastScan = ParseStamp(reader, 8);
         var state = !isOnline ? SourceState.Offline
-          : job?.State is ScanJobState.Running or ScanJobState.Pausing ? SourceState.Scanning
+          : job?.State is ScanJobState.Running or ScanJobState.Pausing or ScanJobState.Cancelling ? SourceState.Scanning
           : job?.State is ScanJobState.Queued ? SourceState.Queued
-          : job?.State is ScanJobState.Interrupted ? SourceState.Interrupted
+          : job?.State is ScanJobState.Interrupted or ScanJobState.Failed or ScanJobState.NeedsNewJob or ScanJobState.WaitingForEngine ? SourceState.Interrupted
           : job?.State is ScanJobState.Paused || lastScan is null ? SourceState.NeedsUpdate
           : SourceState.Online;
         var remark = state switch
@@ -1421,7 +1460,8 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     using var command = IndexDatabase.Command(connection,
       """
       SELECT id, source_id, title, kind, state, phase, queued_at, discovered, candidates, hashed, succeeded, skipped, errors,
-        error_summary, current_path, current_size, last_checkpoint_at, finished_at, reason, saved
+        error_summary, current_path, current_size, last_checkpoint_at, finished_at, reason, saved,
+        analysis_snapshot, analysis_generation, analysis_complete
       FROM jobs
       ORDER BY CASE state WHEN 'Running' THEN 0 WHEN 'Pausing' THEN 0 WHEN 'Paused' THEN 1 WHEN 'Queued' THEN 2 ELSE 3 END, position, queued_at
       """);
@@ -1446,6 +1486,9 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         FinishedAt = ParseStamp(reader, 17),
         Reason = reader.IsDBNull(18) ? null : reader.GetString(18),
         Saved = reader.GetInt64(19),
+        Snapshot = ReadJobSnapshot(reader.IsDBNull(20) ? null : reader.GetString(20)),
+        AnalysisGeneration = reader.GetInt64(21),
+        AnalysisComplete = reader.GetInt64(22) != 0,
       });
     }
     // Describe errors of finished jobs from the recorded paths.
@@ -1528,13 +1571,20 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     return roots;
   }
 
-  private static void QueueJob(SqliteConnection connection, string sourceId, string title, ScanJobKind kind, string reason)
+  private static ScanJobSnapshot? ReadJobSnapshot(string? json)
+  {
+    try { return json is null ? null : ScanJobSnapshot.Deserialize(json); }
+    catch (Exception error) when (error is JsonException or InvalidDataException or ArgumentException) { return null; }
+  }
+
+  private void QueueJob(SqliteConnection connection, string sourceId, string title, ScanJobKind kind, string reason)
   {
     var position = IndexDatabase.Scalar<long>(connection, "SELECT COALESCE(MAX(position), 0) + 1 FROM jobs");
+    var snapshot = ScanJobSnapshot.Capture(connection, sourceId, _newJobEngine, [_areas.AppDataRoot]);
     IndexDatabase.Execute(connection,
-      "INSERT INTO jobs(id, source_id, title, kind, state, phase, queued_at, position, reason) VALUES ($id, $s, $t, $k, 'Queued', 'Discover', $at, $p, $r)",
+      "INSERT INTO jobs(id, source_id, title, kind, state, phase, queued_at, position, reason, analysis_snapshot) VALUES ($id, $s, $t, $k, 'Queued', 'Discover', $at, $p, $r, $snapshot)",
       ("$id", "j" + Guid.NewGuid().ToString("N")[..10]), ("$s", sourceId), ("$t", title), ("$k", kind.ToString()),
-      ("$at", Stamp(DateTimeOffset.Now)), ("$p", position), ("$r", reason));
+      ("$at", Stamp(DateTimeOffset.Now)), ("$p", position), ("$r", reason), ("$snapshot", snapshot.Serialize()));
   }
 
   private const string ItemColumns =
