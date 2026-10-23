@@ -34,6 +34,18 @@ public sealed record BatchItem(string Id, string StackId, PlanItemKind Kind, str
   /// <summary>Volume of the recycle area that holds the item, for example <c>D:\</c>.</summary>
   public string? RecycleVolume { get; init; }
 
+  /// <summary>Recycle: where the folder or file was. Replace: the keeper's file that was swapped out.</summary>
+  public string? OriginalPath { get; init; }
+
+  /// <summary>Recycle: where it is now in the recycle area. Replace: where the keeper's old version went.</summary>
+  public string? RecycledPath { get; init; }
+
+  /// <summary>Copy, save-as and replace: the file this run created in the keeper (recycled again on restore).</summary>
+  public string? CreatedPath { get; init; }
+
+  /// <summary>Copy-like items: the file that was copied.</summary>
+  public string? SourcePath { get; init; }
+
   public bool CanRestore => State == BatchItemState.Done;
 }
 

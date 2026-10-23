@@ -192,11 +192,11 @@ public sealed partial class HubViewModel : PageViewModel
   {
     var stacks = Store.Stacks;
     var open = stacks.Where(s => s.Status == StackStatus.Open).Select(StackTriage.Summarize).ToList();
-    var converged = stacks.Count(s => s.Status == StackStatus.Converged);
+    var converged = Store.ConvergedCount;
     var keptAll = stacks.Count(s => s.Status == StackStatus.KeptAll);
     var pending = stacks.Count(s => s.Status == StackStatus.Pending);
     var scanning = Store.Sources.Where(s => s.State == SourceState.Scanning).Select(s => s.RootPath).ToList();
-    Summary = $"找到 {Fmt.Count(stacks.Count(s => s.Status != StackStatus.Dissolved))} 疊。已收斂 {Fmt.Count(converged)} 疊、都保留 {Fmt.Count(keptAll)} 疊"
+    Summary = $"找到 {Fmt.Count(stacks.Count(s => s.Status is not (StackStatus.Dissolved or StackStatus.Converged)) + converged)} 疊。已收斂 {Fmt.Count(converged)} 疊、都保留 {Fmt.Count(keptAll)} 疊"
       + (pending > 0 ? $"、待執行 {Fmt.Count(pending)} 疊" : string.Empty)
       + $"，還有 {Fmt.Count(open.Count)} 疊待整理。"
       + (scanning.Count > 0 ? $"{string.Join("、", scanning)} 還在掃描，之後可能再多幾疊。" : string.Empty);

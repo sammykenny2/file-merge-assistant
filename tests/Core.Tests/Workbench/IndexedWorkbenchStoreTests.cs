@@ -87,8 +87,6 @@ public sealed class IndexedWorkbenchStoreTests : IDisposable
       Assert.Contains(entry.Items, i => i.Kind == PlanItemKind.Copy && i.Target == "notes.md");
       Assert.Contains(entry.Items, i => i.Kind == PlanItemKind.SaveAs);
       Assert.Equal(2, entry.Items.Count(i => i.Kind == PlanItemKind.Recycle));
-      Assert.False(store.CanExecute);
-      await Assert.ThrowsAsync<NotSupportedException>(() => store.ExecutePlanAsync(CancellationToken.None));
     }
 
     using var reopened = Open();
@@ -145,6 +143,58 @@ public sealed class IndexedWorkbenchStoreTests : IDisposable
     var pending = store.Stacks.Single(s => s.Id == reopened.Id);
     Assert.Equal(StackStatus.Pending, pending.Status);
     Assert.Empty(pending.NewCopyIds);
+  }
+
+  [Fact]
+  public async Task Running_The_Plan_Consolidates_The_Stack_And_Restoring_Brings_It_Back()
+  {
+    using var store = await ScannedStore();
+    var folder = store.Stacks.Single(s => s.Kind == StackKind.Folder);
+    store.Decide(StackDecision.Suggested(folder).WithChoice("receipt.html", ConflictChoice.Both));
+
+    var batch = await store.ExecutePlanAsync(CancellationToken.None);
+
+    Assert.All(batch.Items, i => Assert.Equal(BatchItemState.Done, i.State));
+    Assert.True(File.Exists(_tree.PathOf(@"work\invoice-tool\notes.md")));
+    Assert.Single(Directory.EnumerateFiles(_tree.PathOf(@"work\invoice-tool"), "receipt.from-*.html"));
+    Assert.False(Directory.Exists(_tree.PathOf(@"backup\invoice-tool-backup")));
+    Assert.False(Directory.Exists(_tree.PathOf(@"desk\invoice-tool - 複製")));
+    Assert.Empty(store.Plan);
+    Assert.Equal(1, store.ConvergedCount);
+    Assert.Equal(batch.Id, store.History[0].Id);
+    Assert.Contains(store.RecycleAreas, a => a.Bytes > 0);
+
+    // The index catches up with the disk: the stack dissolves once only the keeper is left.
+    await store.WaitForScansAsync(Timeout);
+    store.RefreshNow();
+    Assert.DoesNotContain(store.Stacks, s => s.Kind == StackKind.Folder);
+    Assert.Equal(1, store.ConvergedCount);
+
+    await store.RestoreBatchAsync(batch.Id);
+    Assert.All(store.History[0].Items, i => Assert.Equal(BatchItemState.Restored, i.State));
+    Assert.True(Directory.Exists(_tree.PathOf(@"backup\invoice-tool-backup")));
+    Assert.False(File.Exists(_tree.PathOf(@"work\invoice-tool\notes.md")));
+    await store.WaitForScansAsync(Timeout);
+    store.RefreshNow();
+    Assert.Equal(StackStatus.Open, Assert.Single(store.Stacks, s => s.Kind == StackKind.Folder).Status);
+    Assert.Equal(0, store.ConvergedCount);
+  }
+
+  [Fact]
+  public async Task Emptying_The_Recycle_Areas_Ends_Restore_For_Earlier_Runs()
+  {
+    using var store = await ScannedStore();
+    var file = store.Stacks.Single(s => s.Kind == StackKind.File);
+    store.Decide(StackDecision.Suggested(file));
+    var batch = await store.ExecutePlanAsync(CancellationToken.None);
+    Assert.Contains(store.RecycleAreas, a => a.Bytes > 0);
+
+    await store.EmptyRecycleAreasAsync();
+
+    Assert.NotNull(store.History.Single(b => b.Id == batch.Id).EmptiedAt);
+    Assert.DoesNotContain(store.RecycleAreas, a => a.Bytes > 0);
+    var recycled = batch.Items.Single(i => i.Kind == PlanItemKind.Recycle).RecycledPath!;
+    Assert.False(File.Exists(recycled));
   }
 
   [Fact]

@@ -188,6 +188,12 @@ When a test hangs, VSTest writes a sequence attachment under
     folders, wrappers and containers, boilerplate inside code projects), `SourceScannerTests`,
     `IndexedWorkbenchStoreTests` and `RealIndexRenderingTests`. Core.Tests has 304 tests, Gui.Tests 3;
     all 307 pass.
+- 2026-10-23, running the plan (PLAN-001 Phase 5):
+  - `PlanExecutorTests` move and copy real files inside temp trees, with the recycle area under the test data
+    folder: copy and verify, never overwrite, a stack's recycling held back when its copy fails, a protected
+    copy refused, a locked file left behind and moved on retry, restore, a restore conflict settled by
+    renaming, and emptying. Store tests run, restore and empty end to end, and the real-index GUI test runs
+    the plan from the plan screen. Core.Tests has 319 tests, Gui.Tests 3; all 322 pass.
 
 ## Bootstrap Validation
 

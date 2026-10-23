@@ -45,6 +45,9 @@ public interface IWorkbenchStore
   /// <summary>All known stacks, including pending, converged and kept-all ones.</summary>
   IReadOnlyList<Stack> Stacks { get; }
 
+  /// <summary>Stacks consolidated by an earlier run; they may no longer be listed once only the keeper remains.</summary>
+  int ConvergedCount { get; }
+
   /// <summary>Decided stacks waiting to run, in the order they were added.</summary>
   IReadOnlyList<PlanEntry> Plan { get; }
 

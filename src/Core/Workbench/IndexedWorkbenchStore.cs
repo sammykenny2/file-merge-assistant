@@ -12,8 +12,8 @@ namespace FileMergeAssistant.Workbench;
 
 /// <summary>
 /// The workbench over the real index: sources and scan jobs in SQLite, stacks detected from the index, decisions and
-/// the pending plan stored as decisions. This store only reads the user's files; running the plan comes with PLAN-001
-/// Phase 5.
+/// the pending plan stored as decisions, and runs of the plan with a journal for retry and restore (PLAN-001 Phase 5).
+/// Only <see cref="PlanExecutor"/> changes the user's files, and only when the user runs the plan.
 /// </summary>
 /// <remarks>
 /// Scans run on <see cref="ScanWorker"/>'s background task. Snapshots are rebuilt off the UI thread, then swapped and
@@ -21,7 +21,6 @@ namespace FileMergeAssistant.Workbench;
 /// </remarks>
 public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 {
-  public const string NotYetAvailable = "執行功能在下一版加入。這一版只會建立索引、找出疊，並記錄你的決定；不會改動任何檔案。";
 
   private static readonly string[] DefaultExclusions = ["Thumbs.db", "desktop.ini", ".DS_Store", "~$*", "*.tmp"];
   private static readonly TimeSpan DetectInterval = TimeSpan.FromSeconds(4);
@@ -40,6 +39,9 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   private readonly Dictionary<string, StoredDecision> _decisions = new(StringComparer.Ordinal);
   private readonly Dictionary<string, PlanItem> _itemStates = new(StringComparer.Ordinal);
 
+  private readonly PlanExecutor _executor;
+  private IReadOnlyList<ExecutionBatch> _history = [];
+  private IReadOnlyList<RestoreConflict> _conflicts = [];
   private IReadOnlyList<SourceInfo> _sources = [];
   private IReadOnlyList<ScanJobInfo> _jobs = [];
   private IReadOnlyList<Stack> _detected = [];
@@ -58,7 +60,9 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     ScanWorker.RecoverInterrupted(database);
     _worker = new ScanWorker(database, () => _onlineRoots);
     _worker.JobChanged += (_, ended) => QueueRefresh(detect: ended || _sinceDetect.Elapsed > DetectInterval);
+    _executor = new PlanExecutor(new RecycleAreaLocator(Path.GetDirectoryName(Path.GetFullPath(database.Path))!));
     LoadDecisions();
+    LoadHistory();
     Apply(Build(detect: true));
   }
 
@@ -86,12 +90,32 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   public IReadOnlyList<Stack> Stacks => _stacks;
   public IReadOnlyList<PlanEntry> Plan => _plan;
   public DateTimeOffset? PlanCheckedAt { get; private set; }
-  public IReadOnlyList<ExecutionBatch> History { get; } = [];
-  public IReadOnlyList<RestoreConflict> RestoreConflicts { get; } = [];
-  public IReadOnlyList<RecycleArea> RecycleAreas { get; } = [];
+  public IReadOnlyList<ExecutionBatch> History => _history;
+  public IReadOnlyList<RestoreConflict> RestoreConflicts => _conflicts;
+
+  /// <summary>What each volume's recycle area holds: recycled copies and replaced keeper files not yet restored or emptied.</summary>
+  public IReadOnlyList<RecycleArea> RecycleAreas =>
+    _history.Where(b => b.EmptiedAt is null)
+      .SelectMany(b => b.Items)
+      .Where(i => i.RecycleVolume is not null && i.Kind is PlanItemKind.Recycle or PlanItemKind.Replace
+        && i.State is BatchItemState.Done or BatchItemState.Failed)
+      .GroupBy(i => i.RecycleVolume!, StringComparer.OrdinalIgnoreCase)
+      .Select(g => new RecycleArea(g.Key, g.Sum(i => i.FileCount > 0 && i.FailedFiles > 0 ? i.Bytes * (i.FileCount - i.FailedFiles) / i.FileCount : i.Bytes)))
+      .ToList();
+
+  public int ConvergedCount
+  {
+    get
+    {
+      lock (_stateGate)
+      {
+        return _decisions.Values.Count(d => d.Status == "Converged");
+      }
+    }
+  }
   public SinceLastVisit? SinceLastVisit => null;
-  public bool CanExecute => false;
-  public string? ExecuteUnavailableReason => NotYetAvailable;
+  public bool CanExecute => true;
+  public string? ExecuteUnavailableReason => null;
 
   public void StartScanning()
   {
@@ -394,17 +418,289 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     Changed?.Invoke(this, WorkbenchChangedEventArgs.Everything);
   }
 
-  public Task<ExecutionBatch> ExecutePlanAsync(CancellationToken cancellationToken) => throw new NotSupportedException(NotYetAvailable);
+  public async Task<ExecutionBatch> ExecutePlanAsync(CancellationToken cancellationToken)
+  {
+    // Check every item against the disk now; the executor checks each one again right before it runs.
+    await RecheckPlanAsync().ConfigureAwait(true);
+    var plan = _plan.ToList();
+    var batchId = "b" + Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + "-" + Guid.NewGuid().ToString("N")[..4];
+    var ranAt = Now;
+    var batch = await Task.Run(() => _executor.Execute(batchId, ranAt, plan, CheckItem, cancellationToken), CancellationToken.None).ConfigureAwait(true);
+    SaveBatch(batch);
 
-  public Task RetryFailedAsync(string batchId) => Task.CompletedTask;
+    lock (_stateGate)
+    {
+      foreach (var entry in plan)
+      {
+        var items = batch.Items.Where(i => i.StackId == entry.Stack.Id).ToList();
+        if (items.Count == 0)
+        {
+          continue;
+        }
+        if (items.Any(i => i.State == BatchItemState.Skipped))
+        {
+          // Something changed after the decision: the stack goes back to the list for another look.
+          _decisions.Remove(entry.Stack.Id);
+          Execute("DELETE FROM decisions WHERE stack_id = $id", ("$id", entry.Stack.Id));
+        }
+        else if (_decisions.TryGetValue(entry.Stack.Id, out var stored))
+        {
+          var converged = stored with { Status = "Converged" };
+          _decisions[entry.Stack.Id] = converged;
+          Save(entry.Stack.Id, converged);
+        }
+      }
+      _itemStates.Clear();
+    }
+    PlanCheckedAt = null;
+    RescanAffected(batch.Items);
+    LoadHistory();
+    Apply(Build(detect: false, probe: false));
+    ApplyDecisions();
+    Changed?.Invoke(this, WorkbenchChangedEventArgs.Everything);
+    return batch;
+  }
 
-  public Task RestoreItemAsync(string batchId, string itemId) => Task.CompletedTask;
+  public async Task RetryFailedAsync(string batchId)
+  {
+    var batch = _history.FirstOrDefault(b => b.Id == batchId);
+    if (batch is null)
+    {
+      return;
+    }
+    var items = await Task.Run(() => batch.Items.Select(i => i.State == BatchItemState.Failed ? PlanExecutor.Retry(i) : i).ToList()).ConfigureAwait(true);
+    SaveItems(batchId, items);
+    RescanAffected(items);
+    LoadHistory();
+    Changed?.Invoke(this, WorkbenchChangedEventArgs.Everything);
+  }
 
-  public Task RestoreBatchAsync(string batchId) => Task.CompletedTask;
+  public Task RestoreItemAsync(string batchId, string itemId) => RestoreAsync(batchId, i => i.Id == itemId);
 
-  public Task ResolveRestoreConflictAsync(string conflictId, RestoreConflictChoice choice, string? folder) => Task.CompletedTask;
+  public Task RestoreBatchAsync(string batchId) => RestoreAsync(batchId, _ => true);
 
-  public Task EmptyRecycleAreasAsync() => Task.CompletedTask;
+  public async Task ResolveRestoreConflictAsync(string conflictId, RestoreConflictChoice choice, string? folder)
+  {
+    var conflict = _conflicts.FirstOrDefault(c => c.Id == conflictId);
+    var batch = conflict is null ? null : _history.FirstOrDefault(b => b.Id == conflict.BatchId);
+    var item = batch?.Items.FirstOrDefault(i => i.Id == conflict!.ItemId);
+    if (conflict is null || batch is null || item is null || conflict.Resolution is not null)
+    {
+      return;
+    }
+    var now = Now;
+    var placed = await Task.Run(() => PlanExecutor.Resolve(conflict, item, choice, folder, now)).ConfigureAwait(true);
+    var resolution = placed is null ? "已留在回收區，之後仍可還原。" : $"已還原到 {placed}，原位置現在的檔沒有被改動。";
+    Execute("UPDATE restore_conflicts SET resolution = $r WHERE id = $id", ("$r", resolution), ("$id", conflictId));
+    if (placed is not null)
+    {
+      SaveItems(batch.Id, batch.Items.Select(i => i.Id == item.Id ? i with { State = BatchItemState.Restored } : i).ToList());
+      Reopen(item.StackId);
+      RescanAffected([item]);
+    }
+    LoadHistory();
+    ApplyDecisions();
+    Changed?.Invoke(this, WorkbenchChangedEventArgs.Everything);
+  }
+
+  public async Task EmptyRecycleAreasAsync()
+  {
+    var batches = _history.Where(b => b.EmptiedAt is null).ToList();
+    await Task.Run(() =>
+    {
+      foreach (var batch in batches)
+      {
+        _executor.Empty(batch);
+      }
+    }).ConfigureAwait(true);
+    var now = Stamp(Now);
+    foreach (var batch in batches)
+    {
+      Execute("UPDATE batches SET emptied_at = $at WHERE id = $id", ("$at", now), ("$id", batch.Id));
+    }
+    LoadHistory();
+    Changed?.Invoke(this, WorkbenchChangedEventArgs.Everything);
+  }
+
+  private async Task RestoreAsync(string batchId, Func<BatchItem, bool> which)
+  {
+    var batch = _history.FirstOrDefault(b => b.Id == batchId);
+    if (batch is null || batch.EmptiedAt is not null)
+    {
+      return;
+    }
+    var open = _conflicts.Where(c => c.BatchId == batchId && c.Resolution is null).Select(c => c.ItemId).ToHashSet(StringComparer.Ordinal);
+    var now = Now;
+    var outcomes = await Task.Run(() => batch.Items
+      .Select(i => which(i) && i.CanRestore && !open.Contains(i.Id) ? Restore(batchId, i, now) : new RestoreOutcome(i, null))
+      .ToList()).ConfigureAwait(true);
+    SaveItems(batchId, outcomes.Select(o => o.Item).ToList());
+    foreach (var conflict in outcomes.Select(o => o.Conflict).Where(c => c is not null))
+    {
+      SaveConflict(conflict!);
+    }
+    foreach (var stackId in outcomes.Where(o => o.Item.State == BatchItemState.Restored).Select(o => o.Item.StackId).Distinct(StringComparer.Ordinal))
+    {
+      Reopen(stackId);
+    }
+    RescanAffected(outcomes.Select(o => o.Item).ToList());
+    LoadHistory();
+    ApplyDecisions();
+    Changed?.Invoke(this, WorkbenchChangedEventArgs.Everything);
+  }
+
+  private RestoreOutcome Restore(string batchId, BatchItem item, DateTimeOffset now)
+  {
+    try
+    {
+      return _executor.Restore(batchId, item, now);
+    }
+    catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+    {
+      return new RestoreOutcome(item with { FailureReason = $"還原沒有完成：{e.Message}" }, null);
+    }
+  }
+
+  /// <summary>A restored stack goes back to the list: its copies are where they were.</summary>
+  private void Reopen(string stackId)
+  {
+    lock (_stateGate)
+    {
+      if (_decisions.Remove(stackId))
+      {
+        Execute("DELETE FROM decisions WHERE stack_id = $id", ("$id", stackId));
+      }
+    }
+  }
+
+  /// <summary>Queues an update of every source a run touched, so the index matches the disk again.</summary>
+  private void RescanAffected(IReadOnlyList<BatchItem> items)
+  {
+    var paths = items.SelectMany(i => new[] { i.OriginalPath, i.CreatedPath, i.SourcePath }).Where(p => p is not null).Select(p => p!).ToList();
+    using (var connection = _database.Open())
+    {
+      foreach (var source in _sources.Where(s => paths.Any(p => LocationSuggester.Same(p, s.RootPath) || LocationSuggester.Inside(p, s.RootPath))))
+      {
+        var active = IndexDatabase.Scalar<long>(connection,
+          "SELECT COUNT(*) FROM jobs WHERE source_id = $s AND state IN ('Queued', 'Running', 'Pausing')", ("$s", source.Id));
+        if (active == 0)
+        {
+          QueueJob(connection, source.Id, source.Name, ScanJobKind.Update, "整理之後更新索引");
+        }
+      }
+    }
+    _worker.Wake();
+  }
+
+  private void SaveBatch(ExecutionBatch batch)
+  {
+    Execute("INSERT INTO batches(id, ran_at) VALUES ($id, $at)", ("$id", batch.Id), ("$at", Stamp(batch.RanAt)));
+    SaveItems(batch.Id, batch.Items);
+  }
+
+  private void SaveItems(string batchId, IReadOnlyList<BatchItem> items)
+  {
+    using var connection = _database.Open();
+    IndexDatabase.InTransaction(connection, () =>
+    {
+      for (var i = 0; i < items.Count; i++)
+      {
+        var item = items[i];
+        IndexDatabase.Execute(connection,
+          """
+          INSERT INTO batch_items(batch_id, id, position, stack_id, kind, target, detail, state, bytes, file_count, failed_files,
+            failure_reason, retried, recycle_volume, original_path, recycled_path, created_path, source_path)
+          VALUES ($b, $id, $pos, $stack, $kind, $target, $detail, $state, $bytes, $files, $failed, $reason, $retried, $volume,
+            $original, $recycled, $created, $source)
+          ON CONFLICT(batch_id, id) DO UPDATE SET state = excluded.state, failed_files = excluded.failed_files,
+            failure_reason = excluded.failure_reason, retried = excluded.retried, recycled_path = excluded.recycled_path,
+            created_path = excluded.created_path
+          """,
+          ("$b", batchId), ("$id", item.Id), ("$pos", i), ("$stack", item.StackId), ("$kind", item.Kind.ToString()), ("$target", item.Target),
+          ("$detail", item.Detail), ("$state", item.State.ToString()), ("$bytes", item.Bytes), ("$files", item.FileCount),
+          ("$failed", item.FailedFiles), ("$reason", item.FailureReason), ("$retried", item.Retried ? 1 : 0), ("$volume", item.RecycleVolume),
+          ("$original", item.OriginalPath), ("$recycled", item.RecycledPath), ("$created", item.CreatedPath), ("$source", item.SourcePath));
+      }
+    });
+  }
+
+  private void SaveConflict(RestoreConflict c) =>
+    Execute(
+      """
+      INSERT OR REPLACE INTO restore_conflicts(id, batch_id, item_id, original_path, recycled_at, recycled_bytes, recycled_modified,
+        current_created, current_bytes, resolution)
+      VALUES ($id, $b, $item, $path, $rat, $rbytes, $rmod, $ccreated, $cbytes, NULL)
+      """,
+      ("$id", c.Id), ("$b", c.BatchId), ("$item", c.ItemId), ("$path", c.OriginalPath), ("$rat", Stamp(c.RecycledAt)),
+      ("$rbytes", c.RecycledBytes), ("$rmod", Stamp(c.RecycledModified)), ("$ccreated", Stamp(c.CurrentCreated)), ("$cbytes", c.CurrentBytes));
+
+  private void LoadHistory()
+  {
+    using var connection = _database.Open();
+    var items = new Dictionary<string, List<BatchItem>>(StringComparer.Ordinal);
+    using (var command = IndexDatabase.Command(connection,
+      """
+      SELECT batch_id, id, stack_id, kind, target, detail, state, bytes, file_count, failed_files, failure_reason, retried,
+        recycle_volume, original_path, recycled_path, created_path, source_path
+      FROM batch_items ORDER BY batch_id, position
+      """))
+    using (var reader = command.ExecuteReader())
+    {
+      while (reader.Read())
+      {
+        string? Text(int column) => reader.IsDBNull(column) ? null : reader.GetString(column);
+        var item = new BatchItem(reader.GetString(1), reader.GetString(2), Enum.Parse<PlanItemKind>(reader.GetString(3)), reader.GetString(4),
+          Enum.Parse<BatchItemState>(reader.GetString(6)))
+        {
+          Detail = reader.GetString(5),
+          Bytes = reader.GetInt64(7),
+          FileCount = reader.GetInt64(8),
+          FailedFiles = reader.GetInt64(9),
+          FailureReason = Text(10),
+          Retried = reader.GetInt64(11) != 0,
+          RecycleVolume = Text(12),
+          OriginalPath = Text(13),
+          RecycledPath = Text(14),
+          CreatedPath = Text(15),
+          SourcePath = Text(16),
+        };
+        if (!items.TryGetValue(reader.GetString(0), out var list))
+        {
+          items[reader.GetString(0)] = list = [];
+        }
+        list.Add(item);
+      }
+    }
+    var batches = new List<ExecutionBatch>();
+    using (var command = IndexDatabase.Command(connection, "SELECT id, ran_at, emptied_at FROM batches ORDER BY ran_at DESC"))
+    using (var reader = command.ExecuteReader())
+    {
+      while (reader.Read())
+      {
+        batches.Add(new ExecutionBatch(reader.GetString(0), ParseStamp(reader, 1) ?? DateTimeOffset.Now, items.GetValueOrDefault(reader.GetString(0)) ?? [])
+        {
+          EmptiedAt = ParseStamp(reader, 2),
+        });
+      }
+    }
+    var conflicts = new List<RestoreConflict>();
+    using (var command = IndexDatabase.Command(connection,
+      "SELECT id, batch_id, item_id, original_path, recycled_at, recycled_bytes, recycled_modified, current_created, current_bytes, resolution FROM restore_conflicts"))
+    using (var reader = command.ExecuteReader())
+    {
+      while (reader.Read())
+      {
+        conflicts.Add(new RestoreConflict(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3),
+          ParseStamp(reader, 4) ?? DateTimeOffset.Now, reader.GetInt64(5), ParseStamp(reader, 6) ?? DateTimeOffset.Now,
+          ParseStamp(reader, 7) ?? DateTimeOffset.Now, reader.GetInt64(8))
+        {
+          Resolution = reader.IsDBNull(9) ? null : reader.GetString(9),
+        });
+      }
+    }
+    _history = batches;
+    _conflicts = conflicts;
+  }
 
   public void RespondToNotice(string noticeId, NoticeResponse response)
   {
@@ -589,6 +885,10 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         {
           status = StackStatus.KeptAll;
         }
+        else if (stored.Status == "Converged")
+        {
+          status = StackStatus.Converged;
+        }
         else if (stored.Status == "Reopened")
         {
           // The stack changed after the decision (ADR-006): back in the list, with the earlier choices preloaded.
@@ -631,6 +931,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       var moved = stored with
       {
         Decision = stored.Decision with { StackId = stack.Id },
+        // A converged stack with a new copy comes back for review too (ADR-006).
         Status = stored.Status == "KeptAll" ? "KeptAll" : "Reopened",
       };
       _decisions.Remove(oldId);
@@ -650,26 +951,23 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   private (PlanEntry Entry, List<PlanItem> Items) Recheck(PlanEntry entry)
   {
-    var keeperThere = File.Exists(entry.Keeper.Path) || Directory.Exists(entry.Keeper.Path);
     var items = new List<PlanItem>();
     foreach (var item in entry.Items)
     {
-      string? change = null;
-      if (!keeperThere)
-      {
-        change = $"正本 {entry.Keeper.Path} 已經不在原位置，所以先停下來。";
-      }
-      else if (item.IsCopyLike)
-      {
-        change = CheckCopy(entry, item);
-      }
-      else
-      {
-        change = CheckRecycle(entry, item);
-      }
+      var change = CheckItem(entry, item);
       items.Add(item with { Check = change is null ? PlanCheck.Confirmed : PlanCheck.Changed, ChangeDetail = change });
     }
     return (entry, items);
+  }
+
+  /// <summary>Checks one item against the disk; returns why it no longer matches the decision, or null.</summary>
+  private string? CheckItem(PlanEntry entry, PlanItem item)
+  {
+    if (!File.Exists(entry.Keeper.Path) && !Directory.Exists(entry.Keeper.Path))
+    {
+      return $"正本 {entry.Keeper.Path} 已經不在原位置，所以先停下來。";
+    }
+    return item.IsCopyLike ? CheckCopy(entry, item) : CheckRecycle(entry, item);
   }
 
   private static string? CheckCopy(PlanEntry entry, PlanItem item)

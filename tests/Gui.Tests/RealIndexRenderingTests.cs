@@ -96,11 +96,24 @@ public sealed class RealIndexRenderingTests : IDisposable
       Snap("r3-sources");
 
       main.ShowPlan();
-      WpfHost.Wait(store.RecheckPlanAsync());
       var plan = Assert.IsType<PlanViewModel>(main.CurrentPage);
-      Assert.False(plan.CanExecute);
-      Assert.NotNull(plan.UnavailableReason);
+      // Opening the plan starts a re-check against the disk; wait for it before running.
+      for (var i = 0; i < 200 && (plan.IsChecking || !plan.CanExecute); i++)
+      {
+        WpfHost.Wait(Task.Delay(25));
+      }
+      Assert.True(plan.CanExecute);
       Snap("r4-plan");
+
+      plan.ExecuteCommand.Execute(null);
+      WpfHost.Wait(store.WaitForScansAsync(TimeSpan.FromSeconds(60)));
+      for (var i = 0; i < 100 && main.CurrentPage is not HistoryViewModel; i++)
+      {
+        WpfHost.Wait(Task.Delay(50));
+      }
+      var history = Assert.IsType<HistoryViewModel>(main.CurrentPage);
+      Assert.True(history.HasBatch);
+      Snap("r5-history");
     });
 
     Assert.Empty(errors);
