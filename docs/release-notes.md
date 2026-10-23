@@ -7,6 +7,22 @@ workflow refuses to start without an entry for the version. See [deployment.md](
 
 No version has been published yet.
 
+## 0.2.1
+
+Summary: File Merge Assistant now stays in the tray, can start when you sign in, checks for updates from the tray or Settings, and speaks English or Traditional Chinese, switched at once in Settings.
+
+- Tray icon with a menu to open or hide the main window, check for updates and exit. Closing the main window keeps
+  the app running in the tray, so scans continue.
+- Settings > Startup: start File Merge Assistant when you sign in (on), keep running in the tray when the main window
+  closes (on), and open the main window after a sign-in start (off). Starting at sign-in is offered by the installed
+  version; a switch turned off in Windows' Startup apps stays off.
+- Opening the app again brings up the window that is already running instead of an "already open" message.
+- Settings > Version and updates checks, downloads and installs a new version with one button; the tray's "Check for
+  updates…" does the same and asks before restarting. Exiting and installing wait while files are being moved.
+- Settings > General > Display language: Auto-detect, English or Traditional Chinese. Every screen, the tray and the
+  dialogs switch at once.
+- A new app icon.
+
 ## 0.2.0
 
 Summary: A new workbench that consolidates copies one small stack at a time: scan your folders, pick the copy to keep, merge in what only the others have, and move the rest to a recycle area you can restore from.
