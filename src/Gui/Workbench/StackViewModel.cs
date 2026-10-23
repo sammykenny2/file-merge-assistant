@@ -329,6 +329,12 @@ public sealed partial class StackViewModel : PageViewModel
   [ObservableProperty]
   private string? _alert;
 
+  [ObservableProperty]
+  private string? _hiddenCopiesText;
+
+  [ObservableProperty]
+  private string? _reopenedText;
+
   public StackViewModel(IWorkbenchStore store, INavigator navigator, string stackId)
     : base(store, navigator)
   {
@@ -344,6 +350,9 @@ public sealed partial class StackViewModel : PageViewModel
 
   /// <summary>The comparison lists at most this many differing paths; the decision still covers all of them.</summary>
   public const int MaxRows = 200;
+
+  /// <summary>The comparison shows at most this many copies as columns.</summary>
+  public const int MaxColumns = 12;
 
   public const double RowHeaderWidth = 230;
   public const double CellWidth = 180;
@@ -374,7 +383,7 @@ public sealed partial class StackViewModel : PageViewModel
     {
       return;
     }
-    _stack = current;
+    _stack = KeepDetails(current, _stack);
     Rebuild();
   }
 
@@ -452,6 +461,33 @@ public sealed partial class StackViewModel : PageViewModel
     }
     Conflicts.Clear();
     Rebuild();
+    LoadDetails();
+  }
+
+  /// <summary>Loads slower facts (git status) after the stack is shown, then redraws if the user is still on it.</summary>
+  private void LoadDetails()
+  {
+    var shown = _stack;
+    var scheduler = SynchronizationContext.Current is null ? TaskScheduler.Current : TaskScheduler.FromCurrentSynchronizationContext();
+    Store.WithDetailsAsync(shown).ContinueWith(task =>
+    {
+      if (task.IsCompletedSuccessfully && !ReferenceEquals(task.Result, shown) && _stack.Id == shown.Id && !IsDone)
+      {
+        _stack = KeepDetails(_stack, task.Result);
+        Rebuild();
+      }
+    }, CancellationToken.None, TaskContinuationOptions.None, scheduler);
+  }
+
+  /// <summary>Carries git facts from <paramref name="detailed"/> over to a newer copy of the same stack.</summary>
+  private static Stack KeepDetails(Stack current, Stack detailed)
+  {
+    if (detailed.Copies.All(c => c.Git is null))
+    {
+      return current;
+    }
+    var git = detailed.Copies.Where(c => c.Git is not null).ToDictionary(c => c.Id, c => c.Git, StringComparer.Ordinal);
+    return current with { Copies = current.Copies.Select(c => c.Git is null && git.TryGetValue(c.Id, out var g) ? c with { Git = g } : c).ToList() };
   }
 
   private void PickAction(StackAction action)
@@ -467,6 +503,14 @@ public sealed partial class StackViewModel : PageViewModel
     var review = _review;
     var summary = StackTriage.Summarize(_stack);
     var active = review.ActiveCopies;
+    // A very large file stack would make the table unreadable; the decision still covers every copy.
+    var shown = active.Take(MaxColumns).ToList();
+    HiddenCopiesText = active.Count > MaxColumns
+      ? $"還有 {Fmt.Count(active.Count - MaxColumns)} 份沒有列在表格裡；選的做法會套用到這疊的全部 {Fmt.Count(active.Count)} 份。"
+      : null;
+    ReopenedText = _stack.NewCopyIds.Count == 0
+      ? null
+      : $"你決定之後，這疊出現了新的複本：{string.Join("、", _stack.Copies.Where(c => _stack.NewCopyIds.Contains(c.Id)).Select(c => c.Path))}。原本的選擇已經帶入，請再確認一次。";
 
     Title = _stack.Title;
     Group = StackText.GroupTitle(summary.Group);
@@ -481,7 +525,7 @@ public sealed partial class StackViewModel : PageViewModel
       : $"已移出這疊：{string.Join("、", review.RemovedCopies.Select(c => $"{c.SourceName} {c.Path}"))}。之後不會再把它和這疊放在一起。";
 
     Columns.Clear();
-    foreach (var copy in active)
+    foreach (var copy in shown)
     {
       var id = copy.Id;
       Columns.Add(new StackColumnViewModel(review, copy, review.Keeper, now,
@@ -501,7 +545,7 @@ public sealed partial class StackViewModel : PageViewModel
           Rebuild();
         }));
     }
-    TableWidth = RowHeaderWidth + CellWidth * active.Count;
+    TableWidth = RowHeaderWidth + CellWidth * shown.Count;
 
     ColumnTone ToneOf(StackCopy copy) => review.RoleOf(copy) switch
     {
@@ -514,7 +558,7 @@ public sealed partial class StackViewModel : PageViewModel
     SameLabel = _stack.SameLabel ?? $"{Fmt.Count(_stack.SameFileCount)} 個檔";
     SameSub = $"{active.Count} 份內容都相同";
     SameCells.Clear();
-    foreach (var copy in active)
+    foreach (var copy in shown)
     {
       SameCells.Add(new SimpleCellViewModel("相同", ToneOf(copy)));
     }
@@ -523,7 +567,7 @@ public sealed partial class StackViewModel : PageViewModel
     foreach (var row in review.Rows.Take(MaxRows))
     {
       var (hint, hintWarn) = Hint(review, row);
-      var cells = active.Select(copy => Cell(review, row, copy, ToneOf(copy), now)).ToList();
+      var cells = shown.Select(copy => Cell(review, row, copy, ToneOf(copy), now)).ToList();
       Rows.Add(new StackRowViewModel(row.Row.RelativePath, row.Row.Description, row.Row.Warning, hint, hintWarn, cells));
     }
     NoDiff = Rows.Count == 0;
@@ -539,7 +583,7 @@ public sealed partial class StackViewModel : PageViewModel
     RegenerableCells.Clear();
     if (_stack.Regenerable is { } regenerable)
     {
-      foreach (var copy in active)
+      foreach (var copy in shown)
       {
         var bytes = regenerable.BytesPerCopy[_stack.IndexOf(copy.Id)];
         RegenerableCells.Add(new SimpleCellViewModel(bytes > 0 ? Fmt.Size(bytes) : "沒有", ToneOf(copy)));

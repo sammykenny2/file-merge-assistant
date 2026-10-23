@@ -37,7 +37,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   // when no synchronization context is given and refreshes are applied on a worker thread.
   private readonly object _stateGate = new();
   private readonly Stopwatch _sinceDetect = Stopwatch.StartNew();
-  private readonly Dictionary<string, (StackDecision Decision, string Status, DateTimeOffset At)> _decisions = new(StringComparer.Ordinal);
+  private readonly Dictionary<string, StoredDecision> _decisions = new(StringComparer.Ordinal);
   private readonly Dictionary<string, PlanItem> _itemStates = new(StringComparer.Ordinal);
 
   private IReadOnlyList<SourceInfo> _sources = [];
@@ -121,9 +121,17 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     throw new TimeoutException("Scans did not finish in time.");
   }
 
-  public StackDecision? DecisionFor(string stackId) => _decisions.TryGetValue(stackId, out var d) ? d.Decision : null;
+  public StackDecision? DecisionFor(string stackId)
+  {
+    lock (_stateGate)
+    {
+      return _decisions.TryGetValue(stackId, out var d) ? d.Decision : null;
+    }
+  }
 
   public IReadOnlyList<SuggestedLocation> SuggestLocations() => LocationSuggester.Suggest(_volumes);
+
+  public Task<Stack> WithDetailsAsync(Stack stack) => Task.Run(() => GitStatusReader.Enrich(stack));
 
   public Task<IReadOnlyList<string>> AddSourcesAsync(IReadOnlyList<string> paths, SourceOptions options, bool startScan)
   {
@@ -186,7 +194,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       }
     }
     _worker.Wake();
-    Apply(Build(detect: false));
+    Apply(Build(detect: false, probe: false));
     return Task.FromResult<IReadOnlyList<string>>(problems);
   }
 
@@ -209,7 +217,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       }
     }
     _worker.Wake();
-    Apply(Build(detect: false));
+    Apply(Build(detect: false, probe: false));
     return Task.CompletedTask;
   }
 
@@ -220,7 +228,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       Execute("UPDATE jobs SET state = 'Pausing' WHERE id = $id", ("$id", jobId));
       _worker.Pause(jobId);
     }
-    Apply(Build(detect: false));
+    Apply(Build(detect: false, probe: false));
     return Task.CompletedTask;
   }
 
@@ -229,7 +237,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     Execute("UPDATE jobs SET state = 'Queued', kind = 'Resume', reason = '繼續上次的進度', position = (SELECT COALESCE(MIN(position), 0) - 1 FROM jobs) WHERE id = $id",
       ("$id", jobId));
     _worker.Wake();
-    Apply(Build(detect: false));
+    Apply(Build(detect: false, probe: false));
     return Task.CompletedTask;
   }
 
@@ -243,7 +251,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     {
       Execute("DELETE FROM jobs WHERE id = $id", ("$id", jobId));
     }
-    Apply(Build(detect: false));
+    Apply(Build(detect: false, probe: false));
     return Task.CompletedTask;
   }
 
@@ -251,7 +259,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   {
     Execute("UPDATE jobs SET state = 'Queued', kind = 'FirstScan', reason = '從頭重新掃描', saved = 0 WHERE id = $id", ("$id", jobId));
     _worker.Wake();
-    Apply(Build(detect: false));
+    Apply(Build(detect: false, probe: false));
     return Task.CompletedTask;
   }
 
@@ -275,7 +283,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       IndexDatabase.Execute(connection, "UPDATE jobs SET position = $p WHERE id = $id", ("$p", b), ("$id", queued[from].Id));
       IndexDatabase.Execute(connection, "UPDATE jobs SET position = $p WHERE id = $id", ("$p", a), ("$id", queued[to].Id));
     }
-    Apply(Build(detect: false));
+    Apply(Build(detect: false, probe: false));
   }
 
   public Task RescanFailedAsync(string jobId)
@@ -291,7 +299,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       QueueJob(connection, job.SourceId, job.Title, ScanJobKind.Update, $"重新掃描上次無法讀取的 {job.Errors} 個項目");
     }
     _worker.Wake();
-    Apply(Build(detect: false));
+    Apply(Build(detect: false, probe: false));
     return Task.CompletedTask;
   }
 
@@ -322,15 +330,10 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     }
     else
     {
-      var status = decision.Action == StackAction.KeepAll ? "KeptAll" : "Pending";
-      var at = Now;
-      _decisions[stack.Id] = (decision, status, at);
-      Execute(
-        """
-        INSERT INTO decisions(stack_id, json, status, decided_at) VALUES ($id, $json, $status, $at)
-        ON CONFLICT(stack_id) DO UPDATE SET json = excluded.json, status = excluded.status, decided_at = excluded.decided_at
-        """,
-        ("$id", stack.Id), ("$json", Serialize(decision)), ("$status", status), ("$at", Stamp(at)));
+      var stored = new StoredDecision(decision, decision.Action == StackAction.KeepAll ? "KeptAll" : "Pending", Now,
+        stack.Copies.Select(c => c.Id).ToList());
+      _decisions[stack.Id] = stored;
+      Save(stack.Id, stored);
       PlanCheckedAt = null;
     }
   }
@@ -464,8 +467,15 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     });
   }
 
-  private Snapshot Build(bool detect)
+  /// <param name="detect">Also run stack detection (expensive).</param>
+  /// <param name="probe">
+  /// Check every source's drive. Builds triggered from the interface pass false and reuse the last known state for
+  /// sources already seen, so a disconnected network drive cannot freeze the window; background refreshes probe.
+  /// </param>
+  private Snapshot Build(bool detect, bool probe = true)
   {
+    var known = _sources.Select(s => s.Id).ToHashSet(StringComparer.Ordinal);
+    var lastOnline = _onlineRoots;
     using var connection = _database.Open();
     var sources = new List<(SourceInfo Info, string Root, bool Online)>();
     var jobs = ReadJobs(connection);
@@ -486,7 +496,9 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         var id = reader.GetString(0);
         var root = reader.GetString(2);
         var serial = reader.IsDBNull(6) ? null : reader.GetString(6);
-        var isOnline = Directory.Exists(root) && (serial is null || _volumes.Describe(root)?.Serial is not { } current || current == serial);
+        var isOnline = !probe && known.Contains(id)
+          ? lastOnline.ContainsKey(id)
+          : Directory.Exists(root) && (serial is null || _volumes.Describe(root)?.Serial is not { } current || current == serial);
         if (isOnline)
         {
           online[id] = root;
@@ -559,16 +571,28 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   private void ApplyDecisionsLocked()
   {
+    FollowChangedStacks();
     var stacks = new List<Stack>(_detected.Count);
     var plan = new List<PlanEntry>();
-    foreach (var stack in _detected)
+    foreach (var detected in _detected)
     {
+      var stack = detected;
       var status = StackStatus.Open;
       if (_decisions.TryGetValue(stack.Id, out var stored) && stack.IndexOf(stored.Decision.KeeperCopyId) >= 0)
       {
+        var added = stack.Copies.Where(c => !stored.CopyIds.Contains(c.Id, StringComparer.Ordinal)).Select(c => c.Id).ToList();
+        if (added.Count > 0)
+        {
+          stack = stack with { NewCopyIds = added };
+        }
         if (stored.Status == "KeptAll")
         {
           status = StackStatus.KeptAll;
+        }
+        else if (stored.Status == "Reopened")
+        {
+          // The stack changed after the decision (ADR-006): back in the list, with the earlier choices preloaded.
+          status = StackStatus.Open;
         }
         else
         {
@@ -587,6 +611,42 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     _stacks = stacks;
     _plan = plan.OrderBy(e => e.DecidedAt).ToList();
   }
+
+  /// <summary>
+  /// A stack's id follows its copies, so a new or vanished copy gives it a new id. Decisions follow the keeper copy to
+  /// the stack that now holds it (ADR-006): a pending decision reopens the stack for another look, a keep-all decision
+  /// stays and the new copies are marked. A decision whose keeper is in no stack waits, unused.
+  /// </summary>
+  private void FollowChangedStacks()
+  {
+    var present = _detected.Select(s => s.Id).ToHashSet(StringComparer.Ordinal);
+    foreach (var (oldId, stored) in _decisions.Where(d => !present.Contains(d.Key)).ToList())
+    {
+      var holders = _detected.Where(s => s.IndexOf(stored.Decision.KeeperCopyId) >= 0).ToList();
+      if (holders.Count != 1 || _decisions.ContainsKey(holders[0].Id))
+      {
+        continue;
+      }
+      var stack = holders[0];
+      var moved = stored with
+      {
+        Decision = stored.Decision with { StackId = stack.Id },
+        Status = stored.Status == "KeptAll" ? "KeptAll" : "Reopened",
+      };
+      _decisions.Remove(oldId);
+      _decisions[stack.Id] = moved;
+      Execute("DELETE FROM decisions WHERE stack_id = $id", ("$id", oldId));
+      Save(stack.Id, moved);
+    }
+  }
+
+  private void Save(string stackId, StoredDecision stored) =>
+    Execute(
+      """
+      INSERT INTO decisions(stack_id, json, status, decided_at) VALUES ($id, $json, $status, $at)
+      ON CONFLICT(stack_id) DO UPDATE SET json = excluded.json, status = excluded.status, decided_at = excluded.decided_at
+      """,
+      ("$id", stackId), ("$json", Serialize(stored)), ("$status", stored.Status), ("$at", Stamp(stored.At)));
 
   private (PlanEntry Entry, List<PlanItem> Items) Recheck(PlanEntry entry)
   {
@@ -852,10 +912,11 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     using var reader = command.ExecuteReader();
     while (reader.Read())
     {
-      var decision = Deserialize(reader.GetString(1));
-      if (decision is not null)
+      var dto = JsonSerializer.Deserialize<DecisionDto>(reader.GetString(1), Json);
+      if (dto is not null)
       {
-        _decisions[reader.GetString(0)] = (decision, reader.GetString(2), ParseStamp(reader, 3) ?? DateTimeOffset.Now);
+        _decisions[reader.GetString(0)] = new StoredDecision(ToDecision(dto), reader.GetString(2), ParseStamp(reader, 3) ?? DateTimeOffset.Now,
+          dto.CopyIds ?? []);
       }
     }
   }
@@ -866,25 +927,28 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     IndexDatabase.Execute(connection, sql, parameters);
   }
 
+  /// <summary>A decision as stored: its status (Pending, KeptAll or Reopened) and the copies the stack had then.</summary>
+  private sealed record StoredDecision(StackDecision Decision, string Status, DateTimeOffset At, IReadOnlyList<string> CopyIds);
+
   private sealed record DecisionDto(string StackId, string KeeperCopyId, StackAction Action, string[] AlsoKeep, string[] Removed,
-    Dictionary<string, ConflictChoice> Choices, bool FromSuggestion);
+    Dictionary<string, ConflictChoice> Choices, bool FromSuggestion, string[]? CopyIds);
 
-  private static string Serialize(StackDecision d) => JsonSerializer.Serialize(
-    new DecisionDto(d.StackId, d.KeeperCopyId, d.Action, [.. d.AlsoKeep], [.. d.Removed], d.Choices.ToDictionary(), d.FromSuggestion), Json);
-
-  private static StackDecision? Deserialize(string json)
+  private static string Serialize(StoredDecision stored)
   {
-    var dto = JsonSerializer.Deserialize<DecisionDto>(json, Json);
-    return dto is null
-      ? null
-      : new StackDecision(dto.StackId, dto.KeeperCopyId, dto.Action)
-      {
-        AlsoKeep = new HashSet<string>(dto.AlsoKeep, StringComparer.Ordinal),
-        Removed = new HashSet<string>(dto.Removed, StringComparer.Ordinal),
-        Choices = new Dictionary<string, ConflictChoice>(dto.Choices, StringComparer.Ordinal),
-        FromSuggestion = dto.FromSuggestion,
-      };
+    var d = stored.Decision;
+    return JsonSerializer.Serialize(
+      new DecisionDto(d.StackId, d.KeeperCopyId, d.Action, [.. d.AlsoKeep], [.. d.Removed], d.Choices.ToDictionary(), d.FromSuggestion, [.. stored.CopyIds]),
+      Json);
   }
+
+  private static StackDecision ToDecision(DecisionDto dto) =>
+    new(dto.StackId, dto.KeeperCopyId, dto.Action)
+    {
+      AlsoKeep = new HashSet<string>(dto.AlsoKeep, StringComparer.Ordinal),
+      Removed = new HashSet<string>(dto.Removed, StringComparer.Ordinal),
+      Choices = new Dictionary<string, ConflictChoice>(dto.Choices, StringComparer.Ordinal),
+      FromSuggestion = dto.FromSuggestion,
+    };
 
   private static string Normalize(string path)
   {

@@ -64,6 +64,9 @@ public interface IWorkbenchStore
   /// <summary>The decision recorded for a stack (pending, kept all, or converged), if any.</summary>
   StackDecision? DecisionFor(string stackId);
 
+  /// <summary>The stack with slower facts filled in, such as git status (ADR-005); never changes the stack's identity.</summary>
+  Task<Stack> WithDetailsAsync(Stack stack);
+
   /// <summary>Folders worth offering on the first-run screen.</summary>
   IReadOnlyList<SuggestedLocation> SuggestLocations();
 
