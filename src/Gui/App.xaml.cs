@@ -90,6 +90,19 @@ public partial class App : Application
     }
     // Hiding the main window to the tray must not end the app; Exit in the tray menu or closing the window does.
     ShutdownMode = ShutdownMode.OnExplicitShutdown;
+    // Signing out or shutting down waits while files are being moved: Windows then lists the app as blocking it.
+    // Otherwise the app ends without asking.
+    SessionEnding += (_, args) =>
+    {
+      if (FileChanges.InProgress)
+      {
+        args.Cancel = true;
+      }
+      else
+      {
+        _exiting = true;
+      }
+    };
     // A failing command must not close the window with the user's work in it; report it and keep going.
     DispatcherUnhandledException += (_, args) =>
     {
