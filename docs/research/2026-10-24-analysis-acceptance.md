@@ -22,6 +22,7 @@ their rebuilt binaries.
 | 50,000 | C# XxHash128 | 88.621 | 104.717 | 128.671 | 2,503 |
 | 50,000 | Czkawka BLAKE3 | 96.452 | 141.846 | 138.619 | 2,503 |
 | 300,000 | C# XxHash128 | 479.041 | 673.619 | 747.831 | 15,003 |
+| 300,000 | Czkawka BLAKE3 | 531.632 | 915.401 | 768.198 | 15,003 |
 
 Each case has six sources, 19 extra indexed entries, 600 measured regenerable
 files and six excluded files. All completed cases match the independent
@@ -45,10 +46,24 @@ for that rescan; these include cached/SQLite activity and are not physical disk
 reads. This is a material indexing/retained-generation cost, not evidence that
 hash-library speed alone determines application performance.
 
+The native 300k case also completed all three phases and offline retention/resume,
+with 303,019 indexed entries and exactly 3,000 +1% backend inputs. After its third
+phase the main DB was 2,752,991,232 bytes, WAL 136,672,792 bytes, sampled working
+set 681,570,304 bytes, and process-reported read transfers 62,964,582,592 bytes.
+Those counters have the same whole-process/cached-I/O limits as the C# case.
+
 Raw retained evidence:
 
 - `build/acceptance-a7042713cbe2421894bb72c89aa5fe26/suite.json` (5k)
-- `build/acceptance-9a329d6eb5114d6fb320fb387adc5771/suite.json` (50k; 300k continues in that suite)
+- `build/acceptance-9a329d6eb5114d6fb320fb387adc5771/suite.json` (50k/300k, all four cases passed)
+- `build/acceptance-9a329d6eb5114d6fb320fb387adc5771/frozen-binaries-0f2696e/` (original binaries copied and matched to launch hashes before rebuilding)
+- [Committed compact metrics](data/2026-10-24-analysis-acceptance.json) (all eight completed cases; no source-file paths)
+
+After the assembly extraction, the host was added to the solution and the current
+graph/bounded runner passed a separate 1,000-file smoke for both engines:
+`build/acceptance-b1f8659f9a6d4b00b49f642ac25b97ad/suite.json`. Each case matched 53
+groups, warm backend zero, +1% backend ten, unchanged sources and offline resume.
+This verifies the updated tooling; it is not a rerun of the large measurements.
 
 ## Interpretation and remaining cases
 
@@ -62,8 +77,7 @@ generation/verification warm it, and small development builds/tests and unrelate
 host activity were not isolated. .NET is Debug while Rust is Release. Do not use
 the table as an optimized speed comparison or performance guarantee.
 
-The Czkawka 300k case is still running and is not counted as passing here. The
-separate [offscreen WPF probe](2026-10-24-wpf-scale.md) measures synthetic UI
+The separate [offscreen WPF probe](2026-10-24-wpf-scale.md) measures synthetic UI
 layout/recycling, not input during a real scan. Physical USB/HDD, controlled
 cold disk cache, physical GUI input, full hub load-more and
 clean-VM lifecycle acceptance remain unverified. Managed XxHash128 stays the

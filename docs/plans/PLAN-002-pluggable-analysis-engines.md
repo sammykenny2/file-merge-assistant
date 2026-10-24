@@ -124,7 +124,10 @@ Unicode，異常項目以 escaped 碼位報錯且保持 partial，未自動修�
 
 Slice 5c tooling：六來源的可重建量測 host 與有整體期限／自有 child 管理的 runner
 已加入；空／重複矩陣不能形成假成功。兩引擎 5k／50k 的完整答案、warm 零後端讀取、
-+1% 只分析新檔、長路徑／排除及模擬離線恢復均通過，300k 仍在執行。
++1% 只分析新檔、長路徑／排除及模擬離線恢復均通過。後續兩引擎 300k 整輪
+也通過，快取重用、新增 3000 檔、完整答案及離線恢復皆符合；舊二進位已凍結。
+抽取分析模組後的新版 host／bounded runner 另跑兩引擎 1000 檔通過，未冒充
+重新量測大資料。可查的精簡數字保存在 research/data，原始報告留於 build。
 數值與未測項見 [acceptance baseline](../research/2026-10-24-analysis-acceptance.md)。
 GUI 互動、實體 USB 及 G5 仍待結果，未提升成熟度或切換預設。
 

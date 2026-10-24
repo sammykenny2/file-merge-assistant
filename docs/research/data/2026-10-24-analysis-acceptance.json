@@ -1,0 +1,551 @@
+{
+  "formatVersion": 1,
+  "kind": "synthetic-acceptance-summary",
+  "completedDate": "2026-10-24",
+  "sourcePathsIncluded": false,
+  "notes": [
+    "Diagnostic Debug .NET/native Release runs; OS cache and development-host activity uncontrolled.",
+    "Large baseline uses frozen 0f2696e host/Core; current graph is separately covered by 1000-file smoke.",
+    "Process I/O counters include cached/SQLite transfers, not physical disk reads.",
+    "Physical USB, visible input/DPI, clean VM and foreign-platform acceptance remain pending."
+  ],
+  "suites": [
+    {
+      "suite": "build/acceptance-a7042713cbe2421894bb72c89aa5fe26/suite.json",
+      "sourceCommit": "0f2696e2a2df3443391ce2e056dae0ec6afef1ff",
+      "sourceWorktreeDirty": true,
+      "hostSha256": "362addcee10b9044945e700291fed6321afbc8271c8ed7cc3e12e47d89d3e2e7",
+      "coreSha256": "1233bc3a75780749eff53cfd29dec44fd2f405b31f0514c260589ac5d13fb309",
+      "nativeSha256": "5299c78250e2cc7e7ffb4289472056f1bd239e9206a3dba15dad38b12808adfe",
+      "dotnetSdk": "10.0.402",
+      "cases": [
+        {
+          "primaryFiles": 5000,
+          "engine": "csharp",
+          "report": "build/acceptance-a7042713cbe2421894bb72c89aa5fe26/csharp-5000/report.json",
+          "simulatedOffline": {
+            "kind": "same-volume-directory-rename",
+            "waitedWithoutInventoryLoss": true,
+            "resumed": true
+          },
+          "phases": [
+            {
+              "name": "fresh-fma-index",
+              "scanMilliseconds": 10919,
+              "backendFiles": 5019,
+              "files": 5019,
+              "groups": 253,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 98463744,
+              "indexFiles": {
+                "index.db": 11571200,
+                "index.db-wal": 4264232,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 12968.75,
+              "processReadBytes": 97014866,
+              "processWriteBytes": 33893370
+            },
+            {
+              "name": "warm-same-index",
+              "scanMilliseconds": 14250,
+              "backendFiles": 0,
+              "files": 5019,
+              "groups": 253,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 100986880,
+              "indexFiles": {
+                "index.db": 26095616,
+                "index.db-wal": 4424912,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 14781.25,
+              "processReadBytes": 213229568,
+              "processWriteBytes": 52461885
+            },
+            {
+              "name": "plus-one-percent",
+              "scanMilliseconds": 14292,
+              "backendFiles": 50,
+              "files": 5069,
+              "groups": 253,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 102588416,
+              "indexFiles": {
+                "index.db": 40120320,
+                "index.db-wal": 4445512,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 14437.5,
+              "processReadBytes": 223070096,
+              "processWriteBytes": 53561017
+            }
+          ]
+        },
+        {
+          "primaryFiles": 5000,
+          "engine": "czkawka",
+          "report": "build/acceptance-a7042713cbe2421894bb72c89aa5fe26/czkawka-5000/report.json",
+          "simulatedOffline": {
+            "kind": "same-volume-directory-rename",
+            "waitedWithoutInventoryLoss": true,
+            "resumed": true
+          },
+          "phases": [
+            {
+              "name": "fresh-fma-index",
+              "scanMilliseconds": 9793,
+              "backendFiles": 5019,
+              "files": 5019,
+              "groups": 253,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 101117952,
+              "indexFiles": {
+                "index.db": 12767232,
+                "index.db-wal": 4490832,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 12718.75,
+              "processReadBytes": 112231157,
+              "processWriteBytes": 37617840
+            },
+            {
+              "name": "warm-same-index",
+              "scanMilliseconds": 20201,
+              "backendFiles": 0,
+              "files": 5019,
+              "groups": 253,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 99524608,
+              "indexFiles": {
+                "index.db": 28188672,
+                "index.db-wal": 4490832,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 17671.875,
+              "processReadBytes": 252010496,
+              "processWriteBytes": 60989172
+            },
+            {
+              "name": "plus-one-percent",
+              "scanMilliseconds": 15410,
+              "backendFiles": 50,
+              "files": 5069,
+              "groups": 253,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 103350272,
+              "indexFiles": {
+                "index.db": 45592576,
+                "index.db-wal": 4573232,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 13562.5,
+              "processReadBytes": 263825296,
+              "processWriteBytes": 65567690
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "suite": "build/acceptance-9a329d6eb5114d6fb320fb387adc5771/suite.json",
+      "sourceCommit": "0f2696e2a2df3443391ce2e056dae0ec6afef1ff",
+      "sourceWorktreeDirty": true,
+      "hostSha256": "362addcee10b9044945e700291fed6321afbc8271c8ed7cc3e12e47d89d3e2e7",
+      "coreSha256": "1233bc3a75780749eff53cfd29dec44fd2f405b31f0514c260589ac5d13fb309",
+      "nativeSha256": "5299c78250e2cc7e7ffb4289472056f1bd239e9206a3dba15dad38b12808adfe",
+      "dotnetSdk": "10.0.402",
+      "cases": [
+        {
+          "primaryFiles": 50000,
+          "engine": "csharp",
+          "report": "build/acceptance-9a329d6eb5114d6fb320fb387adc5771/csharp-50000/report.json",
+          "simulatedOffline": {
+            "kind": "same-volume-directory-rename",
+            "waitedWithoutInventoryLoss": true,
+            "resumed": true
+          },
+          "phases": [
+            {
+              "name": "fresh-fma-index",
+              "scanMilliseconds": 88621,
+              "backendFiles": 50019,
+              "files": 50019,
+              "groups": 2503,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 161099776,
+              "indexFiles": {
+                "index.db": 114241536,
+                "index.db-wal": 6633232,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 92453.125,
+              "processReadBytes": 2328855139,
+              "processWriteBytes": 508260675
+            },
+            {
+              "name": "warm-same-index",
+              "scanMilliseconds": 104717,
+              "backendFiles": 0,
+              "files": 50019,
+              "groups": 2503,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 191197184,
+              "indexFiles": {
+                "index.db": 259387392,
+                "index.db-wal": 6633232,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 114515.625,
+              "processReadBytes": 5702822070,
+              "processWriteBytes": 1290588438
+            },
+            {
+              "name": "plus-one-percent",
+              "scanMilliseconds": 128671,
+              "backendFiles": 500,
+              "files": 50519,
+              "groups": 2503,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 186445824,
+              "indexFiles": {
+                "index.db": 405704704,
+                "index.db-wal": 23619992,
+                "index.db-shm": 65536
+              },
+              "processCpuMilliseconds": 125968.75,
+              "processReadBytes": 5819688696,
+              "processWriteBytes": 1295199701
+            }
+          ]
+        },
+        {
+          "primaryFiles": 50000,
+          "engine": "czkawka",
+          "report": "build/acceptance-9a329d6eb5114d6fb320fb387adc5771/czkawka-50000/report.json",
+          "simulatedOffline": {
+            "kind": "same-volume-directory-rename",
+            "waitedWithoutInventoryLoss": true,
+            "resumed": true
+          },
+          "phases": [
+            {
+              "name": "fresh-fma-index",
+              "scanMilliseconds": 96452,
+              "backendFiles": 50019,
+              "files": 50019,
+              "groups": 2503,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 170590208,
+              "indexFiles": {
+                "index.db": 132677632,
+                "index.db-wal": 8153512,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 101796.875,
+              "processReadBytes": 3030597147,
+              "processWriteBytes": 761285515
+            },
+            {
+              "name": "warm-same-index",
+              "scanMilliseconds": 141846,
+              "backendFiles": 0,
+              "files": 50019,
+              "groups": 2503,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 188416000,
+              "indexFiles": {
+                "index.db": 294973440,
+                "index.db-wal": 19302232,
+                "index.db-shm": 65536
+              },
+              "processCpuMilliseconds": 132234.375,
+              "processReadBytes": 6974277362,
+              "processWriteBytes": 1783664518
+            },
+            {
+              "name": "plus-one-percent",
+              "scanMilliseconds": 138619,
+              "backendFiles": 500,
+              "files": 50519,
+              "groups": 2503,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 190038016,
+              "indexFiles": {
+                "index.db": 458428416,
+                "index.db-wal": 19302232,
+                "index.db-shm": 65536
+              },
+              "processCpuMilliseconds": 122375,
+              "processReadBytes": 7113059192,
+              "processWriteBytes": 1815959947
+            }
+          ]
+        },
+        {
+          "primaryFiles": 300000,
+          "engine": "csharp",
+          "report": "build/acceptance-9a329d6eb5114d6fb320fb387adc5771/csharp-300000/report.json",
+          "simulatedOffline": {
+            "kind": "same-volume-directory-rename",
+            "waitedWithoutInventoryLoss": true,
+            "resumed": true
+          },
+          "phases": [
+            {
+              "name": "fresh-fma-index",
+              "scanMilliseconds": 479041,
+              "backendFiles": 300019,
+              "files": 300019,
+              "groups": 15003,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 520679424,
+              "indexFiles": {
+                "index.db": 685125632,
+                "index.db-wal": 36803992,
+                "index.db-shm": 98304
+              },
+              "processCpuMilliseconds": 512250,
+              "processReadBytes": 25884440028,
+              "processWriteBytes": 6616603643
+            },
+            {
+              "name": "warm-same-index",
+              "scanMilliseconds": 673619,
+              "backendFiles": 0,
+              "files": 300019,
+              "groups": 15003,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 690311168,
+              "indexFiles": {
+                "index.db": 1556373504,
+                "index.db-wal": 127031992,
+                "index.db-shm": 262144
+              },
+              "processCpuMilliseconds": 758343.75,
+              "processReadBytes": 52048948128,
+              "processWriteBytes": 12584069638
+            },
+            {
+              "name": "plus-one-percent",
+              "scanMilliseconds": 747831,
+              "backendFiles": 3000,
+              "files": 303019,
+              "groups": 15003,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 617742336,
+              "indexFiles": {
+                "index.db": 2434420736,
+                "index.db-wal": 127031992,
+                "index.db-shm": 262144
+              },
+              "processCpuMilliseconds": 798875,
+              "processReadBytes": 53299341832,
+              "processWriteBytes": 12620485491
+            }
+          ]
+        },
+        {
+          "primaryFiles": 300000,
+          "engine": "czkawka",
+          "report": "build/acceptance-9a329d6eb5114d6fb320fb387adc5771/czkawka-300000/report.json",
+          "simulatedOffline": {
+            "kind": "same-volume-directory-rename",
+            "waitedWithoutInventoryLoss": true,
+            "resumed": true
+          },
+          "phases": [
+            {
+              "name": "fresh-fma-index",
+              "scanMilliseconds": 531632,
+              "backendFiles": 300019,
+              "files": 300019,
+              "groups": 15003,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 572866560,
+              "indexFiles": {
+                "index.db": 797278208,
+                "index.db-wal": 39230672,
+                "index.db-shm": 98304
+              },
+              "processCpuMilliseconds": 589656.25,
+              "processReadBytes": 30243835908,
+              "processWriteBytes": 7624950152
+            },
+            {
+              "name": "warm-same-index",
+              "scanMilliseconds": 915401,
+              "backendFiles": 0,
+              "files": 300019,
+              "groups": 15003,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 632852480,
+              "indexFiles": {
+                "index.db": 1771216896,
+                "index.db-wal": 136672792,
+                "index.db-shm": 294912
+              },
+              "processCpuMilliseconds": 852265.625,
+              "processReadBytes": 63196240509,
+              "processWriteBytes": 13634061894
+            },
+            {
+              "name": "plus-one-percent",
+              "scanMilliseconds": 768198,
+              "backendFiles": 3000,
+              "files": 303019,
+              "groups": 15003,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 681570304,
+              "indexFiles": {
+                "index.db": 2752991232,
+                "index.db-wal": 136672792,
+                "index.db-shm": 294912
+              },
+              "processCpuMilliseconds": 782406.25,
+              "processReadBytes": 62964582592,
+              "processWriteBytes": 13738283677
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "suite": "build/acceptance-b1f8659f9a6d4b00b49f642ac25b97ad/suite.json",
+      "sourceCommit": "43f99e171114d8d126f99896fe9be43c11c66724",
+      "sourceWorktreeDirty": true,
+      "hostSha256": "35c795f4342995f6db531be053782d032fd32e4a14bb27d8c5248b022224d441",
+      "coreSha256": "21eb94cb7f1074ad0b4bc261c938c5663591cc3f5f3ff13d478de874fe2d7c2d",
+      "nativeSha256": "5299c78250e2cc7e7ffb4289472056f1bd239e9206a3dba15dad38b12808adfe",
+      "dotnetSdk": "10.0.402",
+      "cases": [
+        {
+          "primaryFiles": 1000,
+          "engine": "csharp",
+          "report": "build/acceptance-b1f8659f9a6d4b00b49f642ac25b97ad/csharp-1000/report.json",
+          "simulatedOffline": {
+            "kind": "same-volume-directory-rename",
+            "waitedWithoutInventoryLoss": true,
+            "resumed": true
+          },
+          "phases": [
+            {
+              "name": "fresh-fma-index",
+              "scanMilliseconds": 1914,
+              "backendFiles": 1019,
+              "files": 1019,
+              "groups": 53,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 90681344,
+              "indexFiles": {
+                "index.db": 2101248,
+                "index.db-wal": 4243632,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 2109.375,
+              "processReadBytes": 13465526,
+              "processWriteBytes": 6971120
+            },
+            {
+              "name": "warm-same-index",
+              "scanMilliseconds": 2090,
+              "backendFiles": 0,
+              "files": 1019,
+              "groups": 53,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 100364288,
+              "indexFiles": {
+                "index.db": 4096000,
+                "index.db-wal": 4243632,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 2656.25,
+              "processReadBytes": 23470080,
+              "processWriteBytes": 8692392
+            },
+            {
+              "name": "plus-one-percent",
+              "scanMilliseconds": 2103,
+              "backendFiles": 10,
+              "files": 1029,
+              "groups": 53,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 100610048,
+              "indexFiles": {
+                "index.db": 8089600,
+                "index.db-wal": 4243632,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 2171.875,
+              "processReadBytes": 28026320,
+              "processWriteBytes": 11187680
+            }
+          ]
+        },
+        {
+          "primaryFiles": 1000,
+          "engine": "czkawka",
+          "report": "build/acceptance-b1f8659f9a6d4b00b49f642ac25b97ad/czkawka-1000/report.json",
+          "simulatedOffline": {
+            "kind": "same-volume-directory-rename",
+            "waitedWithoutInventoryLoss": true,
+            "resumed": true
+          },
+          "phases": [
+            {
+              "name": "fresh-fma-index",
+              "scanMilliseconds": 1887,
+              "backendFiles": 1019,
+              "files": 1019,
+              "groups": 53,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 88526848,
+              "indexFiles": {
+                "index.db": 2211840,
+                "index.db-wal": 4190072,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 2093.75,
+              "processReadBytes": 14808914,
+              "processWriteBytes": 7551392
+            },
+            {
+              "name": "warm-same-index",
+              "scanMilliseconds": 2361,
+              "backendFiles": 0,
+              "files": 1019,
+              "groups": 53,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 95649792,
+              "indexFiles": {
+                "index.db": 6275072,
+                "index.db-wal": 4354872,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 2765.625,
+              "processReadBytes": 29843456,
+              "processWriteBytes": 12146632
+            },
+            {
+              "name": "plus-one-percent",
+              "scanMilliseconds": 2013,
+              "backendFiles": 10,
+              "files": 1029,
+              "groups": 53,
+              "sourceContentsUnchanged": true,
+              "sampledWorkingSetPeakBytes": 99049472,
+              "indexFiles": {
+                "index.db": 8019968,
+                "index.db-wal": 4354872,
+                "index.db-shm": 32768
+              },
+              "processCpuMilliseconds": 2328.125,
+              "processReadBytes": 29165008,
+              "processWriteBytes": 9743832
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
