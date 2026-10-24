@@ -9,6 +9,37 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance w:StackViewModel}">
   <UserControl.Resources>
+    <Style x:Key="ReviewList" TargetType="ListBox">
+      <Setter Property="MaxHeight" Value="600" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Focusable" Value="True" />
+      <Setter Property="KeyboardNavigation.TabNavigation" Value="Continue" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+      <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+      <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+      <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+      <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+      <Setter Property="ItemContainerStyle">
+        <Setter.Value>
+          <Style TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Focusable" Value="True" />
+            <Setter Property="KeyboardNavigation.TabNavigation" Value="Continue" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                  <ContentPresenter ContentSource="Content" HorizontalAlignment="Stretch" />
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+        </Setter.Value>
+      </Setter>
+    </Style>
     <!-- Background of a cell by its column: keeper, offline or normal; amber when the cell needs attention. -->
     <Style x:Key="CellBorder" TargetType="Border">
       <Setter Property="Width" Value="180" />
@@ -367,8 +398,9 @@
             <StackPanel>
               <TextBlock Text="{l:T stack.conflicts.title}" Style="{StaticResource H2}" />
               <TextBlock Text="{l:T stack.conflicts.hint}" Style="{StaticResource Small}" Margin="0,2,0,8" />
-              <ItemsControl ItemsSource="{Binding Conflicts}" Focusable="False">
-                <ItemsControl.ItemTemplate>
+              <ListBox ItemsSource="{Binding Conflicts}" Style="{StaticResource ReviewList}"
+                       AutomationProperties.Name="{l:T stack.conflicts.title}">
+                <ListBox.ItemTemplate>
                   <DataTemplate DataType="{x:Type w:ConflictViewModel}">
                     <StackPanel Margin="0,4,0,8">
                       <TextBlock Text="{Binding Path}" FontWeight="Bold" />
@@ -389,16 +421,17 @@
                       </ItemsControl>
                     </StackPanel>
                   </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+                </ListBox.ItemTemplate>
+              </ListBox>
             </StackPanel>
           </Border>
 
           <Border Style="{StaticResource Card}" Padding="18,14" Margin="0,14,0,0">
             <StackPanel>
               <TextBlock Text="{l:T stack.outcome.title}" Style="{StaticResource H2}" Margin="0,0,0,8" />
-              <ItemsControl ItemsSource="{Binding Outcome}" Focusable="False">
-                <ItemsControl.ItemTemplate>
+              <ListBox ItemsSource="{Binding Outcome}" Style="{StaticResource ReviewList}"
+                       AutomationProperties.Name="{l:T stack.outcome.title}">
+                <ListBox.ItemTemplate>
                   <DataTemplate DataType="{x:Type w:OutcomeViewModel}">
                     <Grid Margin="0,0,0,8" x:Name="line" TextElement.Foreground="{StaticResource InkBrush}">
                       <Grid.ColumnDefinitions>
@@ -430,8 +463,8 @@
                       </DataTrigger>
                     </DataTemplate.Triggers>
                   </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+                </ListBox.ItemTemplate>
+              </ListBox>
               <Border Background="{StaticResource StripBrush}" CornerRadius="6" Padding="12,8" Margin="0,4,0,0">
                 <ItemsControl ItemsSource="{Binding Space}" Focusable="False">
                   <ItemsControl.ItemTemplate>

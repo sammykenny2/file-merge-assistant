@@ -9,6 +9,10 @@ No version has been published yet.
 
 ## Unreleased
 
+- Bound large conflict/outcome views to recycled visible controls, retaining all
+  models and radio choices. Add an isolated offscreen WPF scale probe; physical
+  keyboard, focus-cue and high-DPI validation remain pending in the owner's VM.
+
 - Extract read-only analysis into a plain `net10.0` leaf, preserving Windows
   workflow behavior. Add portable tests and a private owner-run Pi/macOS arm64
   verification kit. Target execution, Unix physical file identity and complete

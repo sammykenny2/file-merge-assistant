@@ -106,7 +106,11 @@ Also open the extracted GUI using a NEW test data directory:
 
 Check English/Traditional
 Chinese, engine selection, exact scan, image candidate review, cancel/reopen,
-and high-DPI window behavior. Close the app before installer tests. Record the
+and high-DPI window behavior. Close the app before installer tests. Check
+Tab/Shift+Tab entry/exit and focus cues for conflict/outcome lists; use
+arrows/PageDown/Home/End to reach later rows and Space to choose one conflict.
+Scroll away/back and confirm first/last choices. Offscreen checks do not replace
+physical keyboard acceptance. Record the
 Windows build, scaling and observations beside the JSON reports. The lifecycle
 script does not claim these manual GUI checks passed.
 

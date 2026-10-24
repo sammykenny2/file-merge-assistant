@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UseWPF>true</UseWPF>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>FileMergeAssistant.GuiScaleHost</AssemblyName>
+    <RootNamespace>FileMergeAssistant.Gui.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Gui/Gui.csproj" />
+    <Compile Include="../Gui.Tests/WpfHost.cs" Link="WpfHost.cs" />
+  </ItemGroup>
+</Project>

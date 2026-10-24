@@ -128,6 +128,13 @@ Slice 5c tooling：六來源的可重建量測 host 與有整體期限／自有 
 數值與未測項見 [acceptance baseline](../research/2026-10-24-analysis-acceptance.md)。
 GUI 互動、實體 USB 及 G5 仍待結果，未提升成熟度或切換預設。
 
+Slice 5d：離屏 WPF 量測發現一萬筆衝突／結果控制項會全部建立，已改為有界
+viewport 與 recycling，保留完整模型、可聚焦入口及可讀名稱。最終 20 筆量測／
+斷言全部完成、binding errors 0，GUI 25 零略過；首尾 radio 選擇在回收後保留。
+獨立審閱確認焦點與選擇邊界。數值與早期失敗 probe 限制見
+[WPF scale](../research/2026-10-24-wpf-scale.md)。實體鍵盤、focus cue、高 DPI
+及真實掃描中的互動仍由 Sandbox／VM 驗證，G5 未通過。
+
 ### Phase 6：後續平台與 UI 技術驗證
 
 - [ ] Task 6.1：盤點並抽象化 Windows 路徑／磁碟／檔案身份及系統整合，將可攜的 Core／契約測試分離出目前 `net10.0-windows` 目標限制。

@@ -1,5 +1,11 @@
 # Testing Strategy
 
+The optional [offscreen WPF scale probe](../tests/gui-scale-host/README.md) uses
+10,001 in-memory stacks, 10,000 conflicts and the existing 200-row summary cap.
+It asserts bounded recycled controls, retained radio choices/outcome models and
+zero binding errors. [Measured evidence](research/2026-10-24-wpf-scale.md) is
+separate from physical keyboard, scanning-input, high-DPI and VM acceptance.
+
 ## Portable analysis leaf
 
 `src/analysis/Analysis.csproj` targets `net10.0` with no Windows Core/WPF/SQLite/
