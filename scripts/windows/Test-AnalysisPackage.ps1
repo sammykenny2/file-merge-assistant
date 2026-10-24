@@ -86,6 +86,9 @@ try {
     }
     Require (Test-Path -LiteralPath $cli -PathType Leaf) 'Missing published CLI.'
     Require (Test-Path -LiteralPath (Join-Path $app 'FileMergeAssistant.exe') -PathType Leaf) 'Missing GUI.'
+    Require (-not (Test-Path -LiteralPath (Join-Path $app 'SixLabors.ImageSharp.dll'))) 'ImageSharp must not ship in this preview.'
+    $dependencies = Get-Content -LiteralPath (Join-Path $app 'FileMergeAssistant.deps.json') -Encoding UTF8 -Raw
+    Require ($dependencies -notmatch 'SixLabors\.ImageSharp|CoenM\.ImageSharp') 'Preview dependency graph contains a removed legacy image library.'
     $runtime = Get-Content -LiteralPath (Join-Path $app 'FileMergeAssistant.runtimeconfig.json') -Encoding UTF8 -Raw | ConvertFrom-Json
     Require (@($runtime.runtimeOptions.includedFrameworks).Count -eq 2) 'GUI must include both .NET and Windows Desktop runtimes.'
     $unexpected = @(Get-ChildItem -LiteralPath $PackageRoot -Recurse -File | Where-Object { $_.Name -match '(wrong-abi|scan-host|upload-cancel|\.Tests\.)' })
@@ -109,6 +112,16 @@ try {
         if ($package.noticeStatus -eq 'DeclaredOnly') {
             $declaredOnly += "$($package.name) $($package.version)"
             Require (Test-Path -LiteralPath (Join-Path $noticeFolder 'MISSING-NOTICE.txt')) 'Missing notice diagnostic was not packaged.'
+        } elseif ($package.noticeStatus -eq 'DeclaredSpdxTerms') {
+            Require ("$($package.name)/$($package.version)" -in @('realfft/3.5.0', 'rusty-chromaprint/0.3.0') -and
+                $package.license -eq 'MIT' -and $package.upstreamOriginalLicenseFileFound -eq $false) 'Unreviewed standard-terms supplement.'
+            $provenance = Get-Content -LiteralPath (Join-Path $noticeFolder 'UPSTREAM-SOURCES.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+            Require ($provenance.noticeKind -eq 'DeclaredSpdxTerms' -and $provenance.crateChecksum -match '^[0-9a-f]{64}$') 'Missing original declaration provenance.'
+            Require ((Get-FileHash -LiteralPath (Join-Path $noticeFolder 'standard-terms/MIT.txt') -Algorithm SHA256).Hash.ToLowerInvariant() -eq
+                'b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5') 'Standard SPDX terms hash mismatch.'
+            foreach ($evidence in @('UPSTREAM-Cargo.toml', 'UPSTREAM-README.md', 'UPSTREAM-VCS.json', 'REGISTRY-CHECKSUM.json')) {
+                Require (Test-Path -LiteralPath (Join-Path $noticeFolder $evidence) -PathType Leaf) 'Missing original package attribution evidence.'
+            }
         } else { Require ($package.noticeStatus -eq 'Collected' -and @($package.noticeFiles).Count -gt 0) 'Unexpected dependency notice status.' }
     }
     Require (($declaredOnly.Count -eq 0) -eq [bool]$manifest.noticeCollectionComplete) 'Notice completeness flag contradicts dependency records.'

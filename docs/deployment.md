@@ -2,7 +2,13 @@
 
 File Merge Assistant ships as a Windows x64 setup program built with NSIS. Decisions are in
 [ADR-012](decisions/ADR-012-release-packaging.md) (packaging and data location) and
-[ADR-013](decisions/ADR-013-in-app-updates.md) (in-app updates). Nothing has been published yet.
+[ADR-013](decisions/ADR-013-in-app-updates.md) (in-app updates). Public previews use the manual Release workflow.
+
+The owner requested a public 0.3.0 Preview focused on native DLL integration.
+[ADR-016](decisions/ADR-016-public-native-preview.md) removes ImageSharp/CoenM
+from this version, so Release builds need no Six Labors key. Native PNG/JPEG
+review remains available; legacy `perceptual` and `video-perceptual` commands are
+explicitly disabled. Earlier private Debug artifacts remain historical evidence.
 
 ## What the setup program installs
 
@@ -58,11 +64,10 @@ Native-by-default packaging also requires rustup, Rust 1.99.1, MSVC x64 C++ buil
 tools and a Windows SDK. End-user machines do not need these SDKs.
 
 ```powershell
-# Debug build: no license key needed; not for release.
+# Local Debug build.
 .\scripts\windows\Build-Installer.ps1 -Configuration Debug
 
-# Release build: needs a Six Labors license key (see below).
-$env:SixLaborsLicenseKey = '<key>'
+# Release build: current preview has no ImageSharp dependency.
 .\scripts\windows\Build-Installer.ps1
 ```
 
@@ -105,14 +110,19 @@ Missing crate notices are supplemented from the exact upstream commits with
 URL/SHA-256 provenance in
 [third-party-notices](../native/fma-czkawka-ffi/third-party-notices/README.md).
 
-Three pinned MIT declarations still lack standalone upstream notice text:
-realfft 3.5.0, rusty-chromaprint 0.3.0 and simd_helpers 0.1.0. Native export fails
-closed by default. Only internal Debug packaging retains `DeclaredOnly`,
-`MISSING-NOTICE.txt` and `noticeCollectionComplete=false` and proceeds with an
-explicit warning. Release packaging does not permit that flag. Notice collection
-and a supplied source archive are not a legal compliance certification; resolve
-the recorded gaps before public redistribution. ImageSharp's missing key remains
-a separate Release gate.
+simd_helpers uses the exact official license-only commit immediately following
+its pinned source. Two reviewed MIT-only crates, realfft 3.5.0 and
+rusty-chromaprint 0.3.0, use `DeclaredSpdxTerms`: immutable standard SPDX terms
+with their original manifest/README and source, checked against crate checksum
+and VCS commit. Their records explicitly say no original upstream license file
+was found. No copyright attribution is fabricated. The standard template's
+placeholders are retained rather than presented as upstream authorship.
+
+`noticeCollectionComplete` records terms collection under ADR-016;
+`upstreamOriginalNoticesComplete` separately records original-file coverage.
+Unknown/missing terms still fail closed for Release. This is a collection policy,
+not a legal-compliance or ownership certification. Preserve the matching rebuild
+archive and all recorded notices beside distributed binaries.
 
 The setup program is not signed yet, so Windows SmartScreen may warn before it runs (ADR-012 leaves signing open).
 
@@ -127,17 +137,12 @@ To move to a newer NSIS: download `nsis-<version>.zip`, compare its MD5 with the
 `$NsisVersion` and `$NsisSha256` in `scripts/windows/Build-Installer.ps1`. NSIS 3.13: SHA-256
 `ba63dffc4410ee89193e1cb5a41989991bd77c61068da17e3156d136b7b0b3d8`, MD5 `530e3623c077cba879ed2ae6e13be362`.
 
-### Six Labors license key
+### Removed legacy media dependency
 
-ImageSharp 4.x checks for a Six Labors license key at build time: Debug builds only warn, Release builds fail. The
-project is MIT-licensed, which the Six Labors Split License grants Apache 2.0 terms for; the owner confirms this when
-requesting the key (PLAN-001 Task 0.5). Supply the key in one of these ways and never commit it:
-
-- the `SixLaborsLicenseKey` environment variable or MSBuild property;
-- `SixLaborsLicenseFile` pointing at a key file outside the repository;
-- `src/Core/sixlabors.lic` (the package searches only the Core project folder; `sixlabors.lic` is ignored by Git).
-
-The release workflow reads it from the `SIXLABORS_LICENSE_KEY` repository secret.
+ImageSharp and CoenM are absent from this preview's dependency graph. The package
+verifier rejects an accidental ImageSharp payload. Reintroducing those libraries
+or their legacy algorithms requires a separate implementation/licensing change;
+the current native image evidence is not substituted under their old names.
 
 ## Versions and release notes
 
@@ -194,18 +199,26 @@ repository that holds only releases, before publishing the first release.
 
 ## Publishing a release
 
-Not done yet; the project is too early. When it is time:
+Publication is explicitly authorized for the experimental 0.3.0 Preview:
 
-1. Resolve the native notice gaps, add the `SIXLABORS_LICENSE_KEY` repository secret
-   and make the update repository public (see above). Complete clean-machine acceptance.
+1. Verify the public source, notice collection and current Release tests. Preview
+   notes must retain the outstanding clean-machine/owner-platform acceptance
+   limits; publishing a Preview does not pass G5/G6 or promote engine defaults.
 2. On a branch, raise `<Version>` in `Directory.Build.props`, add its entry to `docs/release-notes.md`, and merge to
    `main`.
 3. Run the workflow: `gh workflow run release.yml --ref main` (or Actions > Release > Run workflow).
-4. The workflow refuses a version whose tag or release already exists, builds the Release setup program on
+4. The workflow requires successful push CI for that exact commit, refuses a
+   version whose tag or release already exists, builds the Release setup program on
    `windows-latest`, and creates the prerelease `v<version>` with the setup/portable
    binaries, native source archive, their checksums and the update manifest.
-   A failed run publishes nothing. The workflow remains manual-only and has not
-   been run for this integration.
+   Assets are uploaded to a draft, all seven expected assets must exist, and only
+   then is the prerelease published. Failure may leave a draft for inspection,
+   but no partially uploaded release is made public. Release remains manual-only.
+
+CI automatically runs on main pushes and pull requests: Windows native checks
+and the full Debug .NET suite, plus Linux arm64/macOS arm64 portable native and
+.NET contracts. These hosted machines do not replace owner Pi/filesystem/VM
+acceptance. No ImageSharp secret is required by these workflows.
 
 ## Testing the setup program
 

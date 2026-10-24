@@ -55,15 +55,16 @@ foreach ($name in @('analysis', 'similar-images')) { Copy-Item -LiteralPath (Joi
 $readme = @'
 # Windows x64 validation kit
 
-This is an experimental local {{CONFIGURATION}} build, not a published release.
+This is an experimental {{CONFIGURATION}} validation payload.
 The GUI is WPF/Windows only. The native adapter is Release/static CRT; the .NET
 application uses {{CONFIGURATION}}. No result in this kit certifies a clean machine.
 
-This kit is for private/internal inspection. ImageSharp's Release key is still
-missing. Native notice collection also remains incomplete for realfft 3.5.0,
-rusty-chromaprint 0.3.0 and simd_helpers 0.1.0. The Debug package preserves their
-DeclaredOnly diagnostics and noticeCollectionComplete=false; it is not cleared
-for public redistribution. Resolve those recorded gaps before a Release package.
+This preview omits ImageSharp/CoenM and needs no Six Labors key. Legacy C# media
+algorithms are explicitly unavailable; native PNG/JPEG review remains available.
+Native notices preserve original files and two DeclaredSpdxTerms supplements
+(realfft/rusty-chromaprint), with their manifests, README and source. Standard
+terms are labeled separately and do not fabricate upstream copyright attribution.
+Read the actual native manifest and source archive for this payload's provenance.
 
 Copy this directory to C:\FmaKit on a disposable Windows x64 Sandbox or VM.
 No SDK, .NET runtime or Rust installation is needed to run these packages.

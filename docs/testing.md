@@ -1,5 +1,12 @@
 # Testing Strategy
 
+The 0.3.0 DLL-integration Preview omits ImageSharp/CoenM. Full Release regression
+after removal passed Core 510, GUI 25, CLI 14 and portable analysis 27, with zero
+skips against the real native DLLs. Legacy media algorithms are rejected before
+scanning; native image evidence/review remains tested. Automatic Windows and
+arm64 Linux/macOS CI is restored. Earlier Debug/key-blocked results below are
+historical; current publication policy is [ADR-016](decisions/ADR-016-public-native-preview.md).
+
 Source-root service wiring adds seven regression cases in
 `Analysis/SourcePathServiceTests`: canonical/identity/ancestor aliases, app-data
 aliases, known identity becoming unknown/replaced without metadata changes,

@@ -18,8 +18,8 @@
       Debug:   FileMergeAssistant-<version>-x64-debug-setup.exe and its .sha256. No update manifest is written, so a
                Debug build can never be offered as an update.
 
-    Release builds need a Six Labors license key for ImageSharp: set the SixLaborsLicenseKey or SixLaborsLicenseFile
-    environment variable, or place sixlabors.lic under src/Core/ (ignored by Git). See docs/deployment.md.
+    This preview omits ImageSharp and its legacy media algorithms; native image
+    analysis remains available. See docs/deployment.md for package requirements.
     Nothing is signed, installed or published.
 
 .PARAMETER Configuration
@@ -49,7 +49,7 @@
     .\scripts\windows\Build-Installer.ps1 -Configuration Debug
 
 .EXAMPLE
-    $env:SixLaborsLicenseKey = '<key>'; .\scripts\windows\Build-Installer.ps1
+    .\scripts\windows\Build-Installer.ps1 -Configuration Release
 #>
 [CmdletBinding()]
 param(
@@ -111,12 +111,6 @@ function Get-ProjectProperties {
         throw "Company '$($Properties.Company)' in Directory.Build.props must be set and contain no `$ or quote."
     }
     return $Properties
-}
-
-function Test-SixLaborsLicense {
-    if ($env:SixLaborsLicenseKey -or $env:SixLaborsLicenseFile) { return $true }
-    $Files = Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'src/Core') -Filter 'sixlabors.lic' -Recurse -File -ErrorAction SilentlyContinue
-    return @($Files).Count -gt 0
 }
 
 function Resolve-Makensis {
@@ -265,10 +259,6 @@ if (-not (Get-Command 'dotnet' -ErrorAction SilentlyContinue)) {
 if ($UsePinnedNsis -and $NsisPath) { throw 'Use either -UsePinnedNsis or -NsisPath, not both.' }
 if ($UpdateSummary -and $Configuration -ne 'Release') { throw 'UpdateSummary applies to Release builds only.' }
 if ($UpdateSummary.Length -gt 500) { throw 'UpdateSummary must be at most 500 characters.' }
-if ($Configuration -eq 'Release' -and -not (Test-SixLaborsLicense)) {
-    throw 'Release builds need a Six Labors license key for ImageSharp. Set SixLaborsLicenseKey or SixLaborsLicenseFile, or place sixlabors.lic under src/Core/. Use -Configuration Debug to build without one.'
-}
-
 Push-Location $ProjectRoot
 $PreviousTelemetry = $env:DOTNET_CLI_TELEMETRY_OPTOUT
 $PreviousNoLogo = $env:DOTNET_NOLOGO

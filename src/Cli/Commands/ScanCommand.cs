@@ -1,4 +1,5 @@
 using System.CommandLine;
+using FileMergeAssistant.Hashing;
 using FileMergeAssistant.Cli.UI;
 using FileMergeAssistant.Models;
 using FileMergeAssistant.Reporting;
@@ -18,7 +19,13 @@ public static class ScanCommand
 
     var pathArgument = new Argument<DirectoryInfo>("path", "Directory to scan");
     var recursiveOption = new Option<bool>(["--recursive", "-r"], () => true, "Scan subdirectories recursively");
-    var algorithmOption = new Option<string>(["--algorithm", "-a"], () => "sha256", "Hash algorithm: sha256, xxhash, perceptual");
+    var algorithmOption = new Option<string>(["--algorithm", "-a"], () => "sha256", "Hash algorithm: sha256, xxhash. For native image review use similar-images.");
+    algorithmOption.AddValidator(result =>
+    {
+      var value = result.GetValueOrDefault<string>();
+      if (string.Equals(value, "perceptual", StringComparison.OrdinalIgnoreCase)) { result.ErrorMessage = PerceptualHashAlgorithm.DisabledReason; }
+      if (string.Equals(value, "video-perceptual", StringComparison.OrdinalIgnoreCase)) { result.ErrorMessage = VideoFrameHashAlgorithm.DisabledReason; }
+    });
     var outputOption = new Option<string>(["--output", "-o"], () => "./fma-results/", "Output directory for results");
     var formatOption = new Option<string>(["--format", "-f"], () => "all", "Report format: console, json, csv, all");
     var minSizeOption = new Option<long>("--min-size", () => 0, "Minimum file size in bytes");

@@ -53,7 +53,8 @@ Use [000-template.md](./000-template.md) as the starting point for new ADRs.
 | [ADR-012](./ADR-012-release-packaging.md) | 發佈格式與資料位置（D-06 之二） | Partly accepted | 2026-10-23 |
 | [ADR-013](./ADR-013-in-app-updates.md) | 從 GitHub Releases 檢查並安裝更新 | Accepted | 2026-10-23 |
 | [ADR-014](./ADR-014-tray-startup-and-display-language.md) | 系統匣、啟動行為與顯示語言 | Accepted | 2026-10-23 |
-| [ADR-015](./ADR-015-pluggable-analysis-engines.md) | 可切換的 C# 與 Czkawka 分析引擎（D-02） | Accepted；尚未實作 | 2026-10-24 |
+| [ADR-015](./ADR-015-pluggable-analysis-engines.md) | 可切換的 C# 與 Czkawka 分析引擎（D-02） | Accepted；依 PLAN-002 實作 | 2026-10-24 |
+| [ADR-016](./ADR-016-public-native-preview.md) | Public native-integration Preview and notice collection | Accepted | 2026-10-24 |
 <!-- Add new ADRs above this line -->
 
 ## For AI Agents

@@ -24,6 +24,22 @@ public sealed class AnalysisCommandTests
 
   private static string DataRoot() => Path.Combine(AppDataPaths.Root, Guid.NewGuid().ToString("N"));
 
+  [Theory]
+  [InlineData("perceptual")]
+  [InlineData("video-perceptual")]
+  public async Task Legacy_Media_Is_Rejected_During_Parsing_Before_Resolving_Services_Or_Scanning(string algorithm)
+  {
+    using var tree = new TempTree();
+    var path = tree.Write("sentinel.txt", "unchanged");
+    using var services = new ServiceCollection().BuildServiceProvider();
+    var root = new RootCommand(); root.AddCommand(ScanCommand.Create(services));
+    var console = new TestConsole();
+    Assert.NotEqual(0, await root.InvokeAsync(["scan", tree.Root, "--algorithm", algorithm], console));
+    Assert.Contains("ImageSharp is not included", console.Error.ToString());
+    Assert.Equal("unchanged", File.ReadAllText(path));
+    Assert.Single(Directory.EnumerateFileSystemEntries(tree.Root));
+  }
+
   private static RootCommand Root(IServiceProvider services, string dataRoot)
   {
     var root = new RootCommand();

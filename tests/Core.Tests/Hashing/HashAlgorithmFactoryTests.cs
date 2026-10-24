@@ -22,11 +22,10 @@ public class HashAlgorithmFactoryTests
   }
 
   [Fact]
-  public void Create_Perceptual_Returns_PerceptualHashAlgorithm()
+  public void Create_Perceptual_Reports_Disabled_Feature()
   {
-    var algorithm = HashAlgorithmFactory.Create("perceptual");
-
-    Assert.IsType<PerceptualHashAlgorithm>(algorithm);
+    Assert.Equal(PerceptualHashAlgorithm.DisabledReason,
+      Assert.Throws<NotSupportedException>(() => HashAlgorithmFactory.Create("perceptual")).Message);
   }
 
   [Fact]
@@ -42,8 +41,6 @@ public class HashAlgorithmFactoryTests
   [InlineData("Sha256")]
   [InlineData("XXHASH")]
   [InlineData("XxHash")]
-  [InlineData("PERCEPTUAL")]
-  [InlineData("Perceptual")]
   public void Create_Is_Case_Insensitive(string algorithmName)
   {
     var algorithm = HashAlgorithmFactory.Create(algorithmName);

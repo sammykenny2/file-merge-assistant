@@ -10,12 +10,12 @@ persistent workbench or file-operation implementation. WPF remains Windows-only.
 No platform support is declared until the returned evidence is reviewed.
 
 The native source inventory originally came from Windows; see
-`DEPENDENCIES.windows.json`. It includes three unresolved notice-collection
-items (realfft, rusty-chromaprint, simd_helpers). Source and declarations are
-preserved, but this private inspection kit is not cleared for public
-redistribution. The target script records its actual Cargo dependency graph.
-ImageSharp is absent from this verifier; the separate full FMA Release build
-still needs the owner's missing ImageSharp key.
+`DEPENDENCIES.windows.json`. Earlier kits retain their recorded incomplete notice
+status. Current 0.3.0 source packaging follows
+[ADR-016](decisions/ADR-016-public-native-preview.md), distinguishing original
+files from standard MIT supplements; do not infer an older archive was rebuilt.
+The target script records its actual Cargo dependency graph. ImageSharp is
+absent from this verifier and from the current full-application Preview.
 
 System.IO.Hashing's NuGet package carries an MIT expression and third-party
 notices but no license-text file. Its original MIT text is supplied from the

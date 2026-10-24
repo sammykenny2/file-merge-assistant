@@ -7,7 +7,7 @@
 File Merge Assistant helps you clean up years of accumulated duplicate files across Windows drives. It handles:
 
 - **File deduplication** - Find and resolve duplicate files scattered across directories using multiple hash algorithms (SHA-256, xxHash)
-- **Photo/video deduplication** - Detect visually similar images using perceptual hashing, even if they've been resized or slightly edited. Video deduplication via FFmpeg keyframe extraction.
+- **Image candidate review** - Experimental native PNG/JPEG similarity with manual review. Legacy C# image/video hashing is disabled in the 0.3.0 preview.
 - **Smart merging** - Compare files that share the same name but have different content across directories
 - **Metadata-driven resolution** - Use EXIF data, file timestamps, camera model, and resolution to intelligently identify originals vs copies
 - **Folder-aware strategy** - Assign priority to folders (e.g., "Originals" always kept over "Backup") for automatic resolution
@@ -21,8 +21,8 @@ File Merge Assistant helps you clean up years of accumulated duplicate files acr
 
 - [x] Core file scanning and indexing
 - [x] SHA-256 / xxHash deduplication
-- [x] Perceptual image hashing
-- [x] Video deduplication (FFmpeg keyframe hashing)
+- [x] Native PNG/JPEG similarity evidence and manual review
+- [ ] Legacy C# image/video hashing is omitted from the 0.3.0 preview (ImageSharp removed)
 - [x] Interactive merge/resolve UI (CLI + GUI)
 - [x] Dry-run / preview mode
 - [x] Report generation (JSON, CSV, PowerShell)
@@ -39,7 +39,7 @@ File Merge Assistant helps you clean up years of accumulated duplicate files acr
 - [x] Stack-by-stack workbench GUI ([GUI flow mock](./docs/gui-flow-mock.md)): all 7 screens; real index, staged scanning and stack detection; running the plan: copy and verify into the keeper, per-volume recycle areas, retry and restore; `--demo` shows the mock's data. Large-scale and release acceptance remain separate gates.
 - [x] Tray icon, startup behaviour (start at sign-in, keep running in the tray, open the window after a sign-in start) and check for updates from the tray or Settings ([ADR-014](./docs/decisions/ADR-014-tray-startup-and-display-language.md))
 - [x] English and Traditional Chinese display languages ([i18n](./docs/i18n.md)), switched at once from Settings > General
-- [x] Experimental pluggable analysis: managed exact-content algorithms, pinned native Czkawka BLAKE3, separate engine comparison, and [PNG/JPEG manual review](./docs/image-review.md). Local Debug NSIS/portable packaging includes the native DLL and rebuild source; clean-machine, scale and public-release acceptance remain PLAN-002 Phase 5.
+- [x] Experimental pluggable analysis: managed exact-content algorithms, pinned native Czkawka BLAKE3, separate engine comparison, and [PNG/JPEG manual review](./docs/image-review.md). NSIS/portable Preview packaging includes the native DLL and rebuild source; owner clean-machine/filesystem acceptance remains PLAN-002 Phase 5/6.
 - [x] Portable `net10.0` analysis leaf and private [Pi/macOS verification kit](./docs/analysis-platform-kit.md). Windows contract checks pass; target-machine results remain pending. See the [platform matrix](./docs/platform-support.md); WPF and the complete workflow remain Windows-only.
 
 ## Quick Start
@@ -114,8 +114,7 @@ file-merge-assistant/
 | Package | Purpose |
 |---------|---------|
 | System.IO.Hashing | Fast xxHash for file comparison |
-| CoenM.ImageHash | Perceptual hashing for image deduplication |
-| SixLabors.ImageSharp | Cross-platform image processing |
+| Pinned Czkawka Rust adapter | Native BLAKE3 and PNG/JPEG candidate evidence |
 | MetadataExtractor | EXIF and media metadata reading |
 | System.CommandLine | CLI argument parsing |
 | Spectre.Console | Rich terminal UI and progress bars |

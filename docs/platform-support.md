@@ -85,7 +85,9 @@ scale and clean-VM installation remain outstanding.
 evaluation is deferred until target evidence and filesystem boundaries can be
 assessed; no prototype, adoption or GUI migration is included here.
 
-The kit is private inspection material. Native notice collection still has
-three declared-only items; it is not cleared for public redistribution. The
-portable verifier has no ImageSharp dependency, while full FMA Release packaging
-still needs the owner's ImageSharp key. CI remains manual-only.
+Earlier private kits retain their historical notice status. Current 0.3.0
+packaging follows [ADR-016](decisions/ADR-016-public-native-preview.md), with
+explicit standard MIT supplements for two dependencies. ImageSharp/CoenM are
+omitted from the full application as well as the verifier. Automatic Windows and
+arm64 Linux/macOS CI is restored; hosted CI does not replace owner filesystem
+acceptance or provide a non-Windows GUI.

@@ -50,6 +50,7 @@ cross-platform UI options are reassessed.
 | [platform-support.md](./platform-support.md) | Partial extraction; target evidence pending | Analysis leaf, Windows dependency inventory, Pi/macOS validation and UI scope |
 | [analysis-platform-kit.md](./analysis-platform-kit.md) | Private verification instructions | Owner-run Linux arm64/macOS arm64 native rebuild and read-only contract checks |
 | [deployment.md](./deployment.md) | Draft | Building the Windows setup program, versions, in-app updates, start at sign-in and publishing releases |
+| [Public Preview preparation](./research/2026-10-24-public-preview.md) | Current evidence | Public-source checks, ImageSharp removal, native notice policy and CI/release verification |
 | [i18n.md](./i18n.md) | Complete | Display languages, the language catalogs and how the window switches language |
 | [release-notes.md](./release-notes.md) | Draft | Release notes per version; the source of the update summary and release text |
 | [security-guidelines.md](./security-guidelines.md) | Template | Security policies |

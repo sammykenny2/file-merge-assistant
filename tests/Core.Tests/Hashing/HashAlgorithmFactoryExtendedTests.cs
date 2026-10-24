@@ -5,19 +5,19 @@ namespace FileMergeAssistant.Tests.Hashing;
 
 public class HashAlgorithmFactoryExtendedTests
 {
-  [Fact]
-  public void Create_VideoPerceptual_Returns_VideoFrameHashAlgorithm()
+  [Theory]
+  [InlineData("video-perceptual")]
+  [InlineData("VIDEO-PERCEPTUAL")]
+  [InlineData("PERCEPTUAL")]
+  public void Create_Legacy_Media_Reports_Disabled_Feature(string name)
   {
-    var algo = HashAlgorithmFactory.Create("video-perceptual");
-    Assert.IsType<VideoFrameHashAlgorithm>(algo);
-    Assert.Equal("video-perceptual", algo.Name);
+    Assert.Contains("ImageSharp is not included",
+      Assert.Throws<NotSupportedException>(() => HashAlgorithmFactory.Create(name)).Message);
   }
 
   [Theory]
   [InlineData("sha256")]
   [InlineData("xxhash")]
-  [InlineData("perceptual")]
-  [InlineData("video-perceptual")]
   public void Create_All_Valid_Algorithms(string name)
   {
     var algo = HashAlgorithmFactory.Create(name);

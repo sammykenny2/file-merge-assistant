@@ -12,6 +12,11 @@
 
 ## Related Spec
 
+2026-10-24 後續指示：產品負責人已要求 push、公開 repo、恢復 CI 並發佈
+0.3.0 Preview；另明確同意先不使用 ImageSharp，重點驗證 DLL。原先先不 push／
+CI 停用的限制已由這次指示取代。依 [ADR-016](../decisions/ADR-016-public-native-preview.md)
+省略 legacy 媒體算法並補足可追溯的授權條款；這不代表 G5／G6 實機驗收通過。
+
 - [SPEC-002：可切換的檔案分析引擎](../specs/SPEC-002-pluggable-analysis-engines.md)（Approved for staged implementation）
 - [ADR-015：雙引擎決策](../decisions/ADR-015-pluggable-analysis-engines.md)（Accepted，依本計畫實作中）
 - [SPEC-001](../specs/SPEC-001-persistent-scan-workbench.md)、[PLAN-001](./PLAN-001-batch-consolidation-workbench.md)

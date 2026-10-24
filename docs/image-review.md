@@ -56,4 +56,5 @@ Windows WPF 的「圖片審閱」頁使用實驗性 Czkawka 圖片能力。它�
 
 只讀取目前應用資料目錄內的審閱檔；拒絕審閱目錄被 junction 改指向來源，
 不從匯入紀錄解析或載入任意 DLL。發佈與 staging 仍依 PLAN-002 Phase 5，
-ImageSharp Release 授權及非 Windows 驗收仍待完成。
+0.3.0 Preview 已依產品負責人指示省略 ImageSharp／legacy C# 媒體算法；本頁的
+原生圖片流程不依賴它們。非 Windows 與實機驗收仍待完成。

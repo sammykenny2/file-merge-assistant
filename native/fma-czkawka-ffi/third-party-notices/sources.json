@@ -219,6 +219,60 @@
           "sha256": "e870d7fd7819a9f0453c62798cb52ae95d148a8c91dc2de1d983f997143c72de"
         }
       ]
+    },
+    {
+      "name": "simd_helpers",
+      "version": "0.1.0",
+      "repository": "https://github.com/lu-zero/simd_helpers",
+      "commit": "ca1a2f84aa386d758e98f8a609d990263932fb85",
+      "noticeCommit": "82040194cd05affb060bf94d6f19f82a771d07fb",
+      "provenance": "Immediate subsequent same-repository commit adds LICENSE only; pinned code is unchanged.",
+      "files": [
+        {
+          "path": "simd_helpers-0.1.0/LICENSE",
+          "upstreamPath": "LICENSE",
+          "url": "https://raw.githubusercontent.com/lu-zero/simd_helpers/82040194cd05affb060bf94d6f19f82a771d07fb/LICENSE",
+          "sha256": "d69f24ad84ec2ade64c0b68bdb31b41170e997b158370342056918329cc9af1e"
+        }
+      ]
+    },
+    {
+      "name": "realfft",
+      "version": "3.5.0",
+      "repository": "https://github.com/HEnquist/realfft",
+      "commit": "d0d4eee0525fd27c96c8a046d6d107acd5ed84a6",
+      "crateChecksum": "f821338fddb99d089116342c46e9f1fbf3828dba077674613e734e01d6ea8677",
+      "noticeKind": "DeclaredSpdxTerms",
+      "licenseExpression": "MIT",
+      "upstreamOriginalLicenseFileFound": false,
+      "provenance": "Pinned crate declares MIT. Standard SPDX MIT template supplied separately; no upstream copyright attribution invented. Original manifest and README retained.",
+      "files": [
+        {
+          "path": "standard-terms/MIT.txt",
+          "upstreamPath": "MIT.txt",
+          "url": "https://raw.githubusercontent.com/spdx/license-list-data/31ba1a50e5397e00a304dbadc76531740e89ee48/text/MIT.txt",
+          "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+        }
+      ]
+    },
+    {
+      "name": "rusty-chromaprint",
+      "version": "0.3.0",
+      "repository": "https://github.com/darksv/rusty-chromaprint",
+      "commit": "97d67dfed02854ac5d5eaa9ac965b9abe3dff690",
+      "crateChecksum": "59e4234523e38d9c12201955f8216e1a60313e64c5077f4e1cf49b0db77bd7e8",
+      "noticeKind": "DeclaredSpdxTerms",
+      "licenseExpression": "MIT",
+      "upstreamOriginalLicenseFileFound": false,
+      "provenance": "Pinned crate declares MIT. Standard SPDX MIT template supplied separately; no upstream copyright attribution invented. Original manifest and README retained.",
+      "files": [
+        {
+          "path": "standard-terms/MIT.txt",
+          "upstreamPath": "MIT.txt",
+          "url": "https://raw.githubusercontent.com/spdx/license-list-data/31ba1a50e5397e00a304dbadc76531740e89ee48/text/MIT.txt",
+          "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+        }
+      ]
     }
   ]
 }

@@ -109,6 +109,8 @@ foreach ($id in ($reachable | Sort-Object)) {
     $folder = Join-Path $noticeRoot $relative
     New-Item -ItemType Directory -Path $folder -Force | Out-Null
     $noticeNames = @()
+    $noticeStatus = 'Collected'
+    $originalNoticeFound = ($notices.Count -gt 0)
     foreach ($notice in $notices) {
         $name = if ($notice.FullName.StartsWith($packageDirectory + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
             $notice.FullName.Substring($packageDirectory.Length + 1)
@@ -123,11 +125,33 @@ foreach ($id in ($reachable | Sort-Object)) {
     foreach ($entry in $fallback) {
         $vcs = Get-Content -LiteralPath (Join-Path $packageDirectory '.cargo_vcs_info.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         if ($vcs.git.sha1 -ne $entry.commit) { throw 'Curated notice commit differs from the pinned crate provenance.' }
+        $standardTerms = $entry.noticeKind -eq 'DeclaredSpdxTerms'
+        if ($standardTerms) {
+            if ("$($package.name)/$($package.version)" -notin @('realfft/3.5.0', 'rusty-chromaprint/0.3.0') -or
+                $package.license -ne 'MIT' -or $entry.licenseExpression -ne 'MIT' -or
+                $entry.upstreamOriginalLicenseFileFound -ne $false) { throw 'Unreviewed SPDX terms supplementation.' }
+            $sourceRegistry = Split-Path -Parent $packageDirectory
+            $registryRoot = Split-Path -Parent (Split-Path -Parent $sourceRegistry)
+            $archiveName = "$($package.name)-$($package.version).crate"
+            $crateArchive = Join-Path $registryRoot ("cache/" + (Split-Path -Leaf $sourceRegistry) + "/$archiveName")
+            if ($entry.crateChecksum -notmatch '^[0-9a-f]{64}$' -or
+                (Get-FileHash -LiteralPath $crateArchive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.crateChecksum) { throw 'Supplemented crate checksum differs from the reviewed package.' }
+            Copy-Item -LiteralPath $package.manifest_path -Destination (Join-Path $folder 'UPSTREAM-Cargo.toml')
+            Copy-Item -LiteralPath (Join-Path $packageDirectory '.cargo_vcs_info.json') -Destination (Join-Path $folder 'UPSTREAM-VCS.json')
+            $checksumEvidence = [ordered]@{ package = $entry.crateChecksum; archive = $archiveName; method = 'SHA-256 of the cached original registry .crate archive' }
+            [IO.File]::WriteAllText((Join-Path $folder 'REGISTRY-CHECKSUM.json'), ($checksumEvidence | ConvertTo-Json) + "`n", [Text.UTF8Encoding]::new($false))
+            $readmePath = [IO.Path]::GetFullPath((Join-Path $packageDirectory $package.readme))
+            if (-not $readmePath.StartsWith($packageDirectory + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or
+                -not (Test-Path -LiteralPath $readmePath -PathType Leaf)) { throw 'Supplemented package must retain its original README.' }
+            Copy-Item -LiteralPath $readmePath -Destination (Join-Path $folder 'UPSTREAM-README.md')
+            $noticeNames += @('UPSTREAM-Cargo.toml', 'UPSTREAM-README.md', 'UPSTREAM-VCS.json', 'REGISTRY-CHECKSUM.json')
+            $noticeStatus = 'DeclaredSpdxTerms'
+        } else { $originalNoticeFound = $true }
         foreach ($file in $entry.files) {
             $inputPath = [IO.Path]::GetFullPath((Join-Path $curatedRoot $file.path))
             if (-not $inputPath.StartsWith($curatedRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or
                 (Get-FileHash -LiteralPath $inputPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $file.sha256) { throw 'Curated native notice path/checksum mismatch.' }
-            $name = 'upstream/' + $file.upstreamPath
+            $name = $(if ($standardTerms) { 'standard-terms/' } else { 'upstream/' }) + $file.upstreamPath
             $output = [IO.Path]::GetFullPath((Join-Path $folder $name))
             if (-not $output.StartsWith($folder + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Invalid notice output path.' }
             New-Item -ItemType Directory -Path (Split-Path -Parent $output) -Force | Out-Null
@@ -146,7 +170,8 @@ foreach ($id in ($reachable | Sort-Object)) {
     $packages.Add([ordered]@{
         name = $package.name; version = $package.version; source = $package.source
         license = $package.license; noticeDirectory = $relative
-        noticeFiles = $noticeNames; noticeStatus = $(if ($noticeNames.Count -gt 0) { 'Collected' } else { 'DeclaredOnly' })
+        noticeFiles = $noticeNames; noticeStatus = $(if ($noticeNames.Count -gt 0) { $noticeStatus } else { 'DeclaredOnly' })
+        upstreamOriginalLicenseFileFound = $originalNoticeFound
     })
 }
 if ($missingNotices.Count -gt 0) {
@@ -191,8 +216,10 @@ $readme = @'
 This archive contains FMA's native wrapper, its pinned Cargo dependencies and test
 fixture. DEPENDENCIES.json lists the resolved non-development
 dependency licenses; the vendor tree also includes build/test/platform sources.
-noticeCollectionComplete=false records unresolved upstream notice text; an
-internal Debug inspection archive does not authorize public redistribution.
+DeclaredSpdxTerms records a reviewed upstream MIT declaration accompanied by the
+standard SPDX text, original manifest/README and source; it does not claim an
+upstream copyright notice was found. See the bundled third-party-notices policy.
+Unknown/missing terms still set noticeCollectionComplete=false and block Release.
 Czkawka core's MIT license is separate from dependency licenses (including rawler
 LGPL-2.1 and symphonia MPL-2.0). Preserve their notices and source when distributing.
 
@@ -220,6 +247,7 @@ $manifest = [ordered]@{
     upstreamCommit = 'eb8b91dbb4d25dff416202674ee0de84ee4b5e5c'; sha256 = $sha
     cargoLockSha256 = (Get-FileHash -LiteralPath (Join-Path $adapterRoot 'Cargo.lock') -Algorithm SHA256).Hash.ToLowerInvariant()
     noticeCollectionComplete = ($missingNotices.Count -eq 0); missingNotices = @($missingNotices)
+    upstreamOriginalNoticesComplete = (@($packages | Where-Object noticeStatus -eq 'DeclaredSpdxTerms').Count -eq 0)
     packages = @($packages)
 }
 $json = ($manifest | ConvertTo-Json -Depth 8) + "`n"

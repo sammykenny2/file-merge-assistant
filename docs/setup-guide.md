@@ -6,7 +6,8 @@ Python and Node.js are not application prerequisites.
 
 ## Run a local package
 
-Build artifacts are local and experimental; no release has been published.
+Preview binaries are listed in [GitHub Releases](https://github.com/sammykenny2/file-merge-assistant/releases);
+local build artifacts are also experimental.
 The NSIS installer installs for the current user. The portable ZIP contains
 `app/` and `cli/`; keep them together so both entry points use the same DLL.
 End users need neither a .NET SDK/runtime nor a Rust/MSVC toolchain.
@@ -54,11 +55,11 @@ folder for inspection. `-WithoutNative` explicitly builds a managed-only package
 Native binary output uses Release/static CRT even when the .NET application is
 Debug; measurements must distinguish those configurations.
 
-Release application builds remain blocked without a valid ImageSharp key. Native
-notice collection also has three explicit unresolved items; see
-[the pinned inventory](../native/fma-czkawka-ffi/third-party-notices/README.md).
-Only internal Debug inspection packaging preserves those diagnostics and proceeds.
-This is not a public redistribution or license-compliance acceptance result.
+The 0.3.0 Preview omits ImageSharp/CoenM and needs no Six Labors key, including
+Release builds. Legacy C# `perceptual`/`video-perceptual` algorithms are disabled;
+native PNG/JPEG analysis and review remain available. See
+[the pinned notice policy](../native/fma-czkawka-ffi/third-party-notices/README.md)
+for original notices and the two explicitly labeled standard MIT supplements.
 
 ## Development entry points
 
@@ -91,7 +92,8 @@ Similarity does not create exact-content operation plans. See
 Windows clean install/update/uninstall checks belong in the owner's Sandbox/VM,
 using the generated validation kit. Pi arm64/Wayland and Apple Silicon macOS
 validation will be run by the owner separately; WPF is not a cross-platform GUI.
-CI stays manual-only, and this work does not publish artifacts or push commits.
+CI automatically runs actual Windows and arm64 portable tests on pushes/PRs.
+Preview publication remains manual and requires successful CI for the same commit.
 
 ## Portable analysis verification
 

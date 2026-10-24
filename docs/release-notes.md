@@ -5,9 +5,20 @@ starts with `Summary:` is the plain-text summary that the in-app update check sh
 whole entry becomes the GitHub release text. `scripts/windows/Get-ReleaseNotes.ps1` reads both, and the release
 workflow refuses to start without an entry for the version. See [deployment.md](deployment.md).
 
-No version has been published yet.
+Published previews appear in [GitHub Releases](https://github.com/sammykenny2/file-merge-assistant/releases).
 
-## Unreleased
+## 0.3.0
+
+Summary: Preview of switchable C# and Czkawka analysis, persistent versioned jobs, image candidate review, and bounded large workbench lists. Windows x64 only; native analysis is experimental and managed XxHash128 remains the default.
+
+- Preview scope: Windows x64 WPF and CLI. Clean-machine lifecycle, physical
+  USB/DPI/input acceptance and owner-run Pi/macOS filesystem validation remain
+  pending. This release does not promote either engine's maturity or port the GUI.
+- ImageSharp and CoenM are omitted in this preview. Legacy `scan --algorithm
+  perceptual` and `video-perceptual` are explicitly unavailable; use
+  `similar-images --engine czkawka` for native PNG/JPEG candidate review.
+- Source repository is public under MIT; automatic Windows regression and arm64
+  Linux/macOS portable-analysis CI replace the former paused template workflow.
 
 - Add optional two-root known-answer verification to the private platform kit.
   Cross-volume evidence requires different stable OS volume identities;
@@ -37,9 +48,9 @@ No version has been published yet.
   dependency inventory and offline rebuild source. A retained validation kit is
   available for the owner's Sandbox/VM; clean install/upgrade/uninstall results
   are still pending.
-- Managed XxHash128 remains the default. Release application builds still need
-  the missing ImageSharp key and resolution of three native notice-collection
-  gaps. No public release, default promotion or non-Windows GUI support is claimed.
+- Managed XxHash128 remains the default. Native notices include the two explicitly
+  labeled standard MIT term supplements described by ADR-016. No default
+  promotion or non-Windows GUI support is claimed.
 
 ## 0.2.1
 

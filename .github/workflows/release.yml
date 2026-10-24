@@ -1,8 +1,6 @@
-# Preview release of the Windows setup program. Manual only, and intentionally not run yet: the project is too early to
-# publish. Before the first run (docs/deployment.md, "Publishing a release"):
-#   - add the SIXLABORS_LICENSE_KEY repository secret, because Release builds of ImageSharp need a Six Labors key;
-#   - resolve the native notice-collection gaps documented in native/fma-czkawka-ffi/third-party-notices/README.md;
-#   - make the repository public (or point UpdateRepository in Directory.Build.props at a public releases repository),
+# Preview release of the Windows setup program. Manual only. Before running:
+#   - verify CI and the native notice policy documented in docs/deployment.md;
+#   - keep the update repository public,
 #     because the in-app update check reads the public release feed and cannot see a private repository.
 #
 # Builds the version in Directory.Build.props from the selected commit on main and publishes one GitHub prerelease
@@ -18,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: release
@@ -30,6 +29,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       commit: ${{ steps.version.outputs.commit }}
+      ci_url: ${{ steps.ci.outputs.url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,6 +37,19 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
+      - name: Require successful CI for this commit
+        id: ci
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $runs = gh run list --repo $env:GITHUB_REPOSITORY --workflow ci.yaml --commit $env:GITHUB_SHA --event push --status completed --limit 20 --json conclusion,headSha,url
+          if ($LASTEXITCODE -ne 0) { throw 'Could not inspect CI results.' }
+          $successful = @($runs | ConvertFrom-Json | Where-Object { $_.headSha -eq $env:GITHUB_SHA -and $_.conclusion -eq 'success' })
+          if ($successful.Count -eq 0) {
+            throw 'This exact commit needs successful push CI before release.'
+          }
+          "url=$($successful[0].url)" >> $env:GITHUB_OUTPUT
       - name: Prepare the pinned native toolchain
         shell: pwsh
         run: |
@@ -79,11 +92,9 @@ jobs:
       - name: Build the setup program
         shell: pwsh
         env:
-          SixLaborsLicenseKey: ${{ secrets.SIXLABORS_LICENSE_KEY }}
           SUMMARY: ${{ steps.notes.outputs.summary }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          if (-not $env:SixLaborsLicenseKey) { throw 'The SIXLABORS_LICENSE_KEY secret is not set.' }
           ./scripts/windows/Build-Installer.ps1 -Configuration Release -UpdateSummary $env:SUMMARY -UsePinnedNsis
           Move-Item -LiteralPath build-release-notes.md -Destination build/release-notes.md
           foreach ($file in "FileMergeAssistant-$env:VERSION-x64-setup.exe", 'file-merge-assistant-update-windows.json') {
@@ -121,18 +132,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.build.outputs.version }}
           COMMIT: ${{ needs.build.outputs.commit }}
+          CI_URL: ${{ needs.build.outputs.ci_url }}
         run: |
           {
             echo "Preview of File Merge Assistant ${VERSION} for Windows x64, built from ${COMMIT}."
+            echo "Validated by [CI](${CI_URL}); SHA-256 files accompany every binary/source archive."
             echo
             cat dist/release-notes.md
             echo
             echo '## Install'
             echo "Download \`FileMergeAssistant-${VERSION}-x64-setup.exe\` and run it. It installs for the current user only and needs no administrator rights."
-            echo 'The setup program is not signed yet, so Windows SmartScreen may warn first: choose "More info", then "Run anyway".'
+            echo 'The setup program is unsigned; Windows may show a SmartScreen warning. Verify the published checksum and project source before deciding whether to run it.'
+            echo 'This preview omits ImageSharp and the legacy perceptual/video-perceptual CLI algorithms. Native PNG/JPEG review is available.'
+            echo 'Native analysis remains experimental. Owner-run filesystem and clean-machine lifecycle acceptance are still pending.'
             echo 'Installed copies check for updates from "Check for updates" in the app.'
           } > "$RUNNER_TEMP/notes.md"
-          gh release create "v${VERSION}" --repo "$GITHUB_REPOSITORY" --target "$COMMIT" --prerelease \
+          (cd dist && sha256sum -c ./*.sha256)
+          gh release create "v${VERSION}" --repo "$GITHUB_REPOSITORY" --target "$COMMIT" --draft --prerelease \
             --title "File Merge Assistant ${VERSION} (preview)" --notes-file "$RUNNER_TEMP/notes.md" \
             "dist/FileMergeAssistant-${VERSION}-x64-setup.exe" \
             "dist/FileMergeAssistant-${VERSION}-x64-setup.exe.sha256" \
@@ -141,3 +157,6 @@ jobs:
             dist/FileMergeAssistant-${VERSION}-czkawka-*-source.zip \
             dist/FileMergeAssistant-${VERSION}-czkawka-*-source.zip.sha256 \
             dist/file-merge-assistant-update-windows.json
+          count="$(gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
+          test "$count" -eq 7
+          gh release edit "v${VERSION}" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease --latest=false
