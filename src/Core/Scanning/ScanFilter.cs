@@ -114,6 +114,7 @@ public sealed class ScanFilter
       var full = relative.Length == 0 ? folder : Path.Combine(folder, relative);
       foreach (var entry in new DirectoryInfo(full).EnumerateFileSystemInfos().ToList())
       {
+        PathText.RequireReadable(entry.FullName);
         var child = relative.Length == 0 ? entry.Name : relative + "\\" + entry.Name;
         var kind = Classify(entry, folderSourceRelative.Length == 0 ? child : folderSourceRelative + "\\" + child);
         if (kind != EntryKind.Index)

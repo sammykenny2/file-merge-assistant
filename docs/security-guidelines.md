@@ -2,6 +2,22 @@
 
 > Internal security policies and best practices for development.
 
+## File-path encoding boundary
+
+Windows inventory, engine requests, index/data roots and operation persistence
+require well-formed Unicode with no NUL. NTFS can hold lone UTF-16 surrogates;
+UTF-8 SQLite/JSON encoding can substitute U+FFFD and identify another real file.
+Reject such roots/requests before encoding or writes. Unsupported inventory
+entries are skipped with escaped code-unit diagnostics and a partial result;
+they never become successful empty analysis. Chinese, paired supplementary
+characters such as emoji, and an actual U+FFFD filename remain supported.
+
+Operation checks include copy digests/snapshots, restore destinations, retryable
+journal paths and legacy recycle/cache/JSON persistence. This prevents new lossy
+records; it does not identify or automatically repair historical records already
+substituted by an older build. See [the Windows reproduction and tests](research/2026-10-24-windows-path-encoding.md).
+These checks do not establish POSIX arbitrary-byte filename support.
+
 ## Overview
 
 This document outlines security practices for developers and AI agents working on this project.

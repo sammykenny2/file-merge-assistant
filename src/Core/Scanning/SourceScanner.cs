@@ -93,6 +93,7 @@ public sealed class SourceScanner
     IReadOnlyDictionary<string, ScanSource>? scopeSources = null)
   {
     ArgumentNullException.ThrowIfNull(source);
+    PathText.RequireSupported(source.Root, nameof(source));
     ArgumentNullException.ThrowIfNull(onlineRoots);
     ArgumentNullException.ThrowIfNull(report);
     ArgumentNullException.ThrowIfNull(pauseRequested);
@@ -114,6 +115,7 @@ public sealed class SourceScanner
   internal static ScanStop Inventory(IndexDatabase database, ScanSource source, string jobId, Action<ScanProgress> report,
     Func<bool> pauseRequested, Action checkScope, CancellationToken cancellationToken)
   {
+    PathText.RequireSupported(source.Root, nameof(source));
     using var connection = database.Open();
     checkScope();
     return Discover(new State(source, jobId, connection, report, checkScope, null), pauseRequested, cancellationToken);
@@ -185,6 +187,13 @@ public sealed class SourceScanner
       {
         foreach (var entry in new DirectoryInfo(fullDirectory).EnumerateFileSystemInfos("*", options))
         {
+          if (!PathText.IsSupported(entry.Name))
+          {
+            // Never bind this raw name to SQLite: UTF-8 replacement could identify a different entry.
+            erroredDirectories.Add(relativeDirectory);
+            state.RecordError(fullDirectory, "Unsupported path encoding: " + PathText.EscapeUnsupported(entry.Name));
+            continue;
+          }
           var relative = relativeDirectory.Length == 0 ? entry.Name : relativeDirectory + "\\" + entry.Name;
           var kind = filter.Classify(entry, relative);
           if (kind == EntryKind.GitFolder)
@@ -633,7 +642,7 @@ public sealed class SourceScanner
     {
       Errors++;
       IndexDatabase.Execute(Connection, "INSERT INTO scan_errors(job_id, path, message) VALUES ($j, $p, $m)",
-        ("$j", JobId), ("$p", path), ("$m", message));
+        ("$j", JobId), ("$p", PathText.EscapeUnsupported(path)), ("$m", PathText.EscapeUnsupported(message)));
     }
   }
 }

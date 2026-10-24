@@ -15,6 +15,8 @@ public class JsonScanResultStore : IScanResultStore
 
   public async Task SaveAsync(ScanResult result, string filePath, CancellationToken cancellationToken = default)
   {
+    PathText.RequireReadable(filePath);
+    RequirePaths(result);
     var directory = Path.GetDirectoryName(filePath);
     if (!string.IsNullOrEmpty(directory))
       Directory.CreateDirectory(directory);
@@ -25,8 +27,17 @@ public class JsonScanResultStore : IScanResultStore
 
   public async Task<ScanResult> LoadAsync(string filePath, CancellationToken cancellationToken = default)
   {
+    PathText.RequireReadable(filePath);
     await using var stream = File.OpenRead(filePath);
-    return await JsonSerializer.DeserializeAsync<ScanResult>(stream, Options, cancellationToken)
+    var result = await JsonSerializer.DeserializeAsync<ScanResult>(stream, Options, cancellationToken)
       ?? throw new InvalidOperationException($"Failed to deserialize scan result from: {filePath}");
+    RequirePaths(result);
+    return result;
+  }
+
+  private static void RequirePaths(ScanResult result)
+  {
+    PathText.RequireReadable(result.ScannedPath);
+    foreach (var file in result.DuplicateGroups.SelectMany(group => group.Files)) { PathText.RequireReadable(file.FilePath); }
   }
 }

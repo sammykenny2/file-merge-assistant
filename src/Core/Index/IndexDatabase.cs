@@ -220,6 +220,7 @@ public sealed class IndexDatabase
   public static IndexDatabase OpenOrCreate(string path)
   {
     ArgumentException.ThrowIfNullOrWhiteSpace(path);
+    PathText.RequireSupported(path, nameof(path));
     var directory = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path));
     if (!string.IsNullOrEmpty(directory))
     {

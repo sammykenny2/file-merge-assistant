@@ -34,6 +34,7 @@ public sealed class ReadOnlyAnalysisSession
   {
     _engines = engines;
     dataRoot ??= AppDataPaths.Root;
+    PathText.RequireSupported(dataRoot, nameof(dataRoot));
     if (!Path.IsPathFullyQualified(dataRoot)) { throw new ArgumentException("The analysis data directory must be absolute.", nameof(dataRoot)); }
     _dataRoot = Path.GetFullPath(dataRoot);
     _volumes = volumes ?? new Win32VolumeInfoProvider();
@@ -52,6 +53,7 @@ public sealed class ReadOnlyAnalysisSession
   {
     ArgumentNullException.ThrowIfNull(paths);
     if (paths.Count == 0) { throw new ArgumentException("At least one source folder is required.", nameof(paths)); }
+    foreach (var path in paths) { PathText.RequireSupported(path, nameof(paths)); }
     if (engine.Capability is not (AnalysisCapability.ExactDuplicates or AnalysisCapability.SimilarImages)) { throw new ArgumentException("This session does not support the requested capability.", nameof(engine)); }
     _engines.Resolve(engine);
     var frozenPaths = paths.ToImmutableArray();
@@ -64,6 +66,7 @@ public sealed class ReadOnlyAnalysisSession
     var clock = Stopwatch.StartNew();
     var before = AnalysisProcessMetrics.Capture();
     var owned = PathIdentity.Resolve(_dataRoot);
+    PathText.RequireSupported(owned, nameof(_dataRoot));
     foreach (var path in paths)
     {
       var source = PathIdentity.Resolve(Path.GetFullPath(path));
@@ -75,6 +78,7 @@ public sealed class ReadOnlyAnalysisSession
     Directory.CreateDirectory(_dataRoot);
     // Persist the physical location as the exclusion, including aliases whose final folder was just created.
     var dataRoot = PathIdentity.Resolve(_dataRoot);
+    PathText.RequireSupported(dataRoot, nameof(_dataRoot));
     var index = Path.Combine(dataRoot, $"analysis-{Guid.NewGuid():N}.db");
     // Claim a new name: no existing index or user work can be overwritten.
     using (File.Open(index, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }

@@ -12,7 +12,11 @@ public sealed record ScanSourceSnapshot(ScanSource Source, string? VolumeSerial,
 /// <summary>Immutable queue-time scope. Mutable source settings never resume an existing job.</summary>
 public sealed record ScanJobSnapshot(int Version, string SourceId, AnalysisEngineSnapshot Engine, ImmutableArray<ScanSourceSnapshot> Sources)
 {
-  public string Serialize() => JsonSerializer.Serialize(this, AnalysisJson.Options);
+  public string Serialize()
+  {
+    RequirePathText(Sources);
+    return JsonSerializer.Serialize(this, AnalysisJson.Options);
+  }
 
   public static ScanJobSnapshot Deserialize(string json)
   {
@@ -55,7 +59,22 @@ public sealed record ScanJobSnapshot(int Version, string SourceId, AnalysisEngin
   }
 
   internal static ScanJobSnapshot Create(string sourceId, AnalysisEngineSnapshot engine, ImmutableArray<ScanSourceSnapshot> sources)
-    => new(1, sourceId, engine with { ScopeJson = JsonSerializer.Serialize(new { sourceId, sources }, AnalysisJson.Options) }, sources);
+  {
+    RequirePathText(sources);
+    return new(1, sourceId, engine with { ScopeJson = JsonSerializer.Serialize(new { sourceId, sources }, AnalysisJson.Options) }, sources);
+  }
+
+  private static void RequirePathText(ImmutableArray<ScanSourceSnapshot> sources)
+  {
+    if (sources.IsDefault) { throw new InvalidDataException("The source set is missing."); }
+    foreach (var item in sources)
+    {
+      if (item?.Source is not { } source) { throw new InvalidDataException("A source is missing."); }
+      PathText.RequireReadable(source.Root);
+      foreach (var path in source.ExcludedRoots) { PathText.RequireReadable(path); }
+      foreach (var rule in source.Exclusions.Concat(source.RegenerableNames)) { PathText.RequireReadable(rule); }
+    }
+  }
 
   public static bool IsOnline(ScanSourceSnapshot snapshot, IVolumeInfoProvider volumes)
   {

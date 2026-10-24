@@ -30,6 +30,7 @@ public static class CopySnapshot
   {
     ArgumentNullException.ThrowIfNull(path);
     ArgumentNullException.ThrowIfNull(skip);
+    PathText.RequireReadable(path);
     bool Late(FileSystemInfo entry) =>
       changedSince is { } since && entry.LastWriteTimeUtc >= since && entry.LastWriteTimeUtc <= DateTime.UtcNow.AddSeconds(5);
     var lines = new List<string>();
@@ -56,6 +57,7 @@ public static class CopySnapshot
         var (relative, folder) = pending.Pop();
         foreach (var entry in folder.EnumerateFileSystemInfos())
         {
+          PathText.RequireReadable(entry.FullName);
           var child = relative.Length == 0 ? entry.Name : relative + "/" + entry.Name;
           if (skip(entry.FullName))
           {

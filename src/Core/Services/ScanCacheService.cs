@@ -22,6 +22,7 @@ public class ScanCacheService : IScanCacheService
   {
     _logger = logger;
     _cacheDirectory = cacheDirectory ?? AppDataPaths.CacheDirectory;
+    PathText.RequireSupported(_cacheDirectory, nameof(cacheDirectory));
   }
 
   public async Task<ScanCache?> LoadCacheAsync(string scannedPath, string algorithm, CancellationToken cancellationToken = default)
@@ -34,6 +35,7 @@ public class ScanCacheService : IScanCacheService
     {
       await using var stream = File.OpenRead(cachePath);
       var cache = await JsonSerializer.DeserializeAsync<ScanCache>(stream, JsonOptions, cancellationToken);
+      if (cache is not null) { RequirePaths(cache); }
       _logger.Information("Loaded scan cache with {Count} entries for {Path}", cache?.Entries.Count ?? 0, scannedPath);
       return cache;
     }
@@ -46,8 +48,9 @@ public class ScanCacheService : IScanCacheService
 
   public async Task SaveCacheAsync(ScanCache cache, CancellationToken cancellationToken = default)
   {
-    Directory.CreateDirectory(_cacheDirectory);
+    RequirePaths(cache);
     var cachePath = GetCachePath(cache.ScannedPath, cache.HashAlgorithm);
+    Directory.CreateDirectory(_cacheDirectory);
 
     await using var stream = File.Create(cachePath);
     await JsonSerializer.SerializeAsync(stream, cache, JsonOptions, cancellationToken);
@@ -71,9 +74,17 @@ public class ScanCacheService : IScanCacheService
 
   private string GetCachePath(string scannedPath, string algorithm)
   {
+    PathText.RequireReadable(scannedPath);
+    PathText.RequireReadable(algorithm);
     var safeName = Convert.ToHexString(
       System.Security.Cryptography.SHA256.HashData(
         System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(scannedPath).ToLowerInvariant())))[..16];
     return Path.Combine(_cacheDirectory, $"cache_{safeName}_{algorithm}.json");
+  }
+
+  private static void RequirePaths(ScanCache cache)
+  {
+    PathText.RequireReadable(cache.ScannedPath);
+    foreach (var path in cache.Entries.Keys) { PathText.RequireReadable(path); }
   }
 }

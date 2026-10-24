@@ -115,6 +115,13 @@ Sandbox／VM 執行安裝／更新／卸載驗證；本機既有安裝與執行�
 SOURCE.json 對應來源 ZIP，以及最終來源包離線 Rust 13 項測試均已確認。
 Task 5.2／G5 仍待外部結果與發佈條件，Task 5.1 及平台驗證仍須繼續，未切換預設。
 
+Slice 5b：以真實 NTFS lone-surrogate／U+FFFD 同名形態 fixture 確認 SQLite／JSON
+轉碼會遺失路徑身份，已加入 root／inventory／FFI／操作與 legacy persistence guards。
+完整 Core 507／GUI 25／CLI 12、獨立聚焦 13 零略過通過；保留合法 supplementary
+Unicode，異常項目以 escaped 碼位報錯且保持 partial，未自動修補舊資料。
+詳見 [filesystem evidence](../research/2026-10-24-windows-path-encoding.md)。
+這是 Task 5.1 的已知邊界修正；規模／實體 USB 量測與平台測試仍待後續 slice。
+
 ### Phase 6：後續平台與 UI 技術驗證
 
 - [ ] Task 6.1：盤點並抽象化 Windows 路徑／磁碟／檔案身份及系統整合，將可攜的 Core／契約測試分離出目前 `net10.0-windows` 目標限制。

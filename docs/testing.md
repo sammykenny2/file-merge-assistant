@@ -59,6 +59,14 @@ dotnet test tests/Core.Tests/Core.Tests.csproj --collect:"XPlat Code Coverage"
 
 ## Analysis Engine Baseline (2026-10-24)
 
+Slice 5b path-encoding validation passes **507 Core / 25 GUI / 12 CLI**, zero
+skips. The 13 focused cases also pass independently, including actual native
+requests, real lone-surrogate NTFS entries and a junction to such a target.
+Valid emoji/U+FFFD siblings remain usable; unsupported inventory stays partial.
+Restore, retryable journals and legacy persistence reject loss before mutation.
+The [reproduction note](research/2026-10-24-windows-path-encoding.md) describes the
+scope and the inability to automatically repair already-substituted history.
+
 Slice 5a packaging changes pass **494 Core / 25 GUI / 12 CLI**, zero skips,
 and **13 Rust** tests plus fmt/clippy via `Build-NativeAnalysis.ps1 -Test`.
 The published self-contained CLI also passes known-answer exact/image analysis,

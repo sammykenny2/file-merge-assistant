@@ -26,6 +26,7 @@ public sealed class AnalysisResultValidator
     ArgumentNullException.ThrowIfNull(request);
     ArgumentNullException.ThrowIfNull(request.Engine);
     ArgumentException.ThrowIfNullOrWhiteSpace(request.JobId);
+    PathText.RequireSupported(request.JobId, nameof(request));
     if (request.Files.IsDefault) { throw new ArgumentException("The file set must be explicit.", nameof(request)); }
     if (request.Files.Length > 1_000_000) { throw new ArgumentException("The request exceeds the per-job file limit.", nameof(request)); }
     var ids = new HashSet<long>();
@@ -33,6 +34,7 @@ public sealed class AnalysisResultValidator
     foreach (var file in request.Files)
     {
       if (file is null || file.Observation is null || file.Id <= 0 || !ids.Add(file.Id) || string.IsNullOrWhiteSpace(file.SourceId) || !Path.IsPathFullyQualified(file.Path)
+        || !PathText.IsSupported(file.Path) || !PathText.IsSupported(file.SourceId)
         || file.Observation.Size < 0 || file.Observation.ModifiedUtcTicks < 0 || file.Observation.ModifiedUtcTicks > DateTime.MaxValue.Ticks)
       {
         throw new ArgumentException("The analysis request contains invalid or duplicate file observations.", nameof(request));

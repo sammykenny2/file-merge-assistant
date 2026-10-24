@@ -20,12 +20,14 @@ public class FileScanner : IFileScanner
 
   public int CountFiles(string path, bool recursive, long minSizeBytes = 0)
   {
+    PathText.RequireSupported(path, nameof(path));
     var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
     return Directory.EnumerateFiles(path, "*", searchOption)
       .Count(f =>
       {
         try
         {
+          if (!PathText.IsSupported(f)) { return false; }
           return new FileInfo(f).Length >= minSizeBytes;
         }
         catch
@@ -49,6 +51,11 @@ public class FileScanner : IFileScanner
     foreach (var filePath in allFiles)
     {
       cancellationToken.ThrowIfCancellationRequested();
+      if (!PathText.IsSupported(filePath))
+      {
+        _logger.Warning("Skipping unsupported path encoding: {FilePath}", PathText.EscapeUnsupported(filePath));
+        continue;
+      }
 
       FileInfo fileInfo;
       try
@@ -107,6 +114,7 @@ public class FileScanner : IFileScanner
     var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     foreach (var path in options.AllPaths)
     {
+      PathText.RequireSupported(path, nameof(options));
       if (!Directory.Exists(path))
         continue;
       foreach (var file in Directory.EnumerateFiles(path, "*", searchOption))

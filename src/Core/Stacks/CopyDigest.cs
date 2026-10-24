@@ -18,7 +18,7 @@ public static class CopyDigest
   {
     ArgumentNullException.ThrowIfNull(files);
     var bytes = JsonSerializer.SerializeToUtf8Bytes(files.OrderBy(file => file.Relative, StringComparer.Ordinal)
-      .Select(file => new { file.Relative, file.Hash }));
+      .Select(file => { PathText.RequireReadable(file.Relative); return new { file.Relative, file.Hash }; }));
     return "evidence-v1:" + Convert.ToHexStringLower(SHA256.HashData(bytes));
   }
 
@@ -29,6 +29,7 @@ public static class CopyDigest
     var count = 0;
     foreach (var (relative, size, modified) in files.OrderBy(f => f.Relative, StringComparer.Ordinal))
     {
+      PathText.RequireReadable(relative);
       hasher.Append(Encoding.UTF8.GetBytes(string.Create(CultureInfo.InvariantCulture, $"{relative}|{size}|{modified}\n")));
       count++;
     }

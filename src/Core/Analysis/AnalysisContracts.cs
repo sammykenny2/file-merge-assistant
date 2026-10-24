@@ -27,6 +27,7 @@ public sealed record FileObservation(long Size, long ModifiedUtcTicks, FileIdent
 {
   public static FileObservation Capture(string path)
   {
+    PathText.RequireSupported(path, nameof(path));
     var info = new FileInfo(path);
     if (!info.Exists) { throw new FileNotFoundException("The analysis input no longer exists.", path); }
     return new(info.Length, info.LastWriteTimeUtc.Ticks, OperatingSystem.IsWindows() ? PathIdentity.Identify(path) : null);

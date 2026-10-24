@@ -25,9 +25,13 @@ public static class AppDataPaths
   public static string ResolveRoot(string? overrideRoot, string localApplicationData)
   {
     if (!string.IsNullOrWhiteSpace(overrideRoot))
+    {
+      PathText.RequireSupported(overrideRoot, nameof(overrideRoot));
       return Path.GetFullPath(overrideRoot);
+    }
     if (string.IsNullOrWhiteSpace(localApplicationData))
       throw new InvalidOperationException($"The local application data folder is not available; set {DataDirectoryVariable}.");
+    PathText.RequireSupported(localApplicationData, nameof(localApplicationData));
     return Path.Combine(localApplicationData, ApplicationFolderName);
   }
 }

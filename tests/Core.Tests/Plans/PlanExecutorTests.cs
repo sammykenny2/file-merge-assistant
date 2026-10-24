@@ -235,6 +235,46 @@ public sealed class PlanExecutorTests : IDisposable
   }
 
   [Fact]
+  public void Unsupported_Restore_Destination_Is_Refused_Before_Any_Move()
+  {
+    var batch = Run(KeepKeeperOnly());
+    var desk = Desk(batch);
+    _tree.Write(@"desk\new.txt", "current");
+    var conflict = _executor.Restore("b1", desk, Now).Conflict!;
+    var badFolder = "destination-" + (char)0xd800;
+    var badSentinel = _tree.Write(badFolder + "/sentinel.txt", "bad-target");
+    var goodSentinel = _tree.Write("destination-\ufffd/sentinel.txt", "valid-target");
+
+    var error = Assert.Throws<InvalidDataException>(() => PlanExecutor.Resolve(conflict, desk,
+      RestoreConflictChoice.OtherFolder, _tree.PathOf(badFolder), Now));
+
+    Assert.Contains("\\uD800", error.Message, StringComparison.Ordinal);
+    Assert.True(File.Exists(Path.Combine(desk.RecycledPath!, "a.txt")));
+    Assert.False(Directory.Exists(_tree.PathOf(badFolder + "/desk")));
+    Assert.False(Directory.Exists(_tree.PathOf("destination-\ufffd/desk")));
+    Assert.Equal("bad-target", File.ReadAllText(badSentinel));
+    Assert.Equal("valid-target", File.ReadAllText(goodSentinel));
+  }
+
+  [Fact]
+  public void Unsupported_Plan_And_Retry_Inputs_Are_Refused_Before_A_Lossy_Journal_Entry()
+  {
+    var entry = Plan(BuildStack());
+    var bad = _tree.Write("backup/" + (char)0xd800 + ".txt", "bad");
+    var good = _tree.Write("backup/\ufffd.txt", "yes");
+    var copy = entry.Items.First(item => item.IsCopyLike) with { SourcePath = bad };
+    var recorded = new List<BatchItem>();
+    Assert.Throws<InvalidDataException>(() => Run(entry with { Items = [copy] }, record: recorded.Add));
+    Assert.Empty(recorded);
+    Assert.False(File.Exists(copy.DestinationPath));
+    var retry = new BatchItem("i", "stack", PlanItemKind.Copy, "copy", BatchItemState.Failed)
+    { SourcePath = bad, CreatedPath = copy.DestinationPath };
+    Assert.Throws<InvalidDataException>(() => _executor.Retry("b1", retry));
+    Assert.False(File.Exists(copy.DestinationPath));
+    Assert.Equal("bad", File.ReadAllText(bad)); Assert.Equal("yes", File.ReadAllText(good));
+  }
+
+  [Fact]
   public void Emptying_Deletes_Only_What_The_Batch_Put_In_The_Recycle_Area()
   {
     var stack = BuildStack();

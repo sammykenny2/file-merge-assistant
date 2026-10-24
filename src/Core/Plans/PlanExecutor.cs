@@ -20,7 +20,9 @@ public sealed class RecycleAreaLocator
 
   public RecycleAreaLocator(string appDataRoot)
   {
+    PathText.RequireSupported(appDataRoot, nameof(appDataRoot));
     _appDataRoot = Path.GetFullPath(appDataRoot);
+    PathText.RequireSupported(PathIdentity.Resolve(_appDataRoot), nameof(appDataRoot));
   }
 
   /// <summary>The app's data folder; never scanned and never a source of copies.</summary>
@@ -81,6 +83,17 @@ public sealed partial class PlanExecutor
     ArgumentNullException.ThrowIfNull(checkNow);
     ArgumentNullException.ThrowIfNull(record);
     RequireBatchId(batchId);
+    // Reject an unrepresentable plan before any journal row or partial operation exists.
+    foreach (var entry in plan)
+    {
+      PathText.RequireReadable(entry.Keeper.Path);
+      foreach (var copy in entry.Stack.Copies) { PathText.RequireReadable(copy.Path); }
+      foreach (var item in entry.Items)
+      {
+        PathText.RequireReadable(item.SourcePath);
+        if (item.DestinationPath is { } destination) { PathText.RequireReadable(destination); }
+      }
+    }
     var results = new List<BatchItem>();
     void Add(BatchItem item)
     {
@@ -177,6 +190,7 @@ public sealed partial class PlanExecutor
   public BatchItem Retry(string batchId, BatchItem item)
   {
     ArgumentNullException.ThrowIfNull(item);
+    RequirePaths(item);
     RequireBatchId(batchId);
     if (item.State != BatchItemState.Failed)
     {
@@ -241,6 +255,7 @@ public sealed partial class PlanExecutor
   public RestoreOutcome Restore(string batchId, BatchItem item, DateTimeOffset now)
   {
     ArgumentNullException.ThrowIfNull(item);
+    RequirePaths(item);
     RequireBatchId(batchId);
     if (!item.CanRestore)
     {
@@ -314,6 +329,9 @@ public sealed partial class PlanExecutor
   {
     ArgumentNullException.ThrowIfNull(conflict);
     ArgumentNullException.ThrowIfNull(item);
+    RequirePaths(item);
+    PathText.RequireReadable(conflict.OriginalPath);
+    if (choice == RestoreConflictChoice.OtherFolder && folder is not null) { PathText.RequireReadable(folder); }
     var recycled = item.Kind is PlanItemKind.Recycle or PlanItemKind.Replace ? item.RecycledPath : null;
     if (choice == RestoreConflictChoice.KeepInRecycleArea || recycled is null || (!File.Exists(recycled) && !Directory.Exists(recycled)))
     {
@@ -407,6 +425,8 @@ public sealed partial class PlanExecutor
   /// <summary>Copies a file through a temporary file, verifies the bytes by fingerprint, then moves it into place.</summary>
   public static void CopyVerified(string source, string destination)
   {
+    PathText.RequireReadable(source);
+    PathText.RequireReadable(destination);
     if (File.Exists(destination) || Directory.Exists(destination))
     {
       throw new IOException(AppText.Get("run.copy.exists", ("path", destination)));
@@ -470,6 +490,7 @@ public sealed partial class PlanExecutor
     var intent = Base(entry, item, BatchItemState.Running);
     RequireOutsideArea(entry.Keeper.Path);
     RequireOutsideArea(item.SourcePath);
+    if (item.DestinationPath is { } destination) { PathText.RequireReadable(destination); }
     switch (item.Kind)
     {
       case PlanItemKind.Copy or PlanItemKind.SaveAs:
@@ -734,6 +755,7 @@ public sealed partial class PlanExecutor
       var folder = relative.Length == 0 ? root : Path.Combine(root, relative);
       foreach (var entry in new DirectoryInfo(folder).EnumerateFileSystemInfos().ToList())
       {
+        PathText.RequireReadable(entry.FullName);
         var child = relative.Length == 0 ? entry.Name : Path.Combine(relative, entry.Name);
         if (ScanFilter.IsLink(entry))
         {
@@ -872,6 +894,8 @@ public sealed partial class PlanExecutor
 
   private static void PutBack(string recycled, string original)
   {
+    PathText.RequireReadable(recycled);
+    PathText.RequireReadable(original);
     var parent = Path.GetDirectoryName(original);
     if (!string.IsNullOrEmpty(parent))
     {
@@ -943,9 +967,19 @@ public sealed partial class PlanExecutor
 
   private void RequireOutsideArea(string path)
   {
+    PathText.RequireReadable(path);
     if (_areas.IsInsideArea(path))
     {
       throw new InvalidOperationException(AppText.Get("run.require.outsideArea", ("path", path)));
+    }
+  }
+
+  internal static void RequirePaths(BatchItem item)
+  {
+    foreach (var path in new[] { item.OriginalPath, item.RecycledPath, item.CreatedPath, item.KeeperPath, item.SourcePath,
+      item.UndonePath, item.RecycleVolume, item.Manifest })
+    {
+      if (path is not null) { PathText.RequireReadable(path); }
     }
   }
 

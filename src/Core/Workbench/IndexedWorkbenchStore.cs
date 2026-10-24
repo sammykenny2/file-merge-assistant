@@ -301,13 +301,16 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       foreach (var raw in paths)
       {
         string path;
+        string real;
         try
         {
           path = Normalize(raw);
+          real = PathIdentity.Resolve(path);
+          PathText.RequireSupported(real);
         }
         catch (ArgumentException)
         {
-          problems.Add(AppText.Get("store.add.invalid", ("path", raw)));
+          problems.Add(AppText.Get("store.add.invalid", ("path", raw is null ? "<null>" : PathText.EscapeUnsupported(raw))));
           continue;
         }
         if (!Directory.Exists(path))
@@ -315,7 +318,6 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
           problems.Add(AppText.Get("store.add.missing", ("path", path)));
           continue;
         }
-        var real = PathIdentity.Resolve(path);
         if (LocationSuggester.Same(real, appData) || LocationSuggester.Inside(real, appData) || PathIdentity.SameOrInside(path, _areas.AppDataRoot) == true)
         {
           problems.Add(AppText.Get("store.add.appFolder", ("path", path)));
@@ -1720,7 +1722,9 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     }
   }
 
-  private static void WriteItem(SqliteConnection connection, string batchId, BatchItem item, int position) =>
+  private static void WriteItem(SqliteConnection connection, string batchId, BatchItem item, int position)
+  {
+    PlanExecutor.RequirePaths(item);
     IndexDatabase.Execute(connection,
       """
       INSERT INTO batch_items(batch_id, id, position, stack_id, kind, target, detail, state, bytes, file_count, failed_files,
@@ -1739,6 +1743,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
       ("$failed", item.FailedFiles), ("$reason", item.FailureReason), ("$retried", item.Retried ? 1 : 0), ("$volume", item.RecycleVolume),
       ("$original", item.OriginalPath), ("$recycled", item.RecycledPath), ("$created", item.CreatedPath), ("$source", item.SourcePath),
       ("$stamp", item.SourceStamp), ("$undone", item.UndonePath), ("$manifest", item.Manifest), ("$keeper", item.KeeperPath));
+  }
 
   private void SaveConflict(RestoreConflict c) =>
     Execute(
@@ -1852,6 +1857,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   private static string Normalize(string path)
   {
+    PathText.RequireSupported(path, nameof(path));
     var full = Path.GetFullPath(path.Trim());
     var trimmed = full.TrimEnd('\\');
     return trimmed.Length == 2 && trimmed[1] == ':' ? trimmed + "\\" : trimmed;

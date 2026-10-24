@@ -9,6 +9,9 @@ No version has been published yet.
 
 ## Unreleased
 
+- Reject paths that cannot cross UTF-8 persistence/native boundaries losslessly;
+  report unsupported NTFS names as partial scans and refuse ambiguous restore,
+  retry, cache and recycle records before changing files.
 - Experimental versioned C# and Czkawka analysis, frozen persistent jobs/evidence,
   read-only engine comparison and separate PNG/JPEG candidate review in WPF/CLI.
 - Windows x64 local Debug installer/portable packages include the native adapter,

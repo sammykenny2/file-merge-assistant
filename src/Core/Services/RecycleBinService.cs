@@ -23,11 +23,13 @@ public class RecycleBinService : IRecycleBinService
   {
     _logger = logger;
     _recycleBinDir = recycleBinDir ?? AppDataPaths.RecycleBinDirectory;
+    PathText.RequireSupported(_recycleBinDir, nameof(recycleBinDir));
     _manifestPath = Path.Combine(_recycleBinDir, "manifest.json");
   }
 
   public async Task<string> RecycleAsync(string filePath, CancellationToken cancellationToken = default)
   {
+    PathText.RequireReadable(filePath);
     Directory.CreateDirectory(_recycleBinDir);
 
     var manifest = await LoadManifestAsync(cancellationToken);
@@ -55,6 +57,7 @@ public class RecycleBinService : IRecycleBinService
 
   public async Task RestoreAsync(string originalPath, CancellationToken cancellationToken = default)
   {
+    PathText.RequireReadable(originalPath);
     var manifest = await LoadManifestAsync(cancellationToken);
     var entry = manifest.Entries.FirstOrDefault(e =>
       string.Equals(e.OriginalPath, Path.GetFullPath(originalPath), StringComparison.OrdinalIgnoreCase));
@@ -152,8 +155,14 @@ public class RecycleBinService : IRecycleBinService
       return new RecycleBinManifest();
 
     await using var stream = File.OpenRead(_manifestPath);
-    return await JsonSerializer.DeserializeAsync<RecycleBinManifest>(stream, JsonOptions, cancellationToken)
+    var manifest = await JsonSerializer.DeserializeAsync<RecycleBinManifest>(stream, JsonOptions, cancellationToken)
       ?? new RecycleBinManifest();
+    foreach (var entry in manifest.Entries)
+    {
+      PathText.RequireReadable(entry.OriginalPath);
+      PathText.RequireReadable(entry.RecycleBinPath);
+    }
+    return manifest;
   }
 
   private async Task SaveManifestAsync(RecycleBinManifest manifest, CancellationToken cancellationToken)
