@@ -17,12 +17,16 @@ internal static class Program
 
   public static async Task<int> Main(string[] args)
   {
-    if (args.Length % 2 != 0) { throw new ArgumentException("Use --work NEW_DIRECTORY --native TRUSTED_LIBRARY_DIRECTORY --fixtures FIXTURES."); }
+    try { return await RunAsync(args).ConfigureAwait(false); }
+    catch (Exception error) { Console.Error.WriteLine(error.Message); return 2; }
+  }
+
+  private static async Task<int> RunAsync(string[] args)
+  {
+    if (args.Length % 2 != 0) { throw new ArgumentException("Use --work NEW_DIRECTORY --native TRUSTED_LIBRARY_DIRECTORY --fixtures FIXTURES [--second-work NEW_DIRECTORY]."); }
     var options = new Dictionary<string, string>(StringComparer.Ordinal);
     for (var i = 0; i < args.Length; i += 2) { options.Add(args[i], args[i + 1]); }
-    var work = Path.GetFullPath(options["--work"]);
-    PathText.RequireSupported(work);
-    if (Directory.Exists(work) || File.Exists(work)) { throw new ArgumentException("Choose a new verification directory; existing content is never overwritten."); }
+    var (work, secondWork) = VerificationRoots.Validate(options["--work"], options.GetValueOrDefault("--second-work"));
     Directory.CreateDirectory(work);
     var nativeDirectory = Path.GetFullPath(options["--native"]);
     var fixtures = Path.GetFullPath(options["--fixtures"]);
@@ -32,9 +36,9 @@ internal static class Program
       ["platform"] = RuntimeInformation.OSDescription, ["rid"] = RuntimeInformation.RuntimeIdentifier,
       ["architecture"] = RuntimeInformation.ProcessArchitecture.ToString(), ["runtime"] = RuntimeInformation.FrameworkDescription,
       ["fileIdentityProvider"] = OperatingSystem.IsWindows() ? "Windows file ID and optional volume GUID" : "Metadata only; no physical identity provider yet",
-      ["work"] = work, ["checks"] = Checks,
+      ["work"] = work, ["secondWork"] = secondWork, ["crossVolumeVerified"] = false, ["checks"] = Checks,
       ["supportScope"] = "Experimental Unicode-path read-only analysis only. WPF, persistent index, operations, restore and platform packaging are not verified by this tool.",
-      ["limitations"] = new[] { "No arbitrary-byte POSIX filename enumeration.", "Non-Windows file observations currently use size/time without a physical identity provider.", "Cross-volume behavior needs a separate mounted-volume case; no external volume is assumed." },
+      ["limitations"] = new[] { "No arbitrary-byte POSIX filename enumeration.", "Non-Windows file observations currently use size/time without a physical identity provider.", "Cross-volume proof requires --second-work and different stable OS volume identities; separate physical disks and cross-volume operations are not verified." },
     };
     try
     {
@@ -173,6 +177,69 @@ internal static class Program
         }).ConfigureAwait(false);
       }
       else { Checks.Add(new("unix-permission-denial", "NotApplicable", "Windows ACL testing is a separate acceptance case.", false)); }
+      var crossRootPassed = false;
+      var distinctVolumes = false;
+      if (secondWork is not null)
+      {
+        await CheckAsync("cross-root-known-answer", async () =>
+        {
+          VerificationRoots.RequireNew(secondWork);
+          Directory.CreateDirectory(secondWork);
+          var firstVolume = await VolumeProof.ObserveAsync(work).ConfigureAwait(false);
+          var secondVolume = await VolumeProof.ObserveAsync(secondWork).ConfigureAwait(false);
+          report["volumesBefore"] = new { first = firstVolume, second = secondVolume };
+          var entries = ImmutableArray.CreateBuilder<AnalysisInput>();
+          var contents = new Dictionary<long, byte[]>();
+          void Add(long id, string root, string name, string text)
+          {
+            var path = Path.Combine(root, name); var bytes = System.Text.Encoding.UTF8.GetBytes(text);
+            using (var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write)) { output.Write(bytes); }
+            File.SetLastWriteTimeUtc(path, new DateTime(2024, 3, 11, 12, 0, 0, DateTimeKind.Utc));
+            entries.Add(new(id, root == work ? "first-volume" : "second-volume", path, FileObservation.Capture(path)));
+            contents.Add(id, bytes);
+          }
+          Add(1, work, "cross-original.txt", "abc"); Add(2, work, "cross-unique.txt", "xyz");
+          Add(3, secondWork, "cross-copy.txt", "abc"); Add(4, secondWork, "cross-different.txt", "def");
+          var references = ImmutableArray.CreateBuilder<AnalysisInput>();
+          foreach (var id in new long[] { 1, 2, 4 })
+          {
+            var path = Path.Combine(work, $"cross-reference-{id}.dat");
+            using (var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write)) { output.Write(contents[id]); }
+            File.SetLastWriteTimeUtc(path, new DateTime(2024, 3, 11, 12, 0, 0, DateTimeKind.Utc));
+            references.Add(new(id, "reference", path, FileObservation.Capture(path)));
+          }
+          foreach (var (id, algorithm) in new[] { ("csharp", ContentFingerprints.XxHash128), ("csharp", ContentFingerprints.Sha256), ("czkawka", ContentFingerprints.Blake3) })
+          {
+            var result = await Analyze(registry, id, algorithm, entries.ToImmutable()).ConfigureAwait(false);
+            var reference = await Analyze(registry, id, algorithm, references.ToImmutable()).ConfigureAwait(false);
+            Require(result.All(file => file.Status == AnalysisFileStatus.Succeeded) && reference.All(file => file.Status == AnalysisFileStatus.Succeeded), "Cross-root analysis failed.");
+            foreach (var file in result)
+            {
+              var expectedId = file.FileId == 3 ? 1 : file.FileId;
+              Require(file.Fingerprint == reference.Single(item => item.FileId == expectedId).Fingerprint, "A cross-root file was substituted.");
+              if (algorithm == ContentFingerprints.Sha256)
+              { Require(file.Fingerprint == ContentFingerprints.Prefix(algorithm) + Convert.ToHexStringLower(SHA256.HashData(contents[file.FileId])), "Cross-root SHA-256 differs from known bytes."); }
+            }
+            var groups = result.GroupBy(file => file.Fingerprint, StringComparer.Ordinal).Where(group => group.Count() > 1)
+              .Select(group => string.Join(',', group.Select(file => file.FileId).Order())).ToArray();
+            Require(groups.Length == 1 && groups[0] == "1,3", "Cross-root group membership differs from the independent oracle.");
+          }
+          foreach (var input in entries) { Require(File.ReadAllBytes(input.Path).AsSpan().SequenceEqual(contents[input.Id]), "Cross-root source bytes changed."); }
+          foreach (var input in references) { Require(File.ReadAllBytes(input.Path).AsSpan().SequenceEqual(contents[input.Id]), "Cross-root reference bytes changed."); }
+          var firstAfter = await VolumeProof.ObserveAsync(work).ConfigureAwait(false);
+          var secondAfter = await VolumeProof.ObserveAsync(secondWork).ConfigureAwait(false);
+          report["volumesAfter"] = new { first = firstAfter, second = secondAfter };
+          Require(firstVolume.Identity == firstAfter.Identity && secondVolume.Identity == secondAfter.Identity, "Volume identity changed during analysis.");
+          distinctVolumes = firstVolume.Identity is not null && secondVolume.Identity is not null && firstVolume.Identity != secondVolume.Identity;
+          crossRootPassed = true;
+          return "Four files in two fresh roots; three algorithms, per-ID evidence, one cross-root group and unchanged source bytes.";
+        }).ConfigureAwait(false);
+      }
+      else { Checks.Add(new("cross-root-known-answer", "Skipped", "No --second-work supplied.", false)); }
+      Checks.Add(crossRootPassed && distinctVolumes
+        ? new("distinct-volume-known-answer", "Passed", "Two different stable OS volume/device identities observed; cross-root known answers passed.")
+        : new("distinct-volume-known-answer", "Skipped", "No second root, same volume, missing proof, or failed cross-root case; no cross-volume support claimed.", false));
+      report["crossVolumeVerified"] = crossRootPassed && distinctVolumes;
       foreach (var (path, bytes) in expectedBytes) { Require(File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes), "A known-answer source changed."); }
       Checks.Add(new("known-answer-source-contents", "Passed", "All original known-answer bytes unchanged."));
       var loaded = AppDomain.CurrentDomain.GetAssemblies().Select(assembly => assembly.GetName().Name).ToArray();
@@ -185,7 +252,7 @@ internal static class Program
     finally
     {
       File.WriteAllText(Path.Combine(work, "report.json"), JsonSerializer.Serialize(report, AnalysisJson.Options));
-      Console.WriteLine(JsonSerializer.Serialize(new { report = Path.Combine(work, "report.json"), passed = report["passed"] }, AnalysisJson.Options));
+      Console.WriteLine(JsonSerializer.Serialize(new { report = Path.Combine(work, "report.json"), passed = report["passed"], crossVolumeVerified = report["crossVolumeVerified"] }, AnalysisJson.Options));
     }
   }
 

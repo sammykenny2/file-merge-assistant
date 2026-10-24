@@ -65,6 +65,13 @@ graph/bounded runner passed a separate 1,000-file smoke for both engines:
 groups, warm backend zero, +1% backend ten, unchanged sources and offline resume.
 This verifies the updated tooling; it is not a rerun of the large measurements.
 
+After source-service wiring (`5573c1a`), a fresh 1,000-file smoke also passed
+both engines: `build/acceptance-83346ea9af334656b9106735f070b39b/suite.json`.
+C# fresh/warm/+1% took 1,946/1,927/1,900 ms; native 1,611/2,147/1,839 ms.
+Both matched all 53 groups, warm backend zero, +1% backend ten, unchanged source
+bytes and same-job offline resume. The suite truthfully records a dirty worktree
+for the concurrent verifier/docs slice; these are diagnostic smoke values only.
+
 ## Interpretation and remaining cases
 
 Both engines are correct on this corpus. Warm/full rescan time includes repeated
@@ -79,7 +86,7 @@ the table as an optimized speed comparison or performance guarantee.
 
 The separate [offscreen WPF probe](2026-10-24-wpf-scale.md) measures synthetic UI
 layout/recycling, not input during a real scan. Physical USB/HDD, controlled
-cold disk cache, physical GUI input, full hub load-more and
+cold disk cache, physical GUI input and
 clean-VM lifecycle acceptance remain unverified. Managed XxHash128 stays the
 default; both engines remain Experimental and G5 is not passed.
 

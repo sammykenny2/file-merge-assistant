@@ -172,6 +172,14 @@ Windows 預設保留既有行為，volume／startup 的現有介面沿用；未�
 獨立審閱另確認 canonical casing 變更以同一服務唯一配對，保留原 frozen Root／
 RootIdentity；大小寫回歸與修正後完整測試通過，6.1 的本機抽象範圍完成。
 
+Slice 6c tooling：verifier 新增 optional `--second-work`，target runner 新增
+`--second-work-parent`，同一 request 跨兩個新根目錄檢驗三種算法、逐檔證據、
+重複群組及來源不變。只有前後穩定且不同的 OS volume GUID／stat device ID
+才能標示跨卷通過；同卷、未知身份或未指定第二根明確略過，不宣稱實體磁碟。
+分析 Release 27 零略過；實際單根／同卷雙根通過，跨卷欄位為 false；既有第二
+根拒絕時未建立第一根且 sentinel 未變。Bash 僅本機 syntax/help 驗證，Pi／Mac
+建置與真正不同卷結果仍待 owner，Task 6.2／6.3 及 G6 不提前勾選。
+
 ## Files to Create/Modify
 
 以下列出交付位置；完成範圍以各階段勾選與測試紀錄為準。

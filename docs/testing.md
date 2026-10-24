@@ -25,8 +25,14 @@ $env:FMA_NATIVE_LIBRARY_DIR = (Resolve-Path native/fma-czkawka-ffi/target/x86_64
 dotnet test tests/analysis-tests/Analysis.Tests.csproj --configuration Release --verbosity minimal
 ```
 
-2026-10-24: 21 portable tests passed with zero skipped against the real native
-Release DLL, including whole-fixture validation before writes. Four isolated
+2026-10-24: 27 portable tests passed with zero skipped against the real native
+Release DLL, including whole-fixture validation before writes, two-root
+preflight rejection without writes and stable same-volume OS identities. The
+Release verifier built without warnings. Actual single-root and two-root runs
+passed; both roots were on the same Windows volume, so the distinct-volume case
+was explicitly Skipped with `crossVolumeVerified: false`. An existing second
+root was rejected with exit 2, no primary-root creation and unchanged sentinel.
+Target Pi/macOS and genuinely different-volume runs remain pending. Four isolated
 verifier processes also rejected parent escape, rooted, duplicate and empty
 fixtures with exit 2, no fixture writes and unchanged sentinels.
 After extraction the full Windows suite also passed Core 507, GUI 25 and CLI 12

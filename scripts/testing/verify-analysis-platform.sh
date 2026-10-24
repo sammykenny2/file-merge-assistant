@@ -1,30 +1,39 @@
 #!/usr/bin/env bash
 # Build/test the pinned native adapter and run the portable analysis verifier.
-# Usage: bash scripts/testing/verify-analysis-platform.sh [--work-parent DIRECTORY]
+# Usage: bash scripts/testing/verify-analysis-platform.sh [--work-parent DIR] [--second-work-parent DIR]
 # Options:
 #   --work-parent DIRECTORY  Existing directory for a new retained report tree.
+#   --second-work-parent DIR Existing parent on a second volume (optional).
 #   -h, --help               Show help.
 # Requires an exported platform kit, native build prerequisites and Rust 1.99.1.
 # Never scans personal directories, runs GUI/operations, installs or deletes data.
 set -euo pipefail
 
 usage() {
-    sed -n '2,8p' "${BASH_SOURCE[0]}"
+    sed -n '2,9p' "${BASH_SOURCE[0]}"
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KIT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WORK_PARENT="${TMPDIR:-/tmp}"
+SECOND_WORK_PARENT=''
+SECOND_RUN_ROOT=''
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --work-parent)
             [ "$#" -ge 2 ] || { usage; exit 2; }
             WORK_PARENT="$2"; shift 2 ;;
+        --second-work-parent)
+            [ "$#" -ge 2 ] && [ -n "$2" ] || { usage; exit 2; }
+            SECOND_WORK_PARENT="$2"; shift 2 ;;
         -h|--help) usage; exit 0 ;;
         *) usage; exit 2 ;;
     esac
 done
 [ -d "$WORK_PARENT" ] || { echo 'Work parent must already exist.' >&2; exit 2; }
+if [ -n "$SECOND_WORK_PARENT" ]; then
+    [ -d "$SECOND_WORK_PARENT" ] || { echo 'Second work parent must already exist.' >&2; exit 2; }
+fi
 [ -f "$KIT_ROOT/analysis-platform-kit.json" ] || { echo 'Run this from an exported analysis platform kit.' >&2; exit 2; }
 case "$(uname -s):$(uname -m)" in
     Linux:aarch64|Linux:arm64) RID='linux-arm64'; TARGET='aarch64-unknown-linux-gnu'; LIBRARY='libfma_czkawka_ffi.so' ;;
@@ -41,6 +50,10 @@ finish() {
     trap - EXIT
     printf '%s\n' "$result" > "$RUN_ROOT/exit-code.txt"
     if [ "$result" -eq 0 ]; then printf 'completed\n' > "$RUN_ROOT/status.txt"; else printf 'failed-or-interrupted\n' > "$RUN_ROOT/status.txt"; fi
+    if [ -n "$SECOND_RUN_ROOT" ]; then
+        printf '%s\n' "$result" > "$SECOND_RUN_ROOT/exit-code.txt"
+        echo "Retained second-volume fixtures: $SECOND_RUN_ROOT"
+    fi
     echo "Return this report tree: $RUN_ROOT"
     exit "$result"
 }
@@ -90,5 +103,17 @@ fi
 VERIFIER="$KIT_ROOT/bin/$RID/FileMergeAssistant.AnalysisVerifier"
 # Only the kit-owned apphost gets an executable bit; no security/quarantine settings are removed.
 chmod u+x "$VERIFIER"
-"$VERIFIER" --work "$RUN_ROOT/verification" --native "$NATIVE_DIR" --fixtures "$KIT_ROOT/tests/Fixtures" 2>&1 | tee "$RUN_ROOT/verifier.txt"
+set -- "$VERIFIER" --work "$RUN_ROOT/verification" --native "$NATIVE_DIR" --fixtures "$KIT_ROOT/tests/Fixtures"
+if [ -n "$SECOND_WORK_PARENT" ]; then
+    SECOND_RUN_ROOT="$(mktemp -d "$SECOND_WORK_PARENT/fma-platform-second.XXXXXX")"
+    SECOND_RUN_ROOT="$(cd "$SECOND_RUN_ROOT" && pwd)"
+    printf '%s\n' "$SECOND_RUN_ROOT" > "$RUN_ROOT/second-root.txt"
+    if [ "$(uname -s)" = 'Darwin' ]; then
+        df -h "$SECOND_RUN_ROOT" > "$RUN_ROOT/second-volume.txt"
+    else
+        if command -v findmnt >/dev/null; then findmnt -T "$SECOND_RUN_ROOT" -o TARGET,FSTYPE,OPTIONS > "$RUN_ROOT/second-volume.txt"; else df -h "$SECOND_RUN_ROOT" > "$RUN_ROOT/second-volume.txt"; fi
+    fi
+    set -- "$@" --second-work "$SECOND_RUN_ROOT/verification"
+fi
+"$@" 2>&1 | tee "$RUN_ROOT/verifier.txt"
 echo 'Read-only contract checks complete; review skipped cases and limitations before declaring platform support.'

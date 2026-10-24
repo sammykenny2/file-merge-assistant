@@ -8,6 +8,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../analysis-verifier/KnownAnswerFixture.cs" Link="KnownAnswerFixture.cs" />
+    <Compile Include="../analysis-verifier/VerificationRoots.cs" Link="VerificationRoots.cs" />
+    <Compile Include="../analysis-verifier/VolumeProof.cs" Link="VolumeProof.cs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="xunit" Version="2.6.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.4" />

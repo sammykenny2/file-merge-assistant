@@ -64,6 +64,26 @@ parent's existing files:
 bash scripts/testing/verify-analysis-platform.sh --work-parent /path/to/test-volume
 ```
 
+To test one request spanning two mounted volumes, supply both existing parents:
+
+```bash
+bash scripts/testing/verify-analysis-platform.sh \
+  --work-parent /path/to/first-volume \
+  --second-work-parent /path/to/second-volume
+```
+
+The runner creates and retains a fresh fixture directory on each volume. It
+records the second path in `second-root.txt` and its filesystem in
+`second-volume.txt`; no existing parent contents are scanned or overwritten.
+Return the primary report tree and retain both fixture trees for inspection.
+The same four-file request spans both roots for each of XxHash128, SHA-256 and
+BLAKE3. Per-file evidence, the expected cross-root duplicate group and unchanged
+source bytes must pass. Stable, different OS volume identities before/after are
+also required for `crossVolumeVerified: true` and
+`distinct-volume-known-answer: Passed`. Missing proof or two folders on the same
+volume produces an explicit Skipped status and `crossVolumeVerified: false`,
+even if all other checks pass. Omitting the second parent also skips this case.
+
 It checks all shipped file hashes, records OS/architecture/filesystem details,
 builds/tests the native adapter from vendored source with `--locked --offline`,
 and runs the architecture-matched verifier. It does not install, run a GUI,
@@ -85,9 +105,11 @@ Skipped checks are not support evidence.
 - Non-Windows observations currently use size/time without a physical identity
   provider. Same-size/same-time replacement protection therefore remains a
   platform gap. No arbitrary-byte POSIX filename enumeration is claimed.
-- A test on one filesystem does not verify cross-volume behavior. Run on each
-  desired filesystem and report both volumes separately; operations across
-  volumes remain unsupported here.
+- Volume proof uses Windows volume GUIDs or the system `stat` device number
+  (`st_dev`): [GNU stat](https://www.gnu.org/software/coreutils/manual/html_node/stat-invocation.html)
+  and [Apple stat](https://raw.githubusercontent.com/apple-oss-distributions/file_cmds/main/stat/stat.1).
+  This proves different logical OS volumes/devices, not different physical disks
+  or a Unix file-identity provider. Cross-volume operations remain untested.
 - Wayland/labwc is recorded as the Pi's environment, not tested as a GUI backend.
 - Native tests have platform-dependent counts: the static-CRT test applies only
   to Windows/MSVC. Do not copy a Windows test total onto another platform.
@@ -102,3 +124,8 @@ dotnet test tests/analysis-tests/Analysis.Tests.csproj --configuration Release -
 
 Native tests skipped because the variable is absent do not establish acceptance.
 Do not use `dotnet test` on an unrelated checkout or personal-data directory.
+
+The verifier can also run directly with `--work NEW_DIRECTORY --native
+TRUSTED_LIBRARY_DIRECTORY --fixtures FIXTURES`, optionally adding `--second-work
+NEW_DIRECTORY`. Both work directories must be new and non-overlapping, with
+existing parents; all roots are validated before any fixture is created.

@@ -12,6 +12,7 @@ declared. Analysis engines remain Experimental; managed XxHash128 stays default.
 | Known answers and image evidence | Published verifier passed; Unicode per-file fingerprints verified | Pending returned report | Pending returned report |
 | Links and permissions | Symlink creation skipped in this verifier; Unix modes not applicable | Pending unprivileged symlink/mode-000 cases | Pending unprivileged symlink/mode-000 cases |
 | Physical file identity | Existing volume serial/file ID/optional GUID preserved | No provider yet; size/time observations only | No provider yet; size/time observations only |
+| One analysis request across volumes | Two-root known answers passed on the same volume; distinct-volume case explicitly Skipped | Optional second-volume runner prepared; actual distinct-volume run pending | Optional second-volume runner prepared; actual distinct-volume run pending |
 | Persistent Core/CLI, source policies, operations/restore | Existing Debug regression suite passes; scale/clean-VM gates incomplete | Windows workflow not ported | Windows workflow not ported |
 | GUI | Existing WPF; no installed host process changed | No GUI build; labwc/Wayland not validated | No GUI build |
 | Packaging | Private Debug NSIS/portable; owner-run VM lifecycle pending | Private verification archive only | Private verification archive only |
@@ -67,7 +68,10 @@ The script verifies shipped hashes, records the actual platform/filesystem,
 builds/tests the native adapter offline with the pinned Rust toolchain, and runs
 the portable verifier. Return the entire printed report directory, including
 build output, loader dependencies, Cargo graph, per-check status and errors.
-Testing a second volume separately still does not prove cross-volume operations.
+Use `--second-work-parent` to test both mounted volumes in one request. The
+report requires different stable OS volume identities before claiming
+`crossVolumeVerified`; a same-volume or unknown-identity case remains Skipped.
+This read-only check does not prove cross-volume operations or physical disks.
 
 Windows-local evidence after root-service wiring: Core 514, GUI 25 and CLI 12 tests
 passed with zero skipped. Portable tests and published verifier are recorded in

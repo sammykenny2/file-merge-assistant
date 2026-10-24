@@ -9,6 +9,10 @@ No version has been published yet.
 
 ## Unreleased
 
+- Add optional two-root known-answer verification to the private platform kit.
+  Cross-volume evidence requires different stable OS volume identities;
+  same-volume and missing-proof cases explicitly remain skipped.
+
 - Route source registration and frozen-root checks through one replaceable path
   service, including isolated analysis sessions and image previews. Keep Windows
   defaults and saved snapshot shapes; Unix identity/operations remain unverified.
