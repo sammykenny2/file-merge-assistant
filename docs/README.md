@@ -47,6 +47,8 @@ cross-platform UI options are reassessed.
 | [testing.md](./testing.md) | Complete | .NET test commands, validation results, and known baseline issues |
 | [analysis-cli.md](./analysis-cli.md) | Implemented: experimental engines | Versioned metadata, exact analysis, engine comparison and similar-image candidate commands |
 | [image-review.md](./image-review.md) | Implemented: experimental Windows | WPF candidate viewing, persistent manual review, scope/evidence/thumbnail limits and compatibility |
+| [platform-support.md](./platform-support.md) | Partial extraction; target evidence pending | Analysis leaf, Windows dependency inventory, Pi/macOS validation and UI scope |
+| [analysis-platform-kit.md](./analysis-platform-kit.md) | Private verification instructions | Owner-run Linux arm64/macOS arm64 native rebuild and read-only contract checks |
 | [deployment.md](./deployment.md) | Draft | Building the Windows setup program, versions, in-app updates, start at sign-in and publishing releases |
 | [i18n.md](./i18n.md) | Complete | Display languages, the language catalogs and how the window switches language |
 | [release-notes.md](./release-notes.md) | Draft | Release notes per version; the source of the update summary and release text |

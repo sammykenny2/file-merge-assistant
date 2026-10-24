@@ -92,3 +92,22 @@ Windows clean install/update/uninstall checks belong in the owner's Sandbox/VM,
 using the generated validation kit. Pi arm64/Wayland and Apple Silicon macOS
 validation will be run by the owner separately; WPF is not a cross-platform GUI.
 CI stays manual-only, and this work does not publish artifacts or push commits.
+
+## Portable analysis verification
+
+`src/analysis/Analysis.csproj` targets `net10.0` independently of Windows Core,
+WPF and ImageSharp. Its [standalone tests](testing.md#portable-analysis-leaf)
+can run with a .NET 10 SDK. This is a read-only engine surface, not a portable
+FMA application. Native compilation is still required for each target.
+
+To prepare the owner's private self-contained Windows x64/Linux arm64/macOS
+arm64 verifier and vendored source archive on Windows:
+
+```powershell
+.\scripts\windows\New-AnalysisPlatformKit.ps1
+```
+
+First build the native inspection source archive as described above. The new
+kit has its own ZIP/checksum, source, dependency notices and retained build
+directory. Follow [the target instructions](analysis-platform-kit.md) on the Pi
+or Mac, then review its returned report before claiming any platform support.

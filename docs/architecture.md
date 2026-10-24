@@ -30,15 +30,23 @@ CLI and Krokiet are independent upstream frontends, not runtime dependencies.
 | `src/Cli/` | Legacy service commands plus versioned `engines`, `analyze`, `compare-engines`, `similar-images` |
 | `src/Core/Workbench/` | Shared workbench API, source registration, selection and immutable policy capture |
 | `src/Core/Scanning/` | Inventory, background scheduling, frozen jobs, observation checks and generation publication |
-| `src/Core/Analysis/` | Immutable engine contracts, registry, capability/result validation and adapters |
+| `src/analysis/` | Portable `net10.0` engine contracts, registry, capability/result validation and adapters |
 | `native/fma-czkawka-ffi/` | Pinned Rust wrapper, ABI 1, controlled lifetime and cancellation |
 | `src/Core/Index/` | SQLite schema, backed-up migrations and connection helpers |
 | `src/Core/Stacks/`, `Plans/` | Stack evidence, decisions, revalidation, copy/recycle execution and restore |
 
-The current target is .NET 10 Windows; GUI uses WPF and the database is SQLite.
+Core/CLI/GUI target .NET 10 Windows; GUI uses WPF and the database is SQLite.
+The analysis leaf targets plain `net10.0` and has no Core, SQLite, WPF or
+ImageSharp reference. Core references this leaf; the dependency never points back.
 The application has no Python or Node.js runtime dependency. Rust is a build
 dependency of the optional native adapter, not an end-user toolchain requirement.
 There is no HTTP service or network listener in this integration.
+
+`FileIdentityReader` preserves the existing Windows volume/file-ID observation;
+Core's `PathIdentity.Identify` delegates to it. Non-Windows observations currently
+have size/time only. This extraction does not make source registration, durable
+workflows, operations or GUI portable. See the [platform matrix](platform-support.md)
+for the remaining Windows dependencies and target-machine validation kit.
 
 ## Exact-content flow
 

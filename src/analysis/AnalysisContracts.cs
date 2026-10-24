@@ -30,7 +30,7 @@ public sealed record FileObservation(long Size, long ModifiedUtcTicks, FileIdent
     PathText.RequireSupported(path, nameof(path));
     var info = new FileInfo(path);
     if (!info.Exists) { throw new FileNotFoundException("The analysis input no longer exists.", path); }
-    return new(info.Length, info.LastWriteTimeUtc.Ticks, OperatingSystem.IsWindows() ? PathIdentity.Identify(path) : null);
+    return new(info.Length, info.LastWriteTimeUtc.Ticks, FileIdentityReader.Identify(path));
   }
 
   public bool Matches(FileObservation other) => Size == other.Size && ModifiedUtcTicks == other.ModifiedUtcTicks

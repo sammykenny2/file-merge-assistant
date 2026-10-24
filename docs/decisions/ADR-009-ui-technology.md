@@ -8,6 +8,13 @@ Accepted（2026-10-23：產品負責人要求依 GUI 流程 mock 實作新介面
 
 產品負責人希望未來也能提供 macOS／Linux 版本，但主要資料與大量驗證仍在 Windows。[ADR-015](./ADR-015-pluggable-analysis-engines.md) 接受保留 C# 工作流程、分析引擎可切換的方向，不全面改寫為 Rust。原本「沒有跨平台需求」的選型前提需重評；現有 WPF 繼續使用，Avalonia 是後續技術驗證候選，尚未決定取代 WPF。本次沒有授權或開始 GUI 移植。
 
+PLAN-002 Phase 6 先將唯讀分析抽成 `net10.0` leaf，並交付 Pi arm64／macOS arm64
+驗證包。這只驗證分析邊界，沒有提供 UI 框架的採用證據。本階段保留 WPF，
+延後 Avalonia prototype 與 GUI 移植；後續需先回收目標機結果、補齊檔案身份與
+Windows 整合缺口，再由產品負責人決定是否另立 UI 驗證計畫。此安排不撤銷
+跨平台需求，也不將尚未執行的 Avalonia 評估記為完成。平台缺口見
+[支援矩陣](../platform-support.md)。
+
 ## 背景
 
 - 現行 GUI 使用 WPF（撰寫時為 `net8.0-windows`，2026-10-23 已升級到 `net10.0-windows`），搭配 CommunityToolkit.Mvvm 與 Microsoft.Extensions.Hosting。畫面分成 Scan、Results、Reports 三個 View。核心邏輯在共用的 `src/Core` 類別庫，CLI 也使用同一套。
@@ -53,8 +60,9 @@ Accepted（2026-10-23：產品負責人要求依 GUI 流程 mock 實作新介面
 ### 替代方案二：Avalonia
 
 - **優點**：XAML 寫法接近 WPF，可以跨平台。
-- **缺點**：產品不需要跨平台；多一個第三方 UI 框架相依；Windows 專屬整合要另外處理。
-- **不採用的原因**：跨平台的好處用不到。
+- **缺點**：多一個第三方 UI 框架相依；Windows 專屬整合要另外處理。
+- **當時不採用的原因**：2026-10-23 尚無跨平台需求；目前此理由已不適用，
+  依上方補充保留為候選，未決定採用。
 
 ### 替代方案三：網頁技術介面（WebView2 內嵌網頁，或 Electron 類框架）
 

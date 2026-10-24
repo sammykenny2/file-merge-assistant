@@ -23,7 +23,9 @@ public sealed class NativeAnalysisPathsTests
     Directory.CreateDirectory(own);
     File.WriteAllText(Path.Combine(own, NativeAnalysisPaths.LibraryName), "invalid local module");
     Assert.Equal(own, NativeAnalysisPaths.Resolve(cli));
-    Assert.Equal(AnalysisAvailability.Incompatible, new NativeAnalysisEngine(NativeAnalysisPaths.Resolve(cli)).Descriptor.Availability);
+    var availability = new NativeAnalysisEngine(NativeAnalysisPaths.Resolve(cli)).Descriptor.Availability;
+    if (OperatingSystem.IsWindows()) { Assert.Equal(AnalysisAvailability.Incompatible, availability); }
+    else { Assert.Contains(availability, new[] { AnalysisAvailability.Incompatible, AnalysisAvailability.MissingDependency }); }
     Assert.Throws<ArgumentException>(() => NativeAnalysisPaths.Resolve("relative"));
     var other = tree.PathOf("some-other-program"); Directory.CreateDirectory(other);
     File.WriteAllText(Path.Combine(other, NativeAnalysisPaths.PackageMarker), "owned");

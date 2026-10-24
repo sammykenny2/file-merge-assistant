@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>FileMergeAssistant.Tests</RootNamespace>
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../analysis-verifier/KnownAnswerFixture.cs" Link="KnownAnswerFixture.cs" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.4" />
+    <ProjectReference Include="../../src/analysis/Analysis.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Core.Tests/Analysis/ManagedAnalysisEngineTests.cs" Link="ManagedAnalysisEngineTests.cs" />
+    <Compile Include="../Core.Tests/Analysis/AnalysisResultValidatorTests.cs" Link="AnalysisResultValidatorTests.cs" />
+    <Compile Include="../Core.Tests/Analysis/NativeAnalysisPathsTests.cs" Link="NativeAnalysisPathsTests.cs" />
+    <Compile Include="../Core.Tests/Analysis/KnownAnswerDataset.cs" Link="KnownAnswerDataset.cs" />
+    <Compile Include="../Core.Tests/Scanning/TempTree.cs" Link="TempTree.cs" />
+    <None Include="../Fixtures/analysis/*" Link="Fixtures/analysis/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../Fixtures/similar-images/*" Link="Fixtures/similar-images/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

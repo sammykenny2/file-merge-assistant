@@ -40,6 +40,7 @@ File Merge Assistant helps you clean up years of accumulated duplicate files acr
 - [x] Tray icon, startup behaviour (start at sign-in, keep running in the tray, open the window after a sign-in start) and check for updates from the tray or Settings ([ADR-014](./docs/decisions/ADR-014-tray-startup-and-display-language.md))
 - [x] English and Traditional Chinese display languages ([i18n](./docs/i18n.md)), switched at once from Settings > General
 - [x] Experimental pluggable analysis: managed exact-content algorithms, pinned native Czkawka BLAKE3, separate engine comparison, and [PNG/JPEG manual review](./docs/image-review.md). Local Debug NSIS/portable packaging includes the native DLL and rebuild source; clean-machine, scale and public-release acceptance remain PLAN-002 Phase 5.
+- [x] Portable `net10.0` analysis leaf and private [Pi/macOS verification kit](./docs/analysis-platform-kit.md). Windows contract checks pass; target-machine results remain pending. See the [platform matrix](./docs/platform-support.md); WPF and the complete workflow remain Windows-only.
 
 ## Quick Start
 
@@ -90,6 +91,7 @@ platform acceptance. Analysis engines remain Experimental; see PLAN-002 and
 
 ```
 file-merge-assistant/
+├── src/analysis/          # Portable read-only analysis contracts and adapters
 ├── src/Core/              # Core library with business logic
 │   ├── Hashing/           # Hash algorithms (SHA-256, xxHash, Perceptual, Video)
 │   ├── Models/            # Data models

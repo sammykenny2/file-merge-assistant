@@ -9,6 +9,11 @@ No version has been published yet.
 
 ## Unreleased
 
+- Extract read-only analysis into a plain `net10.0` leaf, preserving Windows
+  workflow behavior. Add portable tests and a private owner-run Pi/macOS arm64
+  verification kit. Target execution, Unix physical file identity and complete
+  workflow/UI portability remain pending; see the [platform matrix](platform-support.md).
+
 - Reject paths that cannot cross UTF-8 persistence/native boundaries losslessly;
   report unsupported NTFS names as partial scans and refuse ambiguous restore,
   retry, cache and recycle records before changing files.

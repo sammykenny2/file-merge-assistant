@@ -133,11 +133,20 @@ GUI 互動、實體 USB 及 G5 仍待結果，未提升成熟度或切換預設�
 - [ ] Task 6.1：盤點並抽象化 Windows 路徑／磁碟／檔案身份及系統整合，將可攜的 Core／契約測試分離出目前 `net10.0-windows` 目標限制。
 - [ ] Task 6.2：依可用硬體選定 macOS／Linux 平台及架構，建置對應 `.dylib`／`.so`，以小型資料驗證大小寫、Unicode、連結、權限與跨磁碟行為。
 - [ ] Task 6.3：記錄各平台與檔案系統的支援證據；尚未完成執行／還原驗收的平台先限制為分析與檢視，不標為完整 FMA 支援。
-- [ ] Task 6.4：另行決定 Avalonia 技術驗證與 ADR-009 的後續狀態；只有通過驗證並取得 UI 採用決定後，才建立 GUI 移植計畫。
+- [x] Task 6.4：另行決定 Avalonia 技術驗證與 ADR-009 的後續狀態；只有通過驗證並取得 UI 採用決定後，才建立 GUI 移植計畫。現階段保留 WPF，Avalonia 驗證延後，未建立 GUI 移植計畫。
 
 **Deliverables**：平台支援矩陣及 UI 技術評估。相似影片另訂能力驗收，不作為前面階段的必要條件。
 
 **Gate G6**：AC-E11 通過後才宣告對應能力的預覽支援。Windows 的正式驗收不代表 macOS／Linux 已驗證，無大量個人檔案也不免除可重建資料的功能驗證。
+
+Slice 6a：將唯讀分析抽成 `src/analysis/`、`net10.0` leaf，Core 單向引用，
+保留 Windows 檔案身份與序列化形狀。Core 507／GUI 25／CLI 12 及獨立分析
+測試通過；Windows published verifier 的連結建立明確略過，非通過。
+已提供 [平台矩陣與 Windows 相依盤點](../platform-support.md)、Pi arm64／
+macOS arm64 的 source/vendor/self-contained [私有驗證包](../analysis-platform-kit.md)。
+Unix 尚無物理檔案身份 provider，目標機 native build/run 與跨磁碟結果待產品
+負責人執行回傳；6.1 至 6.3 仍未全部完成，G6 未通過。ADR-009 已記錄保留
+WPF、延後 Avalonia 驗證的安排，並非已驗證或採用跨平台 GUI。
 
 ## Files to Create/Modify
 
@@ -145,7 +154,7 @@ GUI 互動、實體 USB 及 G5 仍待結果，未提升成熟度或切換預設�
 
 | 路徑 | 預計動作 | 責任 |
 |------|----------|------|
-| `src/Core/Analysis/` | 新增 | 引擎介面、契約、registry、C# 與 Czkawka 適配 |
+| `src/analysis/` | 新增（Phase 6 從 Core 抽出） | 可攜引擎介面、契約、registry、C# 與 Czkawka 適配 |
 | `native/fma-czkawka-ffi/` | 新增 | C ABI 包裝、版本固定、Rust 測試與建置設定 |
 | `src/Core/Scanning/SourceScanner.cs`、`ScanWorker.cs` | 調整 | 保留探索／排程／索引責任，委派分析 |
 | `src/Core/Index/IndexDatabase.cs`、`src/Core/Sources/ScanJobInfo.cs` | 調整 | 任務快照、證據來源、世代與遷移 |

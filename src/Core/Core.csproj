@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../analysis/Analysis.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- File hashing and comparison -->
     <PackageReference Include="System.IO.Hashing" Version="10.0.13" />
 

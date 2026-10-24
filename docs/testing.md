@@ -1,5 +1,32 @@
 # Testing Strategy
 
+## Portable analysis leaf
+
+`src/analysis/Analysis.csproj` targets `net10.0` with no Windows Core/WPF/SQLite/
+ImageSharp dependency. Its tests are separate from the Windows workflow suite:
+
+```powershell
+$env:FMA_NATIVE_LIBRARY_DIR = (Resolve-Path native/fma-czkawka-ffi/target/x86_64-pc-windows-msvc/release).Path
+dotnet test tests/analysis-tests/Analysis.Tests.csproj --configuration Release --verbosity minimal
+```
+
+2026-10-24: 21 portable tests passed with zero skipped against the real native
+Release DLL, including whole-fixture validation before writes. Four isolated
+verifier processes also rejected parent escape, rooted, duplicate and empty
+fixtures with exit 2, no fixture writes and unchanged sentinels.
+After extraction the full Windows suite also passed Core 507, GUI 25 and CLI 12
+with zero skipped. The published self-contained Windows kit verifier passed
+known exact answers, per-ID Unicode/case fingerprints, PNG resize and source-byte
+checks; symlink creation was explicitly Skipped for missing privilege, and Unix
+modes were NotApplicable. Neither counts as a passed case.
+
+The private [target kit](analysis-platform-kit.md) builds/tests native source and
+runs the verifier on the owner's Pi/macOS machines. Those results are pending;
+cross-publishing and a Windows run do not validate foreign platforms. The
+[platform matrix](platform-support.md) records metadata-only Unix identity and
+the remaining Windows workflow boundaries. This leaf's Release build has no
+ImageSharp; it does not clear the full application's missing Release key.
+
 File Merge Assistant uses xUnit for the .NET 10 Windows-targeted core library.
 Tests live in `tests/Core.Tests/`, grouped under `Hashing/`, `Reporting/`,
 `Resolution/`, `Services/`, `Stacks/`, `Updates/` and `Workbench/`. NSubstitute supplies test

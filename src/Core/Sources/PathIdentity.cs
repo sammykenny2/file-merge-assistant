@@ -4,21 +4,6 @@ using Microsoft.Win32.SafeHandles;
 namespace FileMergeAssistant.Sources;
 
 /// <summary>
-/// The identity of a file or folder on disk: its volume's serial number and its file id on that volume, plus the volume's
-/// GUID when the volume is local. Compare with <see cref="SameAs"/>.
-/// </summary>
-public readonly record struct FileIdentity(uint VolumeSerial, ulong FileId, string? VolumeGuid)
-{
-  /// <summary>
-  /// Same file or folder: the same id on the same volume. Two local volumes are also told apart by their GUID, which a
-  /// sector-by-sector clone of a drive does not share (it copies the serial and the ids).
-  /// </summary>
-  public bool SameAs(FileIdentity other) =>
-    FileId == other.FileId && VolumeSerial == other.VolumeSerial
-    && (VolumeGuid is null || other.VolumeGuid is null || string.Equals(VolumeGuid, other.VolumeGuid, StringComparison.OrdinalIgnoreCase));
-}
-
-/// <summary>
 /// The real location behind a path (ADR-010). A junction, a symbolic link, a <c>subst</c> drive, a mapped drive or a UNC
 /// path (<c>\\server\share</c>, <c>\\localhost\C$</c>) can make one folder appear under several names. Names are never
 /// trusted to tell folders apart: <see cref="Identify"/> asks Windows for the volume serial and file id, which are the
@@ -29,7 +14,6 @@ public static partial class PathIdentity
   private const uint FileShareAll = 0x1 | 0x2 | 0x4;
   private const uint OpenExisting = 3;
   private const uint BackupSemantics = 0x02000000;
-  private const uint VolumeNameGuid = 0x1;
 
   /// <summary>Name prefix of the probe files <see cref="ProbeSeenAt"/> writes for a moment; scans never index them.</summary>
   public const string ProbePrefix = ".fma-probe-";
@@ -65,49 +49,7 @@ public static partial class PathIdentity
 
   /// <summary>The identity of an existing file or folder (links are followed to their target), or null when it cannot be opened.</summary>
   public static FileIdentity? Identify(string path)
-  {
-    ArgumentNullException.ThrowIfNull(path);
-    string full;
-    try
-    {
-      full = Path.GetFullPath(path);
-    }
-    catch (ArgumentException)
-    {
-      return null;
-    }
-    using var handle = Open(full);
-    if (handle.IsInvalid)
-    {
-      return null;
-    }
-    // The same call for every path, so two names of one folder can never come back in different forms (ReFS ids are
-    // 128-bit; their low half is used here, which can only make two folders look the same, never the reverse).
-    var info = new byte[52];
-    if (!GetFileInformationByHandle(handle, info))
-    {
-      return null;
-    }
-    var serial = BitConverter.ToUInt32(info, 28);
-    var index = ((ulong)BitConverter.ToUInt32(info, 44) << 32) | BitConverter.ToUInt32(info, 48);
-    if (index == 0)
-    {
-      // A file system without file ids: names are all there is, so this is not an identity.
-      return null;
-    }
-    // Local volumes answer with their GUID path (\\?\Volume{...}\...); network shares do not.
-    var buffer = new char[1024];
-    var length = GetFinalPathNameByHandleW(handle, buffer, (uint)buffer.Length, VolumeNameGuid);
-    string? guid = null;
-    if (length > 0 && length < buffer.Length)
-    {
-      var final = new string(buffer, 0, (int)length);
-      var start = final.IndexOf("Volume{", StringComparison.OrdinalIgnoreCase);
-      var end = start < 0 ? -1 : final.IndexOf('}', start);
-      guid = end > start ? final[start..(end + 1)] : null;
-    }
-    return new FileIdentity(serial, index, guid);
-  }
+    => FileIdentityReader.Identify(path);
 
   /// <summary>True for a UNC path, a mapped network drive, or a link that leads onto either.</summary>
   public static bool IsNetwork(string path)
@@ -230,8 +172,4 @@ public static partial class PathIdentity
   [LibraryImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
   private static partial uint GetFinalPathNameByHandleW(SafeFileHandle file, [Out] char[] filePath, uint filePathLength, uint flags);
 
-  // BY_HANDLE_FILE_INFORMATION: dwVolumeSerialNumber at 28, nFileIndexHigh at 44, nFileIndexLow at 48.
-  [LibraryImport("kernel32.dll", SetLastError = true)]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  private static partial bool GetFileInformationByHandle(SafeFileHandle file, [Out] byte[] info);
 }
