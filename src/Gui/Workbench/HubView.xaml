@@ -121,8 +121,8 @@
                       </WrapPanel>
                     </StackPanel>
                   </Border>
-                  <ItemsControl ItemsSource="{Binding Items}" Focusable="False">
-                    <ItemsControl.ItemTemplate>
+                  <ListBox ItemsSource="{Binding Items}" Style="{StaticResource ReviewList}" AutomationProperties.Name="{Binding Title}">
+                    <ListBox.ItemTemplate>
                       <DataTemplate DataType="{x:Type w:HubItemViewModel}">
                         <Border BorderBrush="{StaticResource RowDividerBrush}" BorderThickness="0,1,0,0" Padding="18,11">
                           <Grid>
@@ -160,8 +160,8 @@
                           </DataTrigger>
                         </DataTemplate.Triggers>
                       </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
                 </StackPanel>
               </Border>
             </DataTemplate>

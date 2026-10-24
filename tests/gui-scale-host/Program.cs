@@ -83,6 +83,39 @@ internal static class Program
     Record("hub-initial-visible-models", new { models = proxy.Stacks.Count, shown = hub.Groups.Sum(group => group.Items.Count) });
     Measure("hub-folder-filter-and-render", () => { hub.IsFolderKind = true; Render(shell!); });
     Measure("hub-sort-and-render", () => { hub.Sort = hub.SortOptions[^1]; Render(shell!); });
+    Measure("hub-load-all-and-render", () =>
+    {
+      hub.IsAllKinds = true;
+      var loads = 0;
+      while (hub.HasMore && loads++ < 501) { hub.LoadMoreCommand.Execute(null); }
+      if (hub.HasMore || hub.Groups.Sum(group => group.Items.Count) != 10001)
+      { throw new InvalidDataException("Load-more did not retain all 10001 models."); }
+      Render(shell!);
+    });
+    var hubLists = Descendants(shell!).OfType<ListBox>().ToArray();
+    if (hubLists.Length != hub.Groups.Count || hubLists.Sum(list => list.Items.Count) != 10001)
+    { throw new InvalidDataException("The full hub list lost a group or model."); }
+    foreach (var list in hubLists)
+    {
+      var lastItem = (HubItemViewModel)list.Items[^1];
+      list.ScrollIntoView(lastItem); Render(shell!);
+      if (Descendants(list).OfType<VirtualizingStackPanel>().Single().Children.Count >= 100
+        || list.ItemContainerGenerator.ContainerFromIndex(list.Items.Count - 1) is null)
+      { throw new InvalidDataException("Hub rows are unbounded or the final row is inaccessible."); }
+    }
+    var lastHubItem = (HubItemViewModel)hubLists[^1].Items[^1];
+    var open = Descendants(hubLists[^1]).OfType<Button>().Single(button => ReferenceEquals(button.Command, lastHubItem.Open));
+    open.Command.Execute(open.CommandParameter);
+    if (main.CurrentPage is not StackViewModel opened || opened.Title != lastHubItem.Title)
+    { throw new InvalidDataException("A recycled hub button opened the wrong stack."); }
+    Record("hub-full-list-and-recycled-command", new { models = 10001, groups = hubLists.Length, boundedContainers = true, finalRowOpened = true });
+    // Restore the same component instance to exercise filtering after its full load-more state.
+    main.CurrentPage = hub;
+    Measure("hub-filter-after-load-more", () => { hub.IsFileKind = true; Render(shell!); });
+    var filtered = hub.Groups.SelectMany(group => group.Items).ToArray();
+    var kinds = proxy.Stacks.ToDictionary(stack => stack.Id, stack => stack.Kind, StringComparer.Ordinal);
+    if (filtered.Length != 20 || filtered.Any(item => kinds[item.StackId] != StackKind.File))
+    { throw new InvalidDataException("Filtering the fully loaded hub lost its page limit or returned the wrong kind."); }
     Measure("stack-10000-rows-first-viewport", () => { main.ShowStack(large.Id); Render(shell!); });
     var stackView = (StackViewModel)main.CurrentPage!;
     if (stackView.Rows.Count != StackViewModel.MaxRows || stackView.Conflicts.Count != 10000)

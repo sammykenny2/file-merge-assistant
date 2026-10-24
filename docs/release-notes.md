@@ -12,6 +12,8 @@ No version has been published yet.
 - Bound large conflict/outcome views to recycled visible controls, retaining all
   models and radio choices. Add an isolated offscreen WPF scale probe; physical
   keyboard, focus-cue and high-DPI validation remain pending in the owner's VM.
+- Apply the same bound to full hub load-more groups. All loaded models remain
+  accessible; regression covers final-row navigation and filtering after 10k.
 
 - Extract read-only analysis into a plain `net10.0` leaf, preserving Windows
   workflow behavior. Add portable tests and a private owner-run Pi/macOS arm64

@@ -37,7 +37,7 @@ try {
         -LogPath (Join-Path $run 'events.jsonl') -TimeoutSeconds $TimeoutSeconds -Record $record -OnUpdate { Write-ScaleReport }
     if ($record.exitCode -ne 0) { throw 'GUI scale host failed; retained report/log has details.' }
     $report = Get-Content -LiteralPath (Join-Path $run 'measurement/report.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    if (-not $report.passed -or $report.kind -ne 'offscreen-wpf-scale-diagnostic' -or @($report.measurements).Count -ne 20) { throw 'Incomplete or wrong GUI scale report.' }
+    if (-not $report.passed -or $report.kind -ne 'offscreen-wpf-scale-diagnostic' -or @($report.measurements).Count -ne 23) { throw 'Incomplete or wrong GUI scale report.' }
     $record.status = 'Passed'; $record.passed = $true
 } catch {
     if ($record.status -ne 'TimedOut') { $record.status = 'Failed' }

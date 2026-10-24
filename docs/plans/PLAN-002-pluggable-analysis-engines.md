@@ -138,6 +138,11 @@ viewport 與 recycling，保留完整模型、可聚焦入口及可讀名稱。�
 [WPF scale](../research/2026-10-24-wpf-scale.md)。實體鍵盤、focus cue、高 DPI
 及真實掃描中的互動仍由 Sandbox／VM 驗證，G5 未通過。
 
+Slice 5e：completion audit 補上 Hub 載入完整 10001 筆的缺口；各組使用同一個
+可回收、有界且可聚焦的清單樣式。23 筆 probe 全部完成，含最後列存取、回收
+按鈕導覽與完整載入後篩選重設，binding errors 0，GUI 25 零略過。500 次
+load-more 的同步累計時間不等於單次點擊或實體輸入延遲，限制仍見 WPF research。
+
 ### Phase 6：後續平台與 UI 技術驗證
 
 - [ ] Task 6.1：盤點並抽象化 Windows 路徑／磁碟／檔案身份及系統整合，將可攜的 Core／契約測試分離出目前 `net10.0-windows` 目標限制。

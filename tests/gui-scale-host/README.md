@@ -20,6 +20,13 @@ scroll jumps; records process memory and queued Dispatcher Input-priority delay;
 and asserts bounded controls, retained outcome models, zero binding errors and
 first/last conflict-radio choices surviving container recycling.
 
+It also executes all 500 load-more commands to expose every hub model, checks
+all groups keep fewer than 100 containers, reaches each final row and opens the
+correct stack through its recycled button. Filtering that fully loaded component
+must reset to 20 matching file models. The total load-more time is a synchronous
+500-command burst with one final render, not one user click or physical input
+latency. Existing paging semantics and all models are retained.
+
 It also checks named focusable list/container entries. It cannot acquire actual
 keyboard focus in an invisible desktop and does not inject physical keys. In
 the disposable GUI validation, use Tab/Shift+Tab to enter/leave both lists,
