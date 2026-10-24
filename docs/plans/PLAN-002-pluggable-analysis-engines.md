@@ -179,6 +179,11 @@ Slice 6c tooling：verifier 新增 optional `--second-work`，target runner 新�
 分析 Release 27 零略過；實際單根／同卷雙根通過，跨卷欄位為 false；既有第二
 根拒絕時未建立第一根且 sentinel 未變。Bash 僅本機 syntax/help 驗證，Pi／Mac
 建置與真正不同卷結果仍待 owner，Task 6.2／6.3 及 G6 不提前勾選。
+獨立審閱通過；最終 Windows／平台套件均從 clean `87afbd8` 重建，Windows
+18／平台 26442 份內部 checksum、PowerShell 5.1 正式 CLI 及 published verifier
+雙根同卷檢查通過。最新產物／雜湊／回傳方式見
+[packaging evidence](../research/2026-10-24-analysis-packaging.md)。最終 completion
+audit 未找到其他當前範圍內必要本機程式缺口；G5／G6 與 owner 驗收仍未完成。
 
 ## Files to Create/Modify
 
