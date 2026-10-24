@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
-namespace FileMergeAssistant.Gui.Converters;
+namespace FileWorkbench.Gui.Converters;
 
 /// <summary>Collapses an element whose bound value is null or an empty string.</summary>
 public class NullToVisibilityConverter : IValueConverter

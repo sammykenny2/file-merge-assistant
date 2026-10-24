@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // Sources and scanning: how a drive is described, why a scan job is queued or stopped, the remark under a source, and
 // the folders suggested on the first-run screen. Job reasons and drive descriptions are written into the index and keep

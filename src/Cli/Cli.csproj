@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <RootNamespace>FileMergeAssistant.Cli</RootNamespace>
-    <AssemblyName>fma</AssemblyName>
+    <RootNamespace>FileWorkbench.Cli</RootNamespace>
+    <AssemblyName>FileWorkbench.Cli</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

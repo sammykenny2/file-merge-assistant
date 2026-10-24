@@ -1,13 +1,13 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Sources;
+using FileWorkbench.Workbench;
 
-namespace FileMergeAssistant.Scanning;
+namespace FileWorkbench.Scanning;
 
 public sealed record AnalysisSessionJob(string Id, string SourceId, ScanJobState State, ScanJobSnapshot Snapshot,
   long Generation, bool Complete, long Discovered, long Confirmed, long Skipped, long Errors, string? Reason);

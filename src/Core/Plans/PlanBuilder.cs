@@ -1,6 +1,6 @@
-using FileMergeAssistant.Stacks;
+using FileWorkbench.Stacks;
 
-namespace FileMergeAssistant.Plans;
+namespace FileWorkbench.Plans;
 
 /// <summary>Turns a reviewed stack decision into pending-plan items (ADR-002). No file is touched.</summary>
 public static class PlanBuilder

@@ -1,11 +1,11 @@
 using System.IO;
-using FileMergeAssistant.Gui.Settings;
-using FileMergeAssistant.Gui.Shell;
-using FileMergeAssistant.Gui.Updates;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Updates;
+using FileWorkbench.Gui.Settings;
+using FileWorkbench.Gui.Shell;
+using FileWorkbench.Gui.Updates;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Updates;
 
-namespace FileMergeAssistant.Gui.Tests;
+namespace FileWorkbench.Gui.Tests;
 
 /// <summary>A settings context over a throwaway data folder, in-memory startup keys and a scripted update source.</summary>
 internal static class TestSettings
@@ -18,10 +18,10 @@ internal static class TestSettings
     bool tray = true,
     bool demo = false)
   {
-    directory ??= Path.Combine(Path.GetTempPath(), "fma-gui-settings-" + Guid.NewGuid().ToString("N"));
+    directory ??= Path.Combine(Path.GetTempPath(), "file-workbench-gui-settings-" + Guid.NewGuid().ToString("N"));
     keys ??= new FakeStartupKeys();
     var shell = new HostShell(directory, launchedAtLogin: false,
-      new StartupRegistration(keys, installed ? @"C:\Programs\FileMergeAssistant\app\FileMergeAssistant.exe" : null));
+      new StartupRegistration(keys, installed ? @"C:\Programs\FileWorkbench\app\FileWorkbench.exe" : null));
     var coordinator = new UpdateCoordinator(updates ?? new FakeUpdateService(), installed, "owner/repo", shell.LastUpdateCheck, shell.RecordUpdateCheck);
     return new SettingsContext(shell, coordinator, installed ? "installed" : "debug", () => tray, demo);
   }
@@ -62,7 +62,7 @@ internal sealed class FakeUpdateService : IUpdateService
   public int Downloads { get; private set; }
 
   public static UpdatePackage NewPackage(string version) => new(
-    Version.Parse(version), "v" + version, "Faster scans.", $"FileMergeAssistant-{version}-x64-setup.exe", 10,
+    Version.Parse(version), "v" + version, "Faster scans.", $"FileWorkbench-{version}-x64-setup.exe", 10,
     new string('a', 64), new Uri("https://github.com/owner/repo/releases/download/v" + version + "/setup.exe"),
     new Uri("https://github.com/owner/repo/releases/tag/v" + version));
 
@@ -83,7 +83,7 @@ internal sealed class FakeUpdateService : IUpdateService
   public Task<string> DownloadAsync(UpdatePackage package, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
   {
     Downloads++;
-    var path = Path.Combine(Path.GetTempPath(), "fma-gui-update-" + Guid.NewGuid().ToString("N") + ".exe");
+    var path = Path.Combine(Path.GetTempPath(), "file-workbench-gui-update-" + Guid.NewGuid().ToString("N") + ".exe");
     File.WriteAllText(path, "installer");
     return Task.FromResult(path);
   }

@@ -1,6 +1,6 @@
 # Deployment
 
-File Merge Assistant ships as a Windows x64 setup program built with NSIS. Decisions are in
+File Workbench ships as a Windows x64 setup program built with NSIS. Decisions are in
 [ADR-012](decisions/ADR-012-release-packaging.md) (packaging and data location) and
 [ADR-013](decisions/ADR-013-in-app-updates.md) (in-app updates). Public previews use the manual Release workflow.
 
@@ -12,15 +12,15 @@ explicitly disabled. Earlier private Debug artifacts remain historical evidence.
 
 ## What the setup program installs
 
-- A per-user installation in `%LOCALAPPDATA%\Programs\FileMergeAssistant` that needs no administrator rights:
+- A per-user installation in `%LOCALAPPDATA%\Programs\FileWorkbench` that needs no administrator rights:
   `app\` (the self-contained GUI, its .NET runtime and license notices), `uninstall.exe`, and a Start menu shortcut.
-- Optional: `cli\fma.exe` (the command-line tool as one self-contained file), with `cli\` added to the user's PATH,
+- Optional: `cli\file-workbench.exe` (the command-line tool as one self-contained file), with `cli\` added to the user's PATH,
   and a desktop shortcut. Both are off by default; an upgrade keeps the earlier choice.
 - Registry: `HKCU\Software\FileMergeAssistant` (`InstallDir`, `Version`, `CliInstalled`) and the
   Apps & features entry under `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\FileMergeAssistant`.
 
 User data is not part of the installation. The app keeps its index, recycle bin, cache, logs and scan results in
-`%LOCALAPPDATA%\FileMergeAssistant` (`FMA_DATA_DIR` overrides the location), and neither setup nor uninstall touches
+`%LOCALAPPDATA%\FileWorkbench` (`FWB_DATA_DIR` overrides the location), and neither setup nor uninstall touches
 it:
 
 - `index.db` (with `index.db-wal` and `index.db-shm` while the app runs): the workbench's local index of sources,
@@ -35,14 +35,14 @@ it:
 
 Setup and uninstall remove only what this program owns:
 
-- `app\` and `cli\fma.exe`, when their folder carries the marker file `.installed-by-file-merge-assistant-setup`
+- `app\` and `cli\file-workbench.exe`, when their folder carries the marker file `.installed-by-file-merge-assistant-setup`
   (setup writes it before copying anything, so an interrupted copy is still recognized), or when the registry
   recorded that folder as the installation. `cli\` itself goes only when it is then empty.
 - `uninstall.exe` and the installation folder when it is empty.
 - The shortcuts and registry entries, only when the registry names this folder (or nothing). Uninstalling a second
   copy in another folder therefore leaves the registered installation intact.
 
-If the chosen folder already has an `app\` or `cli\fma.exe` that this setup did not install, setup stops before
+If the chosen folder already has an `app\` or `cli\file-workbench.exe` that this setup did not install, setup stops before
 changing anything (exit code 2 when silent).
 
 Setup command line, besides the standard NSIS `/S` (silent) and `/D=<folder>` (must be last):
@@ -52,7 +52,7 @@ Setup command line, besides the standard NSIS `/S` (silent) and `/D=<folder>` (m
   starts an update.
 - `/RELAUNCH`: start the app when setup finishes, or start the installed app again when setup fails.
 
-The uninstaller accepts `/S`. Setup detects a running app or `fma` by their locked executables. Interactive setup
+The uninstaller accepts `/S`. Setup detects a running app or `file-workbench` by their locked executables. Interactive setup
 asks the user to close them; silent setup waits up to 30 seconds and then stops with exit code 2. All checks run
 before anything is changed.
 
@@ -73,17 +73,17 @@ tools and a Windows SDK. End-user machines do not need these SDKs.
 
 The script runs the Core tests (skip with `-SkipTests`), publishes the GUI and the CLI for win-x64, collects license
 notices into `app\Licenses`, stages the actual native DLL and compiles
-`installer/FileMergeAssistant.nsi`. Every run uses a new retained
+`installer/FileWorkbench.nsi`. Every run uses a new retained
 `build/installer/run-<id>` directory; it does not recursively clear a shared stage.
 Results go to `build/` (ignored by Git):
 
-- Release: `FileMergeAssistant-<version>-x64-setup.exe`, its `.sha256`, and
-  `file-merge-assistant-update-windows.json`, the update manifest.
-- Debug: `FileMergeAssistant-<version>-x64-debug-setup.exe` and its `.sha256`. No update manifest is written, so a
+- Release: `FileWorkbench-<version>-x64-setup.exe`, its `.sha256`, and
+  `file-workbench-update-windows.json`, the update manifest.
+- Debug: `FileWorkbench-<version>-x64-debug-setup.exe` and its `.sha256`. No update manifest is written, so a
   Debug build can never be offered as an update. Its Apps & features name ends in "(Debug build)".
-- A matching `FileMergeAssistant-<version>-x64[-debug]-portable.zip` and checksum.
+- A matching `FileWorkbench-<version>-x64[-debug]-portable.zip` and checksum.
   Keep its `app/` and `cli/` folders together.
-- `FileMergeAssistant-<version>-czkawka-<adapter-version>[-debug]-source.zip`
+- `FileWorkbench-<version>-czkawka-<adapter-version>[-debug]-source.zip`
   and checksum: the pinned native wrapper, vendored locked sources, notices and
   offline rebuild instructions. `app/Licenses/Rust/SOURCE.json` names the exact
   matching archive/checksum. Preserve it alongside the binaries.
@@ -108,7 +108,7 @@ are linked into the DLL. In addition to MIT, it includes rawler's LGPL-2.1 and
 symphonia's MPL-2.0. The source archive preserves the full locked rebuild input.
 Missing crate notices are supplemented from the exact upstream commits with
 URL/SHA-256 provenance in
-[third-party-notices](../native/fma-czkawka-ffi/third-party-notices/README.md).
+[third-party-notices](../native/file-workbench-czkawka-ffi/third-party-notices/README.md).
 
 simd_helpers uses the exact official license-only commit immediately following
 its pinned source. Two reviewed MIT-only crates, realfft 3.5.0 and
@@ -156,7 +156,7 @@ manifest and the release tag `v<version>` all use it. Every version needs an ent
 "Check for updates" (Settings > Version and updates, and "Check for updates…" in the tray menu) reads
 `https://github.com/<UpdateRepository>/releases.atom`, the public release
 feed (no GitHub REST API, so its per-IP quota does not apply), and picks the highest `v<major>.<minor>.<patch>` release
-newer than the running version. It then reads `file-merge-assistant-update-windows.json` from that release:
+newer than the running version. It then reads `file-workbench-update-windows.json` from that release:
 
 ```json
 {
@@ -165,13 +165,13 @@ newer than the running version. It then reads `file-merge-assistant-update-windo
   "version": "0.1.0",
   "tag": "v0.1.0",
   "summary": "Plain text, at most 500 characters",
-  "assets": [{ "arch": "x64", "name": "FileMergeAssistant-0.1.0-x64-setup.exe", "size": 79339051, "sha256": "<64 hex>" }]
+  "assets": [{ "arch": "x64", "name": "FileWorkbench-0.1.0-x64-setup.exe", "size": 79339051, "sha256": "<64 hex>" }]
 }
 ```
 
 The manifest must match its release (tag, version, platform), and the only installer it may name is
-`FileMergeAssistant-<version>-x64-setup.exe`. The installer is downloaded from the same release into
-`%LOCALAPPDATA%\FileMergeAssistant\updates`; its size and SHA-256 must match the manifest, and a download that makes
+`FileWorkbench-<version>-x64-setup.exe`. The installer is downloaded from the same release into
+`%LOCALAPPDATA%\FileWorkbench\updates`; its size and SHA-256 must match the manifest, and a download that makes
 no progress for 60 seconds stops. Only a copy installed by the setup program can install updates: the app checks that
 it runs from `InstallDir\app`. The settings page offers one next step at a time ("Check for updates", "Download
 update", "Restart and install"); downloading checks again first. Installing is refused, with the reason, while a
@@ -184,15 +184,15 @@ cannot update and link to the releases page ([ADR-014](decisions/ADR-014-tray-st
 
 Settings > Startup has three switches, as in desktop-work-fleet: start at sign-in (on by default), keep running in
 the tray when the main window closes (on), and open the main window after a sign-in start (off). Only the copy the
-setup program installed can start at sign-in. It writes the value `FileMergeAssistant` under
-`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, `"<InstallDir>\app\FileMergeAssistant.exe" --launch-at-login`:
+setup program installed can start at sign-in. It retains the value `FileMergeAssistant` under
+`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, `"<InstallDir>\app\FileWorkbench.exe" --launch-at-login`:
 on the first start of each installation (recorded as `StartupApplied` under `HKCU\Software\FileMergeAssistant`,
 which uninstalling deletes), then only when the user changes the switch. The app never writes
 `...\Explorer\StartupApproved\Run`, where Windows keeps the user's own Startup apps switch, and the settings page shows
 that switch's state. Uninstalling removes the Run value. A second launch shows the running app's window through a
 named pipe per user and data folder; the setup program's "is running" message tells the user to exit from the tray.
 
-`UpdateRepository` in `Directory.Build.props` names the repository (Debug builds also accept `FMA_UPDATE_REPOSITORY`,
+`UpdateRepository` in `Directory.Build.props` names the repository (Debug builds also accept `FWB_UPDATE_REPOSITORY`,
 for testing). **The check cannot work while that repository is private**: GitHub answers the feed with 404, and the app
 says the release source was not found. Make the repository public, or point `UpdateRepository` at a public
 repository that holds only releases, before publishing the first release.
@@ -201,9 +201,20 @@ repository that holds only releases, before publishing the first release.
 
 The public repository was renamed from `sammykenny2/file-merge-assistant` to
 `sammykenny2/messy-file-workbench` on 2026-10-25. New builds use the new
-`UpdateRepository`. Repository naming does not change the current assembly,
-installer, CLI, data-directory or Registry identifiers, or the update manifest
-and asset filenames. Existing tags and published assets are retained.
+`UpdateRepository`. The subsequent product rename uses `FileWorkbench.*`
+assemblies, `file-workbench.exe`, `file_workbench_czkawka_ffi.dll`,
+`FileWorkbench-<version>-...` assets and `file-workbench-update-windows.json`.
+Published 0.3.0 assets keep their original names and bytes. See
+[ADR-017](decisions/ADR-017-file-workbench-product-identity.md).
+
+Fresh profiles use `%LOCALAPPDATA%\FileWorkbench`; an existing
+`%LOCALAPPDATA%\FileMergeAssistant` is reused without moving its index, journals
+or recycled files, even if both folders exist. `FWB_DATA_DIR` overrides both;
+the old `FMA_DATA_DIR` remains an alias when the new variable is absent.
+Registry/Startup identities, ownership markers, single-instance IPC names,
+`.fma-recycle` and `.fma-partial` remain stable for upgrade/data compatibility.
+The installer retains a registered installation directory, checks both old and
+new executables for locks, and replaces the owned old CLI and shortcuts.
 
 The published 0.3.0 Preview still embeds the old repository. Its metadata
 requests deliberately reject redirects, so that binary cannot follow the
@@ -246,7 +257,7 @@ acceptance. No ImageSharp secret is required by these workflows.
 ```
 
 The generated README provides exact PowerShell 5.1/7 commands. The lifecycle
-script requires `-DisposableMachine` and refuses existing FMA registration,
+script requires `-DisposableMachine` and refuses existing File Workbench registration,
 processes, startup entries, shortcuts or user data. It checks foreign-folder
 refusal, optional CLI/PATH preservation, native loading, payload replacement and
 uninstall preservation of user data/foreign CLI files. It observes asynchronous
@@ -266,7 +277,7 @@ job with the current settings; Resume preserves the original snapshot. There is 
 fallback or reinterpretation of existing evidence.
 
 Historical plans and restore do not require the native analysis DLL. Do not
-replace a loaded DLL while FMA is running; modules remain resident for native
+replace a loaded DLL while File Workbench is running; modules remain resident for native
 worker safety. Returning to C# does not require deleting the index or history.
 It also does not mean downgrading the application executable or restoring an
 older database schema; those are separate compatibility decisions.

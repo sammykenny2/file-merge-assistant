@@ -2,8 +2,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-    <AssemblyName>FileMergeAssistant.AcceptanceHost</AssemblyName>
-    <RootNamespace>FileMergeAssistant.AcceptanceHost</RootNamespace>
+    <AssemblyName>FileWorkbench.AcceptanceHost</AssemblyName>
+    <RootNamespace>FileWorkbench.AcceptanceHost</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>

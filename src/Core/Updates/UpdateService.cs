@@ -2,10 +2,10 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Security.Cryptography;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Updates;
+namespace FileWorkbench.Updates;
 
 public interface IUpdateService
 {
@@ -23,8 +23,8 @@ public interface IUpdateService
 /// </summary>
 public sealed class UpdateService : IUpdateService, IDisposable
 {
-  public const string RepositoryVariable = "FMA_UPDATE_REPOSITORY";
-  public const string InstallerPrefix = "FileMergeAssistant-";
+  public const string RepositoryVariable = "FWB_UPDATE_REPOSITORY";
+  public const string InstallerPrefix = "FileWorkbench-";
   private const int MaxRedirects = 5;
   private static readonly TimeSpan MetadataTimeout = TimeSpan.FromSeconds(30);
   // A download may take long on a slow link, but it must keep moving.
@@ -48,12 +48,12 @@ public sealed class UpdateService : IUpdateService, IDisposable
     {
       Timeout = Timeout.InfiniteTimeSpan
     };
-    _http.DefaultRequestHeaders.UserAgent.ParseAdd($"FileMergeAssistant/{CurrentVersion.ToString(3)}");
+    _http.DefaultRequestHeaders.UserAgent.ParseAdd($"FileWorkbench/{CurrentVersion.ToString(3)}");
   }
 
   /// <summary>
   /// The repository built into the app (UpdateRepository in Directory.Build.props). Debug builds also accept
-  /// <c>FMA_UPDATE_REPOSITORY</c>, for testing against another repository.
+  /// <c>FWB_UPDATE_REPOSITORY</c>, for testing against another repository.
   /// </summary>
   public static string ConfiguredRepository
   {
@@ -62,6 +62,8 @@ public sealed class UpdateService : IUpdateService, IDisposable
 #if DEBUG
       if (Environment.GetEnvironmentVariable(RepositoryVariable) is { Length: > 0 } fromEnvironment)
         return fromEnvironment;
+      if (Environment.GetEnvironmentVariable("FMA_UPDATE_REPOSITORY") is { Length: > 0 } legacyRepository)
+        return legacyRepository;
 #endif
       return typeof(UpdateService).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
         .FirstOrDefault(attribute => attribute.Key == "UpdateRepository")?.Value ?? string.Empty;

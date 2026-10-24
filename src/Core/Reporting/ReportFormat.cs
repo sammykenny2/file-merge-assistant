@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Reporting;
+namespace FileWorkbench.Reporting;
 
 public enum ReportFormat
 {

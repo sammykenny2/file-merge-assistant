@@ -1,8 +1,8 @@
 using System.Text;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
+using FileWorkbench.Analysis;
 
-namespace FileMergeAssistant.AnalysisVerifier;
+namespace FileWorkbench.AnalysisVerifier;
 
 internal sealed record KnownAnswerFile(long Id, string Path, byte[] Contents);
 

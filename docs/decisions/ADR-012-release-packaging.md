@@ -6,7 +6,7 @@
 
 - 升級到 .NET 10：已完成。
 - 發佈格式改為 NSIS 安裝檔，只裝給目前使用者、不需要系統管理員權限；CLI 是可選元件，會加入使用者的 PATH。這取代下面「第一批先用免安裝 zip、之後再評估 NSIS」的提議。
-- 資料位置照下面的提議，固定在 `%LOCALAPPDATA%\FileMergeAssistant\`：已實作。回收區目前仍集中在這裡，各磁碟區分開的作法依 [ADR-007](./ADR-007-recycle-area-policy.md) 決定。
+- 資料位置照下面的提議，固定在 `%LOCALAPPDATA%\FileWorkbench\`：已實作。回收區目前仍集中在這裡，各磁碟區分開的作法依 [ADR-007](./ADR-007-recycle-area-policy.md) 決定。
 - 在拿到 Six Labors 授權金鑰之前，本機先用 Debug 設定打包；Release 建置與發佈都要等金鑰。
 - 程式內更新見 [ADR-013](./ADR-013-in-app-updates.md)。
 
@@ -15,7 +15,7 @@
 ## 背景
 
 - 目前沒有任何發佈設定：[deployment.md](../deployment.md) 仍是範本，專案中沒有發佈設定檔，CI 也暫停中。
-- FR-010 要求：Windows 使用者可以直接啟動 GUI，資料位置不隨啟動時的工作目錄改變。現在多處使用相對路徑 `fma-results`：
+- FR-010 要求：Windows 使用者可以直接啟動 GUI，資料位置不隨啟動時的工作目錄改變。現在多處使用相對路徑 `file-workbench-results`：
   - [`ScanCacheService`](../../src/Core/Services/ScanCacheService.cs) 的快取。
   - [`RecycleBinService`](../../src/Core/Services/RecycleBinService.cs) 的回收區。
   - `LoggingSetup` 的記錄檔。
@@ -30,7 +30,7 @@
   - 內含 .NET 執行環境的 win-x64 版本，使用者不必另外安裝 .NET。
   - 不需要系統管理員權限。
   - 是否打包成單一執行檔，實作時再驗證。
-- 所有程式資料統一放在 `%LOCALAPPDATA%\FileMergeAssistant\`，包括索引、記錄檔與操作歷史。回收內容依 [ADR-007](./ADR-007-recycle-area-policy.md) 放在各磁碟區。程式資料不放在執行檔旁邊，換版本時資料也會保留。
+- 所有程式資料統一放在 `%LOCALAPPDATA%\FileWorkbench\`，包括索引、記錄檔與操作歷史。回收內容依 [ADR-007](./ADR-007-recycle-area-policy.md) 放在各磁碟區。程式資料不放在執行檔旁邊，換版本時資料也會保留。
 - 正式發佈前，先升級到 .NET 10 LTS。.NET 8 在 2026-11-10 之後不再有安全性更新，發佈時不應仍停留在已結束支援的版本。
 - 公開發佈前，決定是否進行程式碼簽章。未簽章的執行檔會被 SmartScreen 警告。
 - 需要開始功能表捷徑、解除安裝或自動更新時，再評估 NSIS 或 MSIX。（已由 2026-10-23 的決定取代：直接提供 NSIS 安裝檔，見「狀態」。）

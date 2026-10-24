@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
-namespace FileMergeAssistant.Gui.Converters;
+namespace FileWorkbench.Gui.Converters;
 
 public class BoolToVisibilityConverter : IValueConverter
 {

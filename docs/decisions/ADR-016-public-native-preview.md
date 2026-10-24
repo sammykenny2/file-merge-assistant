@@ -56,6 +56,6 @@ open, and their absence must be stated in the Preview notes.
 
 - [Cargo: license and license-file](https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields)
 - [SPDX MIT terms](https://spdx.org/licenses/MIT.html)
-- [Pinned collection provenance](../../native/fma-czkawka-ffi/third-party-notices/sources.json)
+- [Pinned collection provenance](../../native/file-workbench-czkawka-ffi/third-party-notices/sources.json)
 - [Upstream missing-file issue](https://github.com/darksv/rusty-chromaprint/issues/23)
 - [PLAN-002](../plans/PLAN-002-pluggable-analysis-engines.md)

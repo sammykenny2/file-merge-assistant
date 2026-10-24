@@ -3,10 +3,10 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Analysis;
+using FileWorkbench.Sources;
 
-namespace FileMergeAssistant.Scanning;
+namespace FileWorkbench.Scanning;
 
 public enum ImageReviewChoice { Pending, Related, Different }
 public sealed record ImagePairDecision(long FirstId, long SecondId, ImageReviewChoice Choice);

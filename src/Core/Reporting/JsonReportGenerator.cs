@@ -1,8 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FileMergeAssistant.Models;
+using FileWorkbench.Models;
 
-namespace FileMergeAssistant.Reporting;
+namespace FileWorkbench.Reporting;
 
 public class JsonReportGenerator : IReportGenerator
 {

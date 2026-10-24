@@ -1,10 +1,10 @@
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Plans;
+using FileWorkbench.Sources;
+using FileWorkbench.Stacks;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Workbench;
+namespace FileWorkbench.Tests.Workbench;
 
 public class DemoWorkbenchStoreTests
 {

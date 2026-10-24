@@ -2,8 +2,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-    <AssemblyName>FileMergeAssistant.ScanHost</AssemblyName>
-    <RootNamespace>FileMergeAssistant.ScanHost</RootNamespace>
+    <AssemblyName>FileWorkbench.ScanHost</AssemblyName>
+    <RootNamespace>FileWorkbench.ScanHost</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Core/Core.csproj" />

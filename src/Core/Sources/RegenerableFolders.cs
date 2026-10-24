@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Sources;
+namespace FileWorkbench.Sources;
 
 /// <summary>
 /// Folders that build tools recreate. They are measured (size and file count) but never compared file by file,

@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Sources;
+namespace FileWorkbench.Sources;
 
 public enum VolumeKind
 {

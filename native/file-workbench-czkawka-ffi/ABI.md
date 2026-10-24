@@ -74,4 +74,4 @@ is observed before and after hashing; full bytes and metadata must agree with
 the request. Core independently validates all results and Windows file identity.
 The only current native capability is experimental `ExactDuplicates`, algorithm
 `blake3-v1`, parameters `{}`. Neither backend selection nor this ABI changes
-FMA's independent copy verification or operation/restore responsibilities.
+File Workbench's independent copy verification or operation/restore responsibilities.

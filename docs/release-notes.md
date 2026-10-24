@@ -54,11 +54,11 @@ Summary: Preview of switchable C# and Czkawka analysis, persistent versioned job
 
 ## 0.2.1
 
-Summary: File Merge Assistant now stays in the tray, can start when you sign in, checks for updates from the tray or Settings, and speaks English or Traditional Chinese, switched at once in Settings.
+Summary: File Workbench now stays in the tray, can start when you sign in, checks for updates from the tray or Settings, and speaks English or Traditional Chinese, switched at once in Settings.
 
 - Tray icon with a menu to open or hide the main window, check for updates and exit. Closing the main window keeps
   the app running in the tray, so scans continue.
-- Settings > Startup: start File Merge Assistant when you sign in (on), keep running in the tray when the main window
+- Settings > Startup: start File Workbench when you sign in (on), keep running in the tray when the main window
   closes (on), and open the main window after a sign-in start (off). Starting at sign-in is offered by the installed
   version; a switch turned off in Windows' Startup apps stays off.
 - Opening the app again brings up the window that is already running instead of an "already open" message.
@@ -85,11 +85,11 @@ Summary: A new workbench that consolidates copies one small stack at a time: sca
 
 ## 0.1.0
 
-Summary: First preview of File Merge Assistant for Windows, with a per-user setup program and an in-app update check.
+Summary: First preview of File Workbench for Windows, with a per-user setup program and an in-app update check.
 
-- Per-user setup program (NSIS) that needs no administrator rights, with an optional `fma` command-line tool added
+- Per-user setup program (NSIS) that needs no administrator rights, with an optional `file-workbench` command-line tool added
   to the user's PATH.
-- Data (recycle bin, cache, logs, scan results) now lives in `%LOCALAPPDATA%\FileMergeAssistant` instead of the
+- Data (recycle bin, cache, logs, scan results) now lives in `%LOCALAPPDATA%\FileWorkbench` instead of the
   folder the app was started from.
 - "Check for updates" reads this repository's public GitHub releases and installs a newer setup program after
   checking its size and SHA-256.

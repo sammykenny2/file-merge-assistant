@@ -1,9 +1,9 @@
 using System.IO;
 using Microsoft.Win32;
 
-namespace FileMergeAssistant.Gui.Updates;
+namespace FileWorkbench.Gui.Updates;
 
-/// <summary>Whether this process runs from the copy the setup program installed (installer/FileMergeAssistant.nsi).</summary>
+/// <summary>Whether this process runs from the copy the setup program installed (installer/FileWorkbench.nsi).</summary>
 internal static class InstallationInfo
 {
   internal const string RegistryKey = @"Software\FileMergeAssistant";

@@ -1,8 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:w="clr-namespace:FileMergeAssistant.Gui.Workbench"
-                    xmlns:s="clr-namespace:FileMergeAssistant.Gui.Settings"
-                    xmlns:conv="clr-namespace:FileMergeAssistant.Gui.Converters">
+                    xmlns:w="clr-namespace:FileWorkbench.Gui.Workbench"
+                    xmlns:s="clr-namespace:FileWorkbench.Gui.Settings"
+                    xmlns:conv="clr-namespace:FileWorkbench.Gui.Converters">
   <ResourceDictionary.MergedDictionaries>
     <ResourceDictionary Source="Styles.xaml" />
     <ResourceDictionary>

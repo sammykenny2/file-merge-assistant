@@ -1,7 +1,7 @@
 using System.Globalization;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 /// <summary>
 /// Number, size and date formats used by the workbench screens. Dates and the joins follow the display language

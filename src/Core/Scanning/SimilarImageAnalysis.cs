@@ -1,10 +1,10 @@
 using System.Collections.Immutable;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Sources;
 
-namespace FileMergeAssistant.Scanning;
+namespace FileWorkbench.Scanning;
 
 public sealed record SimilarImagePair(long FirstId, long SecondId, int Distance);
 public sealed record ImageAnalysisError(string JobId, string Path, string Message);

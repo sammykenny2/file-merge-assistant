@@ -2,15 +2,15 @@ using System.ComponentModel;
 using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FileMergeAssistant.Gui.Shell;
-using FileMergeAssistant.Gui.Updates;
-using FileMergeAssistant.Gui.Workbench;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Updates;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Gui.Shell;
+using FileWorkbench.Gui.Updates;
+using FileWorkbench.Gui.Workbench;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Localization;
+using FileWorkbench.Updates;
+using FileWorkbench.Workbench;
 
-namespace FileMergeAssistant.Gui.Settings;
+namespace FileWorkbench.Gui.Settings;
 
 /// <summary>What the settings page works on, created once by the app.</summary>
 /// <param name="Distribution">"installed", "portable" or "debug".</param>

@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace FileMergeAssistant.Analysis;
+namespace FileWorkbench.Analysis;
 
 /// <summary>Checks an engine stream before the caller commits any of its evidence.</summary>
 public sealed class AnalysisResultValidator

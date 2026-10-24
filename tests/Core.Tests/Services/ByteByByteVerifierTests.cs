@@ -1,7 +1,7 @@
-using FileMergeAssistant.Services;
+using FileWorkbench.Services;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Services;
+namespace FileWorkbench.Tests.Services;
 
 public class ByteByByteVerifierTests : IDisposable
 {
@@ -10,7 +10,7 @@ public class ByteByByteVerifierTests : IDisposable
 
   public ByteByByteVerifierTests()
   {
-    _tempDir = Path.Combine(Path.GetTempPath(), $"fma-bbv-test-{Guid.NewGuid():N}");
+    _tempDir = Path.Combine(Path.GetTempPath(), $"file-workbench-bbv-test-{Guid.NewGuid():N}");
     Directory.CreateDirectory(_tempDir);
   }
 

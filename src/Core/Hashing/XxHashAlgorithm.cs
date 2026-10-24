@@ -1,6 +1,6 @@
 using System.IO.Hashing;
 
-namespace FileMergeAssistant.Hashing;
+namespace FileWorkbench.Hashing;
 
 public class XxHashAlgorithm : IHashAlgorithm
 {

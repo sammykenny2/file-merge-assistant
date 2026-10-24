@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Stacks;
+namespace FileWorkbench.Stacks;
 
 /// <summary>Whether the copies in a stack are whole folders or single files (ADR-001).</summary>
 public enum StackKind

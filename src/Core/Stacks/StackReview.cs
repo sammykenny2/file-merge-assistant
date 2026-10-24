@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Stacks;
+namespace FileWorkbench.Stacks;
 
 /// <summary>What happens to a copy under the current decision.</summary>
 public enum CopyRole

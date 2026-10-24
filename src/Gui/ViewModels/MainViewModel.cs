@@ -2,14 +2,14 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FileMergeAssistant.Gui.Settings;
-using FileMergeAssistant.Gui.Workbench;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Gui.Settings;
+using FileWorkbench.Gui.Workbench;
+using FileWorkbench.Localization;
+using FileWorkbench.Sources;
+using FileWorkbench.Stacks;
+using FileWorkbench.Workbench;
 
-namespace FileMergeAssistant.Gui.ViewModels;
+namespace FileWorkbench.Gui.ViewModels;
 
 public enum NavSection
 {

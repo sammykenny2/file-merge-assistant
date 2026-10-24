@@ -1,8 +1,8 @@
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Services;
+using FileWorkbench.Models;
+using FileWorkbench.Services;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Services;
+namespace FileWorkbench.Tests.Services;
 
 public class JsonScanResultStoreTests : IDisposable
 {
@@ -11,7 +11,7 @@ public class JsonScanResultStoreTests : IDisposable
 
   public JsonScanResultStoreTests()
   {
-    _tempDir = Path.Combine(Path.GetTempPath(), $"fma-test-{Guid.NewGuid():N}");
+    _tempDir = Path.Combine(Path.GetTempPath(), $"file-workbench-test-{Guid.NewGuid():N}");
     Directory.CreateDirectory(_tempDir);
   }
 

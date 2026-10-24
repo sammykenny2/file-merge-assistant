@@ -1,9 +1,9 @@
 using System.Runtime.InteropServices;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Tests.Scanning;
+using FileWorkbench.Analysis;
+using FileWorkbench.Tests.Scanning;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class NativeAnalysisPathsTests
 {

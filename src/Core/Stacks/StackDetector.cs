@@ -2,9 +2,9 @@ using System.Globalization;
 using System.IO.Hashing;
 using System.Text;
 using System.Text.RegularExpressions;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Stacks;
+namespace FileWorkbench.Stacks;
 
 /// <summary>A file as the index knows it. <see cref="RelativePath"/> uses backslashes and is relative to the source root.</summary>
 public sealed record IndexedFile(long Id, string SourceId, string RelativePath, long Size, long ModifiedTicks, string? Hash, bool CloudOnly);

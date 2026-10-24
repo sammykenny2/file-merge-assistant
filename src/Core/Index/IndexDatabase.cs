@@ -1,7 +1,7 @@
 using System.Globalization;
 using Microsoft.Data.Sqlite;
 
-namespace FileMergeAssistant.Index;
+namespace FileWorkbench.Index;
 
 /// <summary>
 /// The local index (ADR-008): one SQLite file in WAL mode, written by one scan at a time while the interface reads.
@@ -315,7 +315,7 @@ public sealed class IndexDatabase
     if (version > SchemaVersion)
     {
       throw new InvalidOperationException(
-        $"The index at '{Path}' has schema version {version}, newer than this app's {SchemaVersion}. Install the newer version of File Merge Assistant.");
+        $"The index at '{Path}' has schema version {version}, newer than this app's {SchemaVersion}. Install the newer version of File Workbench.");
     }
     if (version > 0)
     {

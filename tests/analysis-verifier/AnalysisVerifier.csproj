@@ -3,8 +3,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-    <AssemblyName>FileMergeAssistant.AnalysisVerifier</AssemblyName>
-    <RootNamespace>FileMergeAssistant.AnalysisVerifier</RootNamespace>
+    <AssemblyName>FileWorkbench.AnalysisVerifier</AssemblyName>
+    <RootNamespace>FileWorkbench.AnalysisVerifier</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/analysis/Analysis.csproj" />

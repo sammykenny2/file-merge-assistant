@@ -1,8 +1,8 @@
-using FileMergeAssistant.Hashing;
-using FileMergeAssistant.Tests.Scanning;
+using FileWorkbench.Hashing;
+using FileWorkbench.Tests.Scanning;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Hashing;
+namespace FileWorkbench.Tests.Hashing;
 
 public class PerceptualHashAlgorithmTests
 {

@@ -1,12 +1,12 @@
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Tests.Scanning;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Scanning;
+using FileWorkbench.Tests.Scanning;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class ReadOnlyAnalysisSessionTests
 {
@@ -146,7 +146,7 @@ public sealed class ReadOnlyAnalysisSessionTests
   {
     public void Report(System.Collections.Immutable.ImmutableArray<AnalysisSessionJob> jobs)
     {
-      if (!jobs.IsEmpty && jobs.All(job => job.State == FileMergeAssistant.Sources.ScanJobState.Completed)) { cancel.Cancel(); }
+      if (!jobs.IsEmpty && jobs.All(job => job.State == FileWorkbench.Sources.ScanJobState.Completed)) { cancel.Cancel(); }
     }
   }
 

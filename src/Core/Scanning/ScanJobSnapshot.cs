@@ -1,11 +1,11 @@
 using System.Collections.Immutable;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Sources;
 using Microsoft.Data.Sqlite;
 
-namespace FileMergeAssistant.Scanning;
+namespace FileWorkbench.Scanning;
 
 public sealed record ScanSourceSnapshot(ScanSource Source, string? VolumeSerial, FileIdentity? RootIdentity, bool Protected);
 

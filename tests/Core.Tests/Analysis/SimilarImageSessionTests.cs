@@ -1,12 +1,12 @@
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Tests.Scanning;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Scanning;
+using FileWorkbench.Tests.Scanning;
 using Xunit;
 using System.Runtime.CompilerServices;
 using System.Collections.Immutable;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class SimilarImageSessionTests
 {
@@ -144,7 +144,7 @@ public sealed class SimilarImageSessionTests
     private bool _called;
     public void Report(ImmutableArray<AnalysisSessionJob> jobs)
     {
-      if (!_called && !jobs.IsEmpty && jobs.All(job => job.State == FileMergeAssistant.Sources.ScanJobState.Completed))
+      if (!_called && !jobs.IsEmpty && jobs.All(job => job.State == FileWorkbench.Sources.ScanJobState.Completed))
       {
         _called = true;
         action();

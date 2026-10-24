@@ -1,10 +1,10 @@
-; File Merge Assistant setup program: a per-user installation that needs no administrator rights.
+; File Workbench setup program: a per-user installation that needs no administrator rights.
 ; Built by scripts/windows/Build-Installer.ps1, which defines VERSION, CONFIGURATION, STAGE, OUTFILE, PUBLISHER and
-; REPOSITORY. STAGE holds app\ (the self-contained GUI with its license files) and cli\fma.exe.
+; REPOSITORY. STAGE holds app\ (the self-contained GUI with its license files) and cli\file-workbench.exe.
 ;
-; Layout: $INSTDIR\app\, optional $INSTDIR\cli\fma.exe and $INSTDIR\uninstall.exe. Setup and uninstall remove only
+; Layout: $INSTDIR\app\, optional $INSTDIR\cli\file-workbench.exe and $INSTDIR\uninstall.exe. Setup and uninstall remove only
 ; what this program owns: app\ when it carries the marker file setup writes (or the registry records this folder as
-; the installation), and fma.exe when the registry records that setup installed it. User data, which the app keeps in
+; the installation), and file-workbench.exe when the registry records that setup installed it. User data, which the app keeps in
 ; %LOCALAPPDATA%\FileMergeAssistant (recycle bin, cache, logs, results), is never touched.
 ;
 ; Command line, besides the standard /S and /D=:
@@ -22,13 +22,16 @@ SetCompressor /SOLID lzma
   !error "Build with scripts/windows/Build-Installer.ps1."
 !endif
 
-!define APP_NAME "File Merge Assistant"
-!define APP_EXE "FileMergeAssistant.exe"
-!define CLI_EXE "fma.exe"
+!define APP_NAME "File Workbench"
+!define APP_EXE "FileWorkbench.exe"
+!define CLI_EXE "file-workbench.exe"
+!define LEGACY_APP_EXE "FileMergeAssistant.exe"
+!define LEGACY_CLI_EXE "fma.exe"
+!define LEGACY_APP_NAME "File Merge Assistant"
 !define OWNER_MARKER ".installed-by-file-merge-assistant-setup"
 !define REG_APP "Software\FileMergeAssistant"
 !define REG_UNINSTALL "Software\Microsoft\Windows\CurrentVersion\Uninstall\FileMergeAssistant"
-; The app writes this value when "Start File Merge Assistant when you sign in" is on (StartupRegistration.cs).
+; The app writes this value when "Start File Workbench when you sign in" is on (StartupRegistration.cs).
 !define REG_RUN "Software\Microsoft\Windows\CurrentVersion\Run"
 !define RUN_VALUE "FileMergeAssistant"
 !define POWERSHELL "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
@@ -40,7 +43,7 @@ SetCompressor /SOLID lzma
 
 Name "${DISPLAY_NAME}"
 OutFile "${OUTFILE}"
-InstallDir "$LOCALAPPDATA\Programs\FileMergeAssistant"
+InstallDir "$LOCALAPPDATA\Programs\FileWorkbench"
 InstallDirRegKey HKCU "${REG_APP}" "InstallDir"
 BrandingText "${DISPLAY_NAME} ${VERSION}"
 
@@ -71,26 +74,26 @@ Var PreviousCli
 !insertmacro MUI_LANGUAGE "English"
 !insertmacro MUI_LANGUAGE "TradChinese"
 
-LangString SEC_APP_NAME ${LANG_ENGLISH} "File Merge Assistant"
-LangString SEC_APP_NAME ${LANG_TRADCHINESE} "File Merge Assistant"
+LangString SEC_APP_NAME ${LANG_ENGLISH} "File Workbench"
+LangString SEC_APP_NAME ${LANG_TRADCHINESE} "貓檔家"
 LangString SEC_APP_DESC ${LANG_ENGLISH} "The application and a Start menu shortcut."
 LangString SEC_APP_DESC ${LANG_TRADCHINESE} "應用程式與開始功能表捷徑。"
-LangString SEC_CLI_NAME ${LANG_ENGLISH} "Command-line tool (fma)"
-LangString SEC_CLI_NAME ${LANG_TRADCHINESE} "命令列工具（fma）"
-LangString SEC_CLI_DESC ${LANG_ENGLISH} "Installs fma.exe and adds its folder to your PATH."
-LangString SEC_CLI_DESC ${LANG_TRADCHINESE} "安裝 fma.exe，並把它的資料夾加入你的 PATH。"
+LangString SEC_CLI_NAME ${LANG_ENGLISH} "Command-line tool (file-workbench)"
+LangString SEC_CLI_NAME ${LANG_TRADCHINESE} "命令列工具（file-workbench）"
+LangString SEC_CLI_DESC ${LANG_ENGLISH} "Installs file-workbench.exe and adds its folder to your PATH."
+LangString SEC_CLI_DESC ${LANG_TRADCHINESE} "安裝 file-workbench.exe，並把它的資料夾加入你的 PATH。"
 LangString SEC_DESKTOP_NAME ${LANG_ENGLISH} "Desktop shortcut"
 LangString SEC_DESKTOP_NAME ${LANG_TRADCHINESE} "桌面捷徑"
 LangString SEC_DESKTOP_DESC ${LANG_ENGLISH} "Adds a shortcut to your desktop."
 LangString SEC_DESKTOP_DESC ${LANG_TRADCHINESE} "在桌面加入捷徑。"
-LangString MSG_RUNNING ${LANG_ENGLISH} "File Merge Assistant or fma is running. Close it (File Merge Assistant may be in the tray: right-click its icon and select Exit), then select Retry."
-LangString MSG_RUNNING ${LANG_TRADCHINESE} "File Merge Assistant 或 fma 正在執行。請先關閉它（File Merge Assistant 可能在系統匣：在圖示上按右鍵，選「結束 File Merge Assistant」），再按「重試」。"
-LangString MSG_STILL_RUNNING ${LANG_ENGLISH} "File Merge Assistant or fma is still running, so nothing was changed."
-LangString MSG_STILL_RUNNING ${LANG_TRADCHINESE} "File Merge Assistant 或 fma 仍在執行，所以沒有做任何變更。"
+LangString MSG_RUNNING ${LANG_ENGLISH} "File Workbench or file-workbench is running. Close it (File Workbench may be in the tray: right-click its icon and select Exit), then select Retry."
+LangString MSG_RUNNING ${LANG_TRADCHINESE} "貓檔家 或 file-workbench 正在執行。請先關閉它（貓檔家 可能在系統匣：在圖示上按右鍵，選「結束 貓檔家」），再按「重試」。"
+LangString MSG_STILL_RUNNING ${LANG_ENGLISH} "File Workbench or file-workbench is still running, so nothing was changed."
+LangString MSG_STILL_RUNNING ${LANG_TRADCHINESE} "貓檔家 或 file-workbench 仍在執行，所以沒有做任何變更。"
 LangString MSG_FOREIGN ${LANG_ENGLISH} "$INSTDIR\$R9 already exists and was not installed by this setup program, so nothing was changed. Choose another installation folder."
 LangString MSG_FOREIGN ${LANG_TRADCHINESE} "$INSTDIR\$R9 已經存在，而且不是這個安裝程式安裝的，所以沒有做任何變更。請選擇其他安裝位置。"
-LangString MSG_PATH_FAILED ${LANG_ENGLISH} "Could not update PATH. You can still run fma from $INSTDIR\cli."
-LangString MSG_PATH_FAILED ${LANG_TRADCHINESE} "無法更新 PATH。你仍可以從 $INSTDIR\cli 執行 fma。"
+LangString MSG_PATH_FAILED ${LANG_ENGLISH} "Could not update PATH. You can still run file-workbench from $INSTDIR\cli."
+LangString MSG_PATH_FAILED ${LANG_TRADCHINESE} "無法更新 PATH。你仍可以從 $INSTDIR\cli 執行 file-workbench。"
 
 VIProductVersion "${VERSION}.0"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "${APP_NAME}"
@@ -113,10 +116,24 @@ Function WaitForCaller
 FunctionEnd
 
 ; Running programs keep their executable locked, so a file that cannot be opened for writing is in use.
-; Sets $R6 to 1 when $INSTDIR\app\FileMergeAssistant.exe or $INSTDIR\cli\fma.exe is in use.
+!macro CHECK_EXECUTABLE_LOCK RELATIVE_FILE
+  ${If} ${FileExists} "$INSTDIR\${RELATIVE_FILE}"
+    ClearErrors
+    FileOpen $R5 "$INSTDIR\${RELATIVE_FILE}" a
+    ${If} ${Errors}
+      StrCpy $R6 1
+      Return
+    ${EndIf}
+    FileClose $R5
+  ${EndIf}
+!macroend
+
+; Sets $R6 to 1 when $INSTDIR\app\FileWorkbench.exe or $INSTDIR\cli\file-workbench.exe is in use.
 !macro FILES_IN_USE PREFIX
 Function ${PREFIX}FilesInUse
   StrCpy $R6 0
+  !insertmacro CHECK_EXECUTABLE_LOCK "app\${LEGACY_APP_EXE}"
+  !insertmacro CHECK_EXECUTABLE_LOCK "cli\${LEGACY_CLI_EXE}"
   ${If} ${FileExists} "$INSTDIR\app\${APP_EXE}"
     ClearErrors
     FileOpen $R5 "$INSTDIR\app\${APP_EXE}" a
@@ -225,6 +242,7 @@ FunctionEnd
 !macro REMOVE_CLI
   !insertmacro SET_USER_PATH "Remove"
   Delete "$INSTDIR\cli\${CLI_EXE}"
+  Delete "$INSTDIR\cli\${LEGACY_CLI_EXE}"
   Delete "$INSTDIR\cli\${OWNER_MARKER}"
   RMDir "$INSTDIR\cli"
 !macroend
@@ -243,6 +261,15 @@ Section "!$(SEC_APP_NAME)" SEC_APP
   SetOutPath "$INSTDIR"
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
+  ${If} $PreviousInstallDir == $INSTDIR
+    Delete "$SMPROGRAMS\${LEGACY_APP_NAME}.lnk"
+    Delete "$DESKTOP\${LEGACY_APP_NAME}.lnk"
+    ; Retarget only our exact old command. An absent entry and Windows' opt-out remain untouched.
+    ReadRegStr $R0 HKCU "${REG_RUN}" "${RUN_VALUE}"
+    ${If} $R0 == '"$INSTDIR\app\${LEGACY_APP_EXE}" --launch-at-login'
+      WriteRegStr HKCU "${REG_RUN}" "${RUN_VALUE}" '"$INSTDIR\app\${APP_EXE}" --launch-at-login'
+    ${EndIf}
+  ${EndIf}
   CreateShortcut "$SMPROGRAMS\${APP_NAME}.lnk" "$INSTDIR\app\${APP_EXE}"
 
   WriteRegStr HKCU "${REG_APP}" "InstallDir" "$INSTDIR"
@@ -260,6 +287,10 @@ Section "!$(SEC_APP_NAME)" SEC_APP
 SectionEnd
 
 Section /o "$(SEC_CLI_NAME)" SEC_CLI
+  Call CliIsOurs
+  ${If} $R8 = 1
+    Delete "$INSTDIR\cli\${LEGACY_CLI_EXE}"
+  ${EndIf}
   SetOutPath "$INSTDIR\cli"
   !insertmacro WRITE_OWNER_MARKER "cli"
   File "${STAGE}\cli\${CLI_EXE}"
@@ -275,6 +306,13 @@ SectionEnd
 Function Preflight
   Call WaitForCaller
   Call EnsureAppClosed
+  ${If} ${SectionIsSelected} ${SEC_CLI}
+  ${AndIf} ${FileExists} "$INSTDIR\cli\${LEGACY_CLI_EXE}"
+    Call CliIsOurs
+    ${If} $R8 <> 1
+      !insertmacro STOP_FOREIGN "cli\${LEGACY_CLI_EXE}"
+    ${EndIf}
+  ${EndIf}
   ${If} ${FileExists} "$INSTDIR\app\*.*"
     Call AppFolderIsOurs
     ${If} $R8 <> 1
@@ -293,7 +331,7 @@ FunctionEnd
 ; An upgrade without the command-line tool removes the copy an earlier setup installed here, PATH entry included.
 Section "-RemoveDeselectedCli"
   ${IfNot} ${SectionIsSelected} ${SEC_CLI}
-    ; Checks the folder, not fma.exe, so a PATH entry is cleaned up even when fma.exe was deleted by hand.
+    ; Checks the folder, not file-workbench.exe, so a PATH entry is cleaned up even when file-workbench.exe was deleted by hand.
     ${If} ${FileExists} "$INSTDIR\cli\*.*"
       Call CliIsOurs
       ${If} $R8 = 1
@@ -343,6 +381,10 @@ Function .onInit
   ${If} $PreviousCli = 1
     !insertmacro SelectSection ${SEC_CLI}
   ${EndIf}
+  ${If} $PreviousInstallDir != ""
+  ${AndIf} ${FileExists} "$DESKTOP\${LEGACY_APP_NAME}.lnk"
+    !insertmacro SelectSection ${SEC_DESKTOP}
+  ${EndIf}
   ClearErrors
   ${GetOptions} $R0 "/CLI" $R1
   ${IfNot} ${Errors}
@@ -360,12 +402,24 @@ Function .onInstFailed
       Exec '"$INSTDIR\app\${APP_EXE}"'
     ${EndIf}
   ${EndIf}
+  ${If} $Relaunch == "1"
+  ${AndIfNot} ${FileExists} "$INSTDIR\app\${APP_EXE}"
+  ${AndIf} ${FileExists} "$INSTDIR\app\${LEGACY_APP_EXE}"
+    Call FilesInUse
+    ${If} $R6 = 0
+      Exec '"$INSTDIR\app\${LEGACY_APP_EXE}"'
+    ${EndIf}
+  ${EndIf}
 FunctionEnd
 
 ; An upgrade installs into the existing folder, so the directory page is only shown for a first installation.
 Function SkipDirectoryOnUpgrade
   ${If} $PreviousInstallDir != ""
   ${AndIf} ${FileExists} "$PreviousInstallDir\app\${APP_EXE}"
+    Abort
+  ${EndIf}
+  ${If} $PreviousInstallDir != ""
+  ${AndIf} ${FileExists} "$PreviousInstallDir\app\${LEGACY_APP_EXE}"
     Abort
   ${EndIf}
 FunctionEnd
@@ -397,6 +451,8 @@ Section "Uninstall"
   ${If} $R8 = 1
     Delete "$SMPROGRAMS\${APP_NAME}.lnk"
     Delete "$DESKTOP\${APP_NAME}.lnk"
+    Delete "$SMPROGRAMS\${LEGACY_APP_NAME}.lnk"
+    Delete "$DESKTOP\${LEGACY_APP_NAME}.lnk"
     ; The app's start-at-sign-in entry (ADR-014); Windows' own Startup apps switch for it is Windows' to keep.
     DeleteRegValue HKCU "${REG_RUN}" "${RUN_VALUE}"
     ; When another program kept a file in app\ locked, the marker may already be gone. The registry entries then

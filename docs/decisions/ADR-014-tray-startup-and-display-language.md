@@ -17,20 +17,20 @@ Accepted（2026-10-23）。產品負責人要求參照 desktop-work-fleet，做�
 
 ### 主機偏好檔
 
-- 資料夾（`%LOCALAPPDATA%\FileMergeAssistant`，或 `FMA_DATA_DIR`）新增 `host-preferences.json`：`version: 1`、`startAtLogin`、`closeToTray`、`openMainAtLogin`、`lastUpdateCheck`、`language`。
+- 資料夾（`%LOCALAPPDATA%\FileWorkbench`，或 `FWB_DATA_DIR`）新增 `host-preferences.json`：`version: 1`、`startAtLogin`、`closeToTray`、`openMainAtLogin`、`lastUpdateCheck`、`language`。
 - 它屬於這台電腦，不在索引裡。讀不懂、版本不明或值不合法時一律用預設值，不會擋住啟動；單一個值不合法只影響那個值。
 - 寫入先寫暫存檔、flush 到磁碟再改名取代。
 
 ### 系統匣
 
 - 照搬 `NativeTray`：自己的通知區域圖示與 Windows 原生、可用鍵盤操作的選單。點圖示開啟主畫面。開機登入時通知區域可能還沒好，加入失敗每 2 秒重試、最多 1 分鐘；之後 Explorer 重新啟動（`TaskbarCreated`）時還會再加。
-- 選單依開啟當下的狀態組成，分組方式同參考專案：「開啟 File Merge Assistant」（粗體，等於點圖示）、主畫面顯示中才有的「收起主畫面」、分隔線、本副本能自我更新時才有的「檢查更新…」、分隔線、「結束 File Merge Assistant」。參考專案的快速記錄、桌面便箋等項目屬於它自己的功能，沒有帶過來。
+- 選單依開啟當下的狀態組成，分組方式同參考專案：「開啟 File Workbench」（粗體，等於點圖示）、主畫面顯示中才有的「收起主畫面」、分隔線、本副本能自我更新時才有的「檢查更新…」、分隔線、「結束 File Workbench」。參考專案的快速記錄、桌面便箋等項目屬於它自己的功能，沒有帶過來。
 - 文字每次開選單時從語言目錄讀，所以跟著顯示語言。下載更新時提示文字顯示進度。
 - 新增程式圖示（`src/Gui/Resources/app.ico`，由 `scripts/windows/New-AppIcon.ps1` 依視窗左上角的標誌產生），系統匣、視窗與捷徑都用它。
 
 ### 啟動行為（設定 > 啟動行為）
 
-1. 「登入電腦時啟動 File Merge Assistant」，預設開啟。
+1. 「登入電腦時啟動 File Workbench」，預設開啟。
 2. 「關閉主畫面時保留在系統匣」，預設開啟。關閉這個選項，或目前沒有系統匣時，按 X 就結束程式。
 3. 「登入啟動後開啟主畫面」，預設關閉。登入啟動時主畫面不出現，索引在背景繼續；從系統匣或再開一次程式可以叫出主畫面。自己開啟程式時一律顯示主畫面。
 
@@ -42,7 +42,7 @@ Accepted（2026-10-23）。產品負責人要求參照 desktop-work-fleet，做�
 
 ### 登入時啟動：與參考專案不同之處
 
-- 改用目前使用者的 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`，值名稱 `FileMergeAssistant`，內容為 `"<安裝位置>\app\FileMergeAssistant.exe" --launch-at-login`。
+- 改用目前使用者的 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`，值名稱保留 `FileMergeAssistant`，內容為 `"<安裝位置>\app\FileWorkbench.exe" --launch-at-login`。品牌更名後保留 Windows 識別以沿用使用者的啟動選擇，見 ADR-017。
 - 只有安裝程式裝的那份（執行位置等於登錄檔記錄的 `InstallDir\app`）提供這個選項；從原始碼或解壓縮資料夾執行的副本會停用選項並說明原因，也不會寫 Run 值。
 - 使用者在工作管理員或「設定 > 應用程式 > 啟動」關掉時，Windows 會在 `...\Explorer\StartupApproved\Run` 記下同名的值。在這台電腦上讀到的值，第一個位元組 02 代表開啟、03 代表關閉；程式把奇數視為使用者關閉。這個狀態下，設定頁顯示「已在 Windows 的「啟動應用程式」關閉」並鎖住選項，另提供「開啟系統設定」（`ms-settings:startupapps`）。程式從不寫 StartupApproved，所以不會蓋掉使用者在 Windows 的選擇。
 - Run 值沒有參考專案 `RequestEnableAsync` 那種保護，所以照參考專案在 macOS、Linux 的作法：每次安裝後第一次啟動時，依偏好（預設開啟）寫入，並在安裝程式自己的 `HKCU\Software\FileMergeAssistant` 記下 `StartupApplied`；之後只在使用者切換選項時寫或刪。使用者在 Windows 外部刪掉的項目不會被重新建立，偏好檔損壞時也不會。唯一的例外是：項目還在、但指向另一份副本時，改指向目前這一份。

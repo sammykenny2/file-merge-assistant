@@ -1,9 +1,9 @@
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Tests.Scanning;
+using FileWorkbench.Analysis;
+using FileWorkbench.Tests.Scanning;
 using Xunit;
 using System.Runtime.InteropServices;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class NativeAnalysisEngineTests
 {
@@ -19,7 +19,7 @@ public sealed class NativeAnalysisEngineTests
     var error = Assert.Throws<AnalysisEngineUnavailableException>(() => registry.Snapshot(NativeAnalysisEngine.EngineId,
       AnalysisCapability.ExactDuplicates, ContentFingerprints.Blake3));
     Assert.Equal(AnalysisAvailability.MissingDependency, error.Availability);
-    var name = OperatingSystem.IsWindows() ? "fma_czkawka_ffi.dll" : OperatingSystem.IsMacOS() ? "libfma_czkawka_ffi.dylib" : "libfma_czkawka_ffi.so";
+    var name = OperatingSystem.IsWindows() ? "file_workbench_czkawka_ffi.dll" : OperatingSystem.IsMacOS() ? "libfile_workbench_czkawka_ffi.dylib" : "libfile_workbench_czkawka_ffi.so";
     File.WriteAllText(Path.Combine(tree.Root, name), "not a native module");
     Assert.Equal(AnalysisAvailability.Incompatible, new NativeAnalysisEngine(tree.Root).Descriptor.Availability);
     Assert.Throws<ArgumentException>(() => new NativeAnalysisEngine("relative-native-directory"));
@@ -28,17 +28,17 @@ public sealed class NativeAnalysisEngineTests
   [NativeFact]
   public void A_Real_Native_Module_With_An_Incompatible_Abi_Is_Rejected_Before_Job_Creation()
   {
-    var directory = Environment.GetEnvironmentVariable("FMA_WRONG_ABI_LIBRARY_DIR");
-    Assert.False(string.IsNullOrWhiteSpace(directory), "Set FMA_WRONG_ABI_LIBRARY_DIR to the built native/test-libraries/wrong-abi output.");
+    var directory = Environment.GetEnvironmentVariable("FWB_WRONG_ABI_LIBRARY_DIR");
+    Assert.False(string.IsNullOrWhiteSpace(directory), "Set FWB_WRONG_ABI_LIBRARY_DIR to the built native/test-libraries/wrong-abi output.");
     Assert.Equal(AnalysisAvailability.Incompatible, new NativeAnalysisEngine(directory).Descriptor.Availability);
   }
 
   [NativeFact]
   public async Task Cancellation_During_Native_Input_Upload_Is_Cancellation_And_Releases_The_Job()
   {
-    var directory = Environment.GetEnvironmentVariable("FMA_CANCEL_UPLOAD_LIBRARY_DIR");
-    Assert.False(string.IsNullOrWhiteSpace(directory), "Build the upload-cancel native test module and set FMA_CANCEL_UPLOAD_LIBRARY_DIR.");
-    var name = OperatingSystem.IsWindows() ? "fma_czkawka_ffi.dll" : OperatingSystem.IsMacOS() ? "libfma_czkawka_ffi.dylib" : "libfma_czkawka_ffi.so";
+    var directory = Environment.GetEnvironmentVariable("FWB_CANCEL_UPLOAD_LIBRARY_DIR");
+    Assert.False(string.IsNullOrWhiteSpace(directory), "Build the upload-cancel native test module and set FWB_CANCEL_UPLOAD_LIBRARY_DIR.");
+    var name = OperatingSystem.IsWindows() ? "file_workbench_czkawka_ffi.dll" : OperatingSystem.IsMacOS() ? "libfile_workbench_czkawka_ffi.dylib" : "libfile_workbench_czkawka_ffi.so";
     var module = NativeLibrary.Load(Path.Combine(directory!, name));
     try
     {
@@ -129,12 +129,12 @@ public sealed class NativeAnalysisEngineTests
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class NativeFactAttribute : FactAttribute
 {
-  public const string LibraryDirectoryVariable = "FMA_NATIVE_LIBRARY_DIR";
+  public const string LibraryDirectoryVariable = "FWB_NATIVE_LIBRARY_DIR";
   public NativeFactAttribute()
   {
     if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(LibraryDirectoryVariable)))
     {
-      Skip = "Optional native integration: build the adapter and set FMA_NATIVE_LIBRARY_DIR to its absolute output directory.";
+      Skip = "Optional native integration: build the adapter and set FWB_NATIVE_LIBRARY_DIR to its absolute output directory.";
     }
   }
 }

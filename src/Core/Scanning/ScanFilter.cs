@@ -1,7 +1,7 @@
 using System.IO.Enumeration;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Sources;
 
-namespace FileMergeAssistant.Scanning;
+namespace FileWorkbench.Scanning;
 
 /// <summary>What a folder entry means to a scan.</summary>
 public enum EntryKind

@@ -5,7 +5,7 @@ macOS. The exact OS/build/filesystem will be recorded on the target; the supplie
 macOS nickname is not used to infer a version. No remote connection is needed.
 
 It contains a self-contained .NET 10 verifier, its portable source/tests and the
-pinned Rust wrapper/dependencies. It does not contain a macOS/Linux FMA GUI,
+pinned Rust wrapper/dependencies. It does not contain a macOS/Linux File Workbench GUI,
 persistent workbench or file-operation implementation. WPF remains Windows-only.
 No platform support is declared until the returned evidence is reviewed.
 
@@ -57,7 +57,7 @@ bash scripts/testing/verify-analysis-platform.sh
 ```
 
 For a particular test filesystem, supply an existing parent directory. The
-script creates a new `fma-platform.XXXXXX` folder there and never scans the
+script creates a new `file-workbench-platform.XXXXXX` folder there and never scans the
 parent's existing files:
 
 ```bash
@@ -101,7 +101,7 @@ Skipped checks are not support evidence.
 ## Limits and interpretation
 
 - Results cover direct read-only analysis of supplied Unicode paths, not complete
-  FMA support. No WPF, SQLite migration, startup, recycling or restore is tested.
+  File Workbench support. No WPF, SQLite migration, startup, recycling or restore is tested.
 - Non-Windows observations currently use size/time without a physical identity
   provider. Same-size/same-time replacement protection therefore remains a
   platform gap. No arbitrary-byte POSIX filename enumeration is claimed.
@@ -118,7 +118,7 @@ If the .NET 10 SDK is installed, the included pure analysis contract tests can
 also run separately after the native library has been built:
 
 ```bash
-export FMA_NATIVE_LIBRARY_DIR=/absolute/path/to/the/report/native
+export FWB_NATIVE_LIBRARY_DIR=/absolute/path/to/the/report/native
 dotnet test tests/analysis-tests/Analysis.Tests.csproj --configuration Release --verbosity minimal
 ```
 

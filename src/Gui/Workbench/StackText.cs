@@ -1,7 +1,7 @@
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Stacks;
+using FileWorkbench.Localization;
+using FileWorkbench.Stacks;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 /// <summary>
 /// Plain-language descriptions of a stack for the workbench list, the suggested next stack and the stack screen. Every

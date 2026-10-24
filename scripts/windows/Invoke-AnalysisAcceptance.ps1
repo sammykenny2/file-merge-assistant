@@ -64,17 +64,17 @@ try {
     $dotnet = (& dotnet --version) -join ''
     if ($LASTEXITCODE -ne 0) { throw 'The .NET SDK is required.' }
     $report.dotnetSdk = $dotnet.Trim()
-    $native = Join-Path $root 'native/fma-czkawka-ffi/target/x86_64-pc-windows-msvc/release'
+    $native = Join-Path $root 'native/file-workbench-czkawka-ffi/target/x86_64-pc-windows-msvc/release'
     if ('czkawka' -in $Engines) {
         & (Join-Path $PSScriptRoot 'Build-NativeAnalysis.ps1') -Configuration Release
         if ($LASTEXITCODE -ne 0) { throw 'Native adapter build failed.' }
-        $report.nativeSha256 = (Get-FileHash -LiteralPath (Join-Path $native 'fma_czkawka_ffi.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
+        $report.nativeSha256 = (Get-FileHash -LiteralPath (Join-Path $native 'file_workbench_czkawka_ffi.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
     }
     & dotnet build (Join-Path $root 'tests/acceptance-host/AcceptanceHost.csproj') --configuration Debug --verbosity minimal
     if ($LASTEXITCODE -ne 0) { throw 'Acceptance host build failed.' }
-    $hostDll = Join-Path $root 'tests/acceptance-host/bin/Debug/net10.0-windows/FileMergeAssistant.AcceptanceHost.dll'
+    $hostDll = Join-Path $root 'tests/acceptance-host/bin/Debug/net10.0-windows/FileWorkbench.AcceptanceHost.dll'
     $report.hostSha256 = (Get-FileHash -LiteralPath $hostDll -Algorithm SHA256).Hash.ToLowerInvariant()
-    $report.coreSha256 = (Get-FileHash -LiteralPath (Join-Path (Split-Path -Parent $hostDll) 'FileMergeAssistant.Core.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
+    $report.coreSha256 = (Get-FileHash -LiteralPath (Join-Path (Split-Path -Parent $hostDll) 'FileWorkbench.Core.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
     foreach ($count in $FileCounts) {
         foreach ($engine in $Engines) {
             $case = Join-Path $run "$engine-$count"

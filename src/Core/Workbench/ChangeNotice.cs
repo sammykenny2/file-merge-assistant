@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Workbench;
+namespace FileWorkbench.Workbench;
 
 public enum NoticeKind
 {

@@ -1,6 +1,6 @@
 using System.Windows.Threading;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 /// <summary>At most one queued UI update; a slow dispatcher retains only the newest progress value.</summary>
 internal sealed class CoalescingProgress<T>(Action<T> apply) : IProgress<T>, IDisposable where T : class

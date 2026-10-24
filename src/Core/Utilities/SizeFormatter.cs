@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Utilities;
+namespace FileWorkbench.Utilities;
 
 public static class SizeFormatter
 {

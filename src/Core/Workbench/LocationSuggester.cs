@@ -1,8 +1,8 @@
 using System.Globalization;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Localization;
+using FileWorkbench.Sources;
 
-namespace FileMergeAssistant.Workbench;
+namespace FileWorkbench.Workbench;
 
 /// <summary>
 /// Folders worth offering on the first-run screen: code folders, the user's document folders, OneDrive and other

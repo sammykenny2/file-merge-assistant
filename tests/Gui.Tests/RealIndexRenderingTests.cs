@@ -1,12 +1,12 @@
 using System.IO;
 using System.Text;
-using FileMergeAssistant.Gui.ViewModels;
-using FileMergeAssistant.Gui.Workbench;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Gui.ViewModels;
+using FileWorkbench.Gui.Workbench;
+using FileWorkbench.Stacks;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Gui.Tests;
+namespace FileWorkbench.Gui.Tests;
 
 /// <summary>
 /// The screens over the real index: scan a throwaway tree under %TEMP%, then render the workbench, a stack, the sources
@@ -14,8 +14,8 @@ namespace FileMergeAssistant.Gui.Tests;
 /// </summary>
 public sealed class RealIndexRenderingTests : IDisposable
 {
-  private readonly string _root = Path.Combine(Path.GetTempPath(), "fma-gui-tree-" + Guid.NewGuid().ToString("N")[..8]);
-  private static readonly string? SnapshotDirectory = Environment.GetEnvironmentVariable("FMA_SNAPSHOT_DIR");
+  private readonly string _root = Path.Combine(Path.GetTempPath(), "file-workbench-gui-tree-" + Guid.NewGuid().ToString("N")[..8]);
+  private static readonly string? SnapshotDirectory = Environment.GetEnvironmentVariable("FWB_SNAPSHOT_DIR");
 
   public void Dispose()
   {

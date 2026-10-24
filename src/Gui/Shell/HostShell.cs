@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using System.IO;
 using System.Security;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Gui.Shell;
+namespace FileWorkbench.Gui.Shell;
 
 /// <summary>
 /// ADR-014: what the app does around its main window, from <c>host-preferences.json</c> in the data folder: starting at

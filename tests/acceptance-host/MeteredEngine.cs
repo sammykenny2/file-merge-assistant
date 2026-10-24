@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
-using FileMergeAssistant.Analysis;
+using FileWorkbench.Analysis;
 
-namespace FileMergeAssistant.AcceptanceHost;
+namespace FileWorkbench.AcceptanceHost;
 
 internal sealed class MeteredEngine(IFileAnalysisEngine inner) : IFileAnalysisEngine
 {

@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // The --demo store (DemoData, DemoWorkbenchStore): what the app says about the simulated disk. Folder, file, source and
 // drive names are sample data the user would have typed and are passed in as values, not translated.

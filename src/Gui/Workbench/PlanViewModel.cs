@@ -1,12 +1,12 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Localization;
+using FileWorkbench.Plans;
+using FileWorkbench.Stacks;
+using FileWorkbench.Workbench;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 public sealed partial class PlanItemViewModel : ObservableObject
 {

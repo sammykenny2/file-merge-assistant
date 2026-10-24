@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Gui.Shell;
+namespace FileWorkbench.Gui.Shell;
 
 /// <summary>One tray menu row: an action and its catalog key, or a separator when Action is empty.</summary>
 /// <param name="Default">The item the icon's own click runs, drawn bold.</param>

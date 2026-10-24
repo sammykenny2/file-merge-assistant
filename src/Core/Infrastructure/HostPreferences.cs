@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Infrastructure;
+namespace FileWorkbench.Infrastructure;
 
 /// <summary>
 /// ADR-014: startup behaviour, the last update check and the display language, kept in <c>host-preferences.json</c> in

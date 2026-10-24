@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // The stack screen (screen 4, compare and decide) and the stack descriptions the workbench list shares with it
 // (StackText). Keys ending in .one/.other go through AppText.Plural; .two/.three/.four/.many name how many copies.

@@ -1,10 +1,10 @@
 using System.Globalization;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Stacks;
+using FileWorkbench.Localization;
+using FileWorkbench.Plans;
+using FileWorkbench.Sources;
+using FileWorkbench.Stacks;
 
-namespace FileMergeAssistant.Workbench;
+namespace FileWorkbench.Workbench;
 
 /// <summary>
 /// The simulated content of the GUI flow mock (docs/gui-flow-mock.md): eight sources, the scan queue, the stacks on

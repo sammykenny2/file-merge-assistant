@@ -6,7 +6,7 @@
     Records finite-viewport render, filter, sort, scroll and dispatcher-queue
     delays. No physical input, real scan, native engine, installation or source
     operation is exercised. Retains reports; no cleanup. Uses a bounded owned
-    child process and never stops the installed FMA.
+    child process and never stops the installed File Workbench.
 .PARAMETER TimeoutSeconds
     Maximum wall-clock runtime of the newly created measurement child.
 .EXAMPLE
@@ -32,7 +32,7 @@ function Write-ScaleReport {
 try {
     & dotnet build (Join-Path $root 'tests/gui-scale-host/GuiScaleHost.csproj') --configuration Debug --verbosity minimal
     if ($LASTEXITCODE -ne 0) { throw 'GUI scale host build failed.' }
-    $hostDll = Join-Path $root 'tests/gui-scale-host/bin/Debug/net10.0-windows/FileMergeAssistant.GuiScaleHost.dll'
+    $hostDll = Join-Path $root 'tests/gui-scale-host/bin/Debug/net10.0-windows/FileWorkbench.GuiScaleHost.dll'
     Invoke-OwnedProcess -Executable (Get-Command dotnet).Source -Arguments @($hostDll, (Join-Path $run 'measurement')) `
         -LogPath (Join-Path $run 'events.jsonl') -TimeoutSeconds $TimeoutSeconds -Record $record -OnUpdate { Write-ScaleReport }
     if ($record.exitCode -ne 0) { throw 'GUI scale host failed; retained report/log has details.' }

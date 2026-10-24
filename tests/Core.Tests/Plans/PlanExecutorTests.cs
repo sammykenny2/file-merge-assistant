@@ -1,10 +1,10 @@
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Tests.Scanning;
+using FileWorkbench.Plans;
+using FileWorkbench.Sources;
+using FileWorkbench.Stacks;
+using FileWorkbench.Tests.Scanning;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Plans;
+namespace FileWorkbench.Tests.Plans;
 
 /// <summary>The executor against throwaway folders under %TEMP%; its recycle area lives under the test data folder.</summary>
 public sealed class PlanExecutorTests : IDisposable

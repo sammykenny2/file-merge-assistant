@@ -1,8 +1,8 @@
-using FileMergeAssistant.AnalysisVerifier;
-using FileMergeAssistant.Tests.Scanning;
+using FileWorkbench.AnalysisVerifier;
+using FileWorkbench.Tests.Scanning;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class VerificationRootsTests
 {

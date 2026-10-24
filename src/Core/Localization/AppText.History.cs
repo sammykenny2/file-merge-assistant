@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // Run results, history and restore (screen 6). The reasons recorded in the index are shown as they were written; the
 // item verbs, file counts and list joiners come from the plan area (plan.verb.*, plan.item.files.*, plan.join.*).

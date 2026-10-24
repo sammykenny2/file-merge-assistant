@@ -1,7 +1,7 @@
 using System.Security;
 using Microsoft.Win32;
 
-namespace FileMergeAssistant.Infrastructure;
+namespace FileWorkbench.Infrastructure;
 
 /// <summary>The per-user registry places that decide whether the app starts at sign-in.</summary>
 public interface IStartupKeys
@@ -31,7 +31,7 @@ public sealed class RegistryStartupKeys : IStartupKeys
   private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
   private const string ApprovedKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
 
-  // The installation's own key (installer/FileMergeAssistant.nsi, REG_APP). Uninstalling deletes it, so a new
+  // The installation's own key (installer/FileWorkbench.nsi, REG_APP). Uninstalling deletes it, so a new
   // installation counts as a first start again.
   private const string AppKey = @"Software\FileMergeAssistant";
   private const string AppliedValue = "StartupApplied";
@@ -95,6 +95,7 @@ public enum StartupState
 /// </summary>
 public sealed class StartupRegistration
 {
+  // Keep the Windows identity so an upgrade respects the user's existing Startup apps switch.
   public const string ValueName = "FileMergeAssistant";
   public const string LoginArgument = "--launch-at-login";
 

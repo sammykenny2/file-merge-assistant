@@ -1,25 +1,25 @@
 using System.ComponentModel;
 using System.Windows;
-using FileMergeAssistant.Gui.Settings;
-using FileMergeAssistant.Gui.Shell;
-using FileMergeAssistant.Gui.Updates;
-using FileMergeAssistant.Gui.ViewModels;
-using FileMergeAssistant.Gui.Workbench;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Services;
-using FileMergeAssistant.Updates;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Gui.Settings;
+using FileWorkbench.Gui.Shell;
+using FileWorkbench.Gui.Updates;
+using FileWorkbench.Gui.ViewModels;
+using FileWorkbench.Gui.Workbench;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Localization;
+using FileWorkbench.Services;
+using FileWorkbench.Updates;
+using FileWorkbench.Workbench;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace FileMergeAssistant.Gui;
+namespace FileWorkbench.Gui;
 
 // The application lives as long as the process; OnExit disposes what it owns.
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Disposed in OnExit.")]
 public partial class App : Application
 {
-  private const string Title = "File Merge Assistant";
+  private static string Title => AppText.Get("header.productName");
   private static readonly bool Installed = InstallationInfo.IsInstalledCopy();
   // Held for the life of the process; Windows releases it when the process ends.
   private static Mutex? _instance;

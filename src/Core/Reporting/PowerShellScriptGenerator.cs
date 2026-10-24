@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text;
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Utilities;
+using FileWorkbench.Models;
+using FileWorkbench.Utilities;
 
-namespace FileMergeAssistant.Reporting;
+namespace FileWorkbench.Reporting;
 
 public class PowerShellScriptGenerator : IReportGenerator
 {
@@ -21,7 +21,7 @@ public class PowerShellScriptGenerator : IReportGenerator
 
     var sb = new StringBuilder();
     sb.AppendLine("#Requires -Version 5.1");
-    sb.AppendLine("# File Merge Assistant - Duplicate Resolution Script");
+    sb.AppendLine("# File Workbench - Duplicate Resolution Script");
     sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
       "# Generated: {0:yyyy-MM-dd HH:mm:ss} UTC", result.ScanDateUtc));
     sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
@@ -34,14 +34,14 @@ public class PowerShellScriptGenerator : IReportGenerator
     sb.AppendLine("[CmdletBinding(SupportsShouldProcess)]");
     sb.AppendLine("param(");
     sb.AppendLine("    [switch]$Force,");
-    sb.AppendLine("    [string]$RecycleBinPath = \".\\fma-recycle-bin\"");
+    sb.AppendLine("    [string]$RecycleBinPath = \".\\file-workbench-recycle-bin\"");
     sb.AppendLine(")");
     sb.AppendLine();
     sb.AppendLine("$ErrorActionPreference = 'Stop'");
     sb.AppendLine("$deletedCount = 0");
     sb.AppendLine("$freedBytes = 0");
     sb.AppendLine();
-    sb.AppendLine("Write-Host '=== File Merge Assistant - Duplicate Resolution ===' -ForegroundColor Cyan");
+    sb.AppendLine("Write-Host '=== File Workbench - Duplicate Resolution ===' -ForegroundColor Cyan");
     sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
       "Write-Host 'Processing {0} duplicate groups...' -ForegroundColor Yellow", result.DuplicateGroups.Count));
     sb.AppendLine("Write-Host ''");

@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>FileMergeAssistant</RootNamespace>
-    <AssemblyName>FileMergeAssistant.Core</AssemblyName>
+    <RootNamespace>FileWorkbench</RootNamespace>
+    <AssemblyName>FileWorkbench.Core</AssemblyName>
     <!-- LibraryImport (volume serial numbers) generates marshalling code that needs unsafe blocks. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>

@@ -2,16 +2,16 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Diagnostics;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Plans;
+using FileWorkbench.Scanning;
+using FileWorkbench.Sources;
+using FileWorkbench.Workbench;
 
-namespace FileMergeAssistant.ScanHost;
+namespace FileWorkbench.ScanHost;
 
-/// <summary>Test-only process for termination and cold-start recovery. Never packaged with FMA.</summary>
+/// <summary>Test-only process for termination and cold-start recovery. Never packaged with File Workbench.</summary>
 internal static class Program
 {
   public static async Task<int> Main(string[] args)
@@ -74,7 +74,7 @@ internal static class Program
   private static int NativeModuleCount()
   {
     using var current = Process.GetCurrentProcess();
-    return current.Modules.Cast<ProcessModule>().Count(module => module.ModuleName.Contains("fma_czkawka_ffi", StringComparison.OrdinalIgnoreCase));
+    return current.Modules.Cast<ProcessModule>().Count(module => module.ModuleName.Contains("file_workbench_czkawka_ffi", StringComparison.OrdinalIgnoreCase));
   }
 
   private sealed class Volumes : IVolumeInfoProvider
@@ -98,7 +98,7 @@ internal static class Program
         throw new InvalidOperationException("Native process fixtures are unavailable.");
       }
       // Same lifetime policy as the real adapter: this module stays resident until the process exits.
-      var module = NativeLibrary.Load(Path.Combine(blockingDirectory, "fma_czkawka_ffi.dll"));
+      var module = NativeLibrary.Load(Path.Combine(blockingDirectory, "file_workbench_czkawka_ffi.dll"));
       _started = Marshal.GetDelegateForFunctionPointer<Probe>(NativeLibrary.GetExport(module, "fma_test_upload_started"));
     }
 

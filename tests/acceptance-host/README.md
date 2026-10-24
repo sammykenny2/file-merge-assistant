@@ -1,6 +1,6 @@
 # Windows analysis acceptance host
 
-Developer-only generated-data tool. It is not shipped with FMA and never runs an
+Developer-only generated-data tool. It is not shipped with File Workbench and never runs an
 operation plan. Run from the repository root with PowerShell 7.2+, .NET 10 and
 the pinned native toolchain:
 

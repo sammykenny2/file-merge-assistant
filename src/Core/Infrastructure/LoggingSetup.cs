@@ -1,7 +1,7 @@
 using System.Globalization;
 using Serilog;
 
-namespace FileMergeAssistant.Infrastructure;
+namespace FileWorkbench.Infrastructure;
 
 public static class LoggingSetup
 {
@@ -10,7 +10,7 @@ public static class LoggingSetup
     return new LoggerConfiguration()
       .MinimumLevel.Information()
       .WriteTo.File(
-        Path.Combine(AppDataPaths.LogDirectory, "fma.log"),
+        Path.Combine(AppDataPaths.LogDirectory, "file-workbench.log"),
         rollingInterval: RollingInterval.Day,
         formatProvider: CultureInfo.InvariantCulture,
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")

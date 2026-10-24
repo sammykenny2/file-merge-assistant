@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // The window header: the section tabs and the index status strip under them. The Workbench and Sources tabs use
 // hub.title and sources.title, and the Settings tab settings.title.
@@ -7,6 +7,8 @@ public static partial class AppText
   // i18n:en
   private static readonly Dictionary<string, string> HeaderEnglish = new(StringComparer.Ordinal)
   {
+    ["header.productName"] = "File Workbench",
+    ["header.productTagline"] = "Your file organization expert",
     ["header.nav.pending"] = "Pending",
     ["header.nav.history"] = "History",
     ["header.demo"] = "Sample data",
@@ -31,6 +33,8 @@ public static partial class AppText
   // i18n:zh-TW
   private static readonly Dictionary<string, string> HeaderChinese = new(StringComparer.Ordinal)
   {
+    ["header.productName"] = "貓檔家",
+    ["header.productTagline"] = "整理檔案的專家",
     ["header.nav.pending"] = "待執行",
     ["header.nav.history"] = "歷史",
     ["header.demo"] = "模擬資料",

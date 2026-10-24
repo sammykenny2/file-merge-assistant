@@ -3,13 +3,13 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Localization;
+using FileWorkbench.Sources;
+using FileWorkbench.Workbench;
 
-namespace FileMergeAssistant.AcceptanceHost;
+namespace FileWorkbench.AcceptanceHost;
 
 internal static class Program
 {
@@ -28,7 +28,7 @@ internal static class Program
     Assert(engineId is "csharp" or "czkawka", "Choose csharp or czkawka.");
     var fixtures = Path.GetFullPath(options["--fixtures"]);
     Directory.CreateDirectory(root);
-    Environment.SetEnvironmentVariable("FMA_DATA_DIR", Path.Combine(root, "host-data"));
+    Environment.SetEnvironmentVariable("FWB_DATA_DIR", Path.Combine(root, "host-data"));
     AppText.Apply("en", []);
     var report = new Dictionary<string, object?>
     {
@@ -36,7 +36,7 @@ internal static class Program
       ["root"] = root, ["nominalPrimaryFiles"] = count, ["seed"] = Dataset.Seed,
       ["platform"] = RuntimeInformation.OSDescription, ["runtime"] = RuntimeInformation.FrameworkDescription,
       ["architecture"] = RuntimeInformation.ProcessArchitecture.ToString(), ["configuration"] = "Debug .NET; native Release when selected",
-      ["cachePolicy"] = "Fresh FMA index, then same-index warm and +1% runs. OS filesystem cache is uncontrolled; generation and verification also warm it.",
+      ["cachePolicy"] = "Fresh File Workbench index, then same-index warm and +1% runs. OS filesystem cache is uncontrolled; generation and verification also warm it.",
       ["measurementScope"] = "Whole process including SQLite, workbench detection, oracle metadata and counters. Backend bytes are reported logical content bytes, not physical disk I/O.",
       ["guiInputLatency"] = "Not measured by this headless host; manual/interactive GUI acceptance remains pending.",
       ["physicalUsb"] = "Not tested. Offline case renames an owned directory on the same fixed volume.",
@@ -45,7 +45,7 @@ internal static class Program
     {
       using (var marker = new FileStream(Path.Combine(root, "fixture.json"), FileMode.CreateNew, FileAccess.Write, FileShare.None))
       {
-        JsonSerializer.Serialize(marker, new { generator = "fma-acceptance-v1", count, seed = Dataset.Seed, engineId }, AnalysisJson.Options);
+        JsonSerializer.Serialize(marker, new { generator = "file-workbench-acceptance-v1", count, seed = Dataset.Seed, engineId }, AnalysisJson.Options);
       }
       var dataset = new Dataset(root, count, fixtures);
       var generate = Stopwatch.StartNew(); dataset.Generate();
@@ -69,7 +69,7 @@ internal static class Program
       report["indexSetupMilliseconds"] = setup.ElapsedMilliseconds;
       store.SelectNewJobEngine(selected);
       var phases = new List<object>(); report["phases"] = phases;
-      phases.Add(await RunPhase("fresh-fma-index", store, index, dataset, measured, async () =>
+      phases.Add(await RunPhase("fresh-file-workbench-index", store, index, dataset, measured, async () =>
       {
         var problems = await store.AddSourcesAsync(dataset.Sources, new SourceOptions(true, true, dataset.Sources), startScan: true).ConfigureAwait(false);
         Assert(problems.Count == 0, string.Join("; ", problems));
@@ -168,7 +168,7 @@ internal static class Program
     var result = new
     {
       name, scanMilliseconds, modelRefreshMilliseconds = modelMilliseconds, firstStackVisibleMilliseconds = firstStack < 0 ? (long?)null : firstStack,
-      firstStackMeaning = name == "fresh-fma-index" ? "First populated workbench model notification; no rendered GUI." : "Stacks may already be present from an earlier phase.",
+      firstStackMeaning = name == "fresh-file-workbench-index" ? "First populated workbench model notification; no rendered GUI." : "Stacks may already be present from an earlier phase.",
       sampledStageMilliseconds = stages, sampledWorkingSetPeakBytes = Math.Max(peak, after.WorkingSet), workingSetBeforeBytes = before.WorkingSet,
       processReadBytes = after.ReadBytes - before.ReadBytes, processWriteBytes = after.WriteBytes - before.WriteBytes,
       processCpuMilliseconds = after.CpuMilliseconds - before.CpuMilliseconds,

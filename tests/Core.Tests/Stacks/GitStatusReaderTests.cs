@@ -1,9 +1,9 @@
 using System.Diagnostics;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Tests.Scanning;
+using FileWorkbench.Stacks;
+using FileWorkbench.Tests.Scanning;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Stacks;
+namespace FileWorkbench.Tests.Stacks;
 
 /// <summary>Git facts from throwaway repositories under %TEMP%. Skipped when git is not installed.</summary>
 public sealed class GitStatusReaderTests : IDisposable

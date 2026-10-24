@@ -1,6 +1,6 @@
-using FileMergeAssistant.Scanning;
+using FileWorkbench.Scanning;
 
-namespace FileMergeAssistant.Sources;
+namespace FileWorkbench.Sources;
 
 public enum ScanJobKind
 {

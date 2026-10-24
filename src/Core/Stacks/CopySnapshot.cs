@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.IO.Hashing;
 using System.Text;
-using FileMergeAssistant.Scanning;
+using FileWorkbench.Scanning;
 
-namespace FileMergeAssistant.Stacks;
+namespace FileWorkbench.Stacks;
 
 /// <summary>
 /// Everything inside a copy on disk, including what scans skip (<c>.git</c>, regenerable folders, excluded files): how

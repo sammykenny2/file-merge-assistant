@@ -1,14 +1,14 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Tests.Scanning;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Scanning;
+using FileWorkbench.Sources;
+using FileWorkbench.Tests.Scanning;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class SourcePathServiceTests : IDisposable
 {

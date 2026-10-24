@@ -1,8 +1,8 @@
 using System.Text;
-using FileMergeAssistant.Updates;
+using FileWorkbench.Updates;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Updates;
+namespace FileWorkbench.Tests.Updates;
 
 public class UpdateFeedTests
 {
@@ -18,7 +18,7 @@ public class UpdateFeedTests
 
   internal static string Page(string tag, string repo = Repo) => $"https://github.com/{repo}/releases/tag/{tag}";
 
-  internal static byte[] Manifest(string version, string tag, string name = "FileMergeAssistant-0.2.0-x64-setup.exe",
+  internal static byte[] Manifest(string version, string tag, string name = "FileWorkbench-0.2.0-x64-setup.exe",
     long size = 1234, string sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", string platform = "windows", string summary = "Fixes")
   {
     var json = $$"""
@@ -122,9 +122,9 @@ public class UpdateFeedTests
     var package = UpdateFeed.ReadManifest(Manifest("0.2.0", "v0.2.0"), release, "x64");
 
     Assert.Equal(new Version(0, 2, 0), package.Version);
-    Assert.Equal("FileMergeAssistant-0.2.0-x64-setup.exe", package.FileName);
+    Assert.Equal("FileWorkbench-0.2.0-x64-setup.exe", package.FileName);
     Assert.Equal(1234, package.Size);
-    Assert.Equal(new Uri("https://github.com/owner/app/releases/download/v0.2.0/FileMergeAssistant-0.2.0-x64-setup.exe"), package.DownloadUrl);
+    Assert.Equal(new Uri("https://github.com/owner/app/releases/download/v0.2.0/FileWorkbench-0.2.0-x64-setup.exe"), package.DownloadUrl);
     Assert.Equal("Fixes", package.Summary);
   }
 
@@ -155,9 +155,9 @@ public class UpdateFeedTests
   }
 
   [Theory]
-  [InlineData("FileMergeAssistant-0.2.0-x64-setup.cmd")]
-  [InlineData("FileMergeAssistant-0.3.0-x64-setup.exe")]
-  [InlineData("FileMergeAssistant-0.2.0-x64-debug-setup.exe")]
+  [InlineData("FileWorkbench-0.2.0-x64-setup.cmd")]
+  [InlineData("FileWorkbench-0.3.0-x64-setup.exe")]
+  [InlineData("FileWorkbench-0.2.0-x64-debug-setup.exe")]
   [InlineData("other.exe")]
   public void ReadManifest_Accepts_Only_The_Setup_Program_Of_That_Version(string name)
   {

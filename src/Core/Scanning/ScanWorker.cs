@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Localization;
+using FileWorkbench.Sources;
 using Microsoft.Data.Sqlite;
 
-namespace FileMergeAssistant.Scanning;
+namespace FileWorkbench.Scanning;
 
 /// <summary>
 /// Runs queued scan jobs one at a time on a background task (SPEC-001: one scan writes at a time). Job rows in the index

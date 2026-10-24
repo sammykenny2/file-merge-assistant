@@ -1,10 +1,10 @@
 using System.Globalization;
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Reporting;
-using FileMergeAssistant.Utilities;
+using FileWorkbench.Models;
+using FileWorkbench.Reporting;
+using FileWorkbench.Utilities;
 using Spectre.Console;
 
-namespace FileMergeAssistant.Cli.Reporting;
+namespace FileWorkbench.Cli.Reporting;
 
 public class ConsoleReportGenerator : IReportGenerator
 {

@@ -48,10 +48,10 @@ jobs:
         include:
           - runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            library: libfma_czkawka_ffi.so
+            library: libfile_workbench_czkawka_ffi.so
           - runner: macos-15
             target: aarch64-apple-darwin
-            library: libfma_czkawka_ffi.dylib
+            library: libfile_workbench_czkawka_ffi.dylib
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
@@ -70,7 +70,7 @@ jobs:
       - name: Install the pinned Rust toolchain
         run: rustup toolchain install 1.99.1 --profile minimal
       - name: Build and test the native adapter on the actual target OS
-        working-directory: native/fma-czkawka-ffi
+        working-directory: native/file-workbench-czkawka-ffi
         env:
           TARGET: ${{ matrix.target }}
         run: |
@@ -81,8 +81,8 @@ jobs:
           TARGET: ${{ matrix.target }}
           LIBRARY: ${{ matrix.library }}
         run: |
-          export FMA_NATIVE_LIBRARY_DIR="$RUNNER_TEMP/cargo-target/$TARGET/release"
-          test -f "$FMA_NATIVE_LIBRARY_DIR/$LIBRARY"
+          export FWB_NATIVE_LIBRARY_DIR="$RUNNER_TEMP/cargo-target/$TARGET/release"
+          test -f "$FWB_NATIVE_LIBRARY_DIR/$LIBRARY"
           dotnet test tests/analysis-tests/Analysis.Tests.csproj --configuration Release --verbosity minimal --logger 'trx;LogFileName=portable.trx' --results-directory "$RUNNER_TEMP/test-results" --blame-hang-timeout 60s --blame-hang-dump-type none
       - name: Preserve portable test results
         if: always()

@@ -1,12 +1,12 @@
 using System.Text;
-using FileMergeAssistant.Infrastructure;
+using FileWorkbench.Infrastructure;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Infrastructure;
+namespace FileWorkbench.Tests.Infrastructure;
 
 public sealed class HostPreferencesTests : IDisposable
 {
-  private readonly string _directory = Path.Combine(Path.GetTempPath(), "fma-host-preferences-" + Guid.NewGuid().ToString("N"));
+  private readonly string _directory = Path.Combine(Path.GetTempPath(), "file-workbench-host-preferences-" + Guid.NewGuid().ToString("N"));
 
   public void Dispose()
   {

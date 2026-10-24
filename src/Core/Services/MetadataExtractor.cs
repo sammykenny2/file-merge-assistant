@@ -1,10 +1,10 @@
-using FileMergeAssistant.Models;
+using FileWorkbench.Models;
 using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
 using Serilog;
 using Directory = MetadataExtractor.Directory;
 
-namespace FileMergeAssistant.Services;
+namespace FileWorkbench.Services;
 
 public class ExifMetadataExtractor : IMetadataExtractor
 {

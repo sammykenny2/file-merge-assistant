@@ -1,9 +1,9 @@
-using FileMergeAssistant.Services;
+using FileWorkbench.Services;
 using NSubstitute;
 using Serilog;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Services;
+namespace FileWorkbench.Tests.Services;
 
 public class EmptyDirectoryServiceTests : IDisposable
 {
@@ -12,7 +12,7 @@ public class EmptyDirectoryServiceTests : IDisposable
 
   public EmptyDirectoryServiceTests()
   {
-    _tempDir = Path.Combine(Path.GetTempPath(), $"fma-empty-test-{Guid.NewGuid():N}");
+    _tempDir = Path.Combine(Path.GetTempPath(), $"file-workbench-empty-test-{Guid.NewGuid():N}");
     Directory.CreateDirectory(_tempDir);
     var logger = Substitute.For<ILogger>();
     _sut = new EmptyDirectoryService(logger);

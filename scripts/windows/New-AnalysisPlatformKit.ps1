@@ -21,9 +21,9 @@ if ((Get-Item -LiteralPath $build -Force).Attributes -band [IO.FileAttributes]::
 if (-not $NativeSourceArchive) {
     [xml]$props = Get-Content -LiteralPath (Join-Path $root 'Directory.Build.props') -Raw -Encoding UTF8
     $version = @($props.Project.PropertyGroup.Version | Where-Object { $_ })[0]
-    $crate = Get-Content -LiteralPath (Join-Path $root 'native/fma-czkawka-ffi/Cargo.toml') -Raw -Encoding UTF8
+    $crate = Get-Content -LiteralPath (Join-Path $root 'native/file-workbench-czkawka-ffi/Cargo.toml') -Raw -Encoding UTF8
     $nativeVersion = [regex]::Match($crate, '(?m)^version = "(\d+\.\d+\.\d+)"').Groups[1].Value
-    $NativeSourceArchive = Join-Path $build "FileMergeAssistant-$version-czkawka-$nativeVersion-debug-source.zip"
+    $NativeSourceArchive = Join-Path $build "FileWorkbench-$version-czkawka-$nativeVersion-debug-source.zip"
 }
 $NativeSourceArchive = [IO.Path]::GetFullPath($NativeSourceArchive)
 $expected = ((Get-Content -LiteralPath "$NativeSourceArchive.sha256" -Raw) -split '\s+')[0]
@@ -57,7 +57,7 @@ foreach ($rid in @('win-x64', 'linux-arm64', 'osx-arm64')) {
     $output = Join-Path $kit "bin/$rid"
     & dotnet publish (Join-Path $root 'tests/analysis-verifier/AnalysisVerifier.csproj') --configuration Release --runtime $rid --self-contained true --output $output --verbosity minimal
     if ($LASTEXITCODE -ne 0) { throw "Portable verifier publish failed for $rid." }
-    $runtime = Get-Content -LiteralPath (Join-Path $output 'FileMergeAssistant.AnalysisVerifier.runtimeconfig.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $runtime = Get-Content -LiteralPath (Join-Path $output 'FileWorkbench.AnalysisVerifier.runtimeconfig.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     $runtimeVersion = ($runtime.runtimeOptions.includedFrameworks | Where-Object { $_.name -eq 'Microsoft.NETCore.App' }).version
     $noticeTarget = Join-Path $licenses ".NET-$rid"
     New-Item -ItemType Directory -Path $noticeTarget -Force | Out-Null

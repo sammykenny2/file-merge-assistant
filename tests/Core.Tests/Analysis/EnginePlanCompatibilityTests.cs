@@ -1,14 +1,14 @@
 using System.Text.Json.Nodes;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Tests.Scanning;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Plans;
+using FileWorkbench.Sources;
+using FileWorkbench.Stacks;
+using FileWorkbench.Tests.Scanning;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class EnginePlanCompatibilityTests : IDisposable
 {

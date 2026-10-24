@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace FileMergeAssistant.Hashing;
+namespace FileWorkbench.Hashing;
 
 public class Sha256HashAlgorithm : IHashAlgorithm
 {

@@ -6,10 +6,10 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Gui.Tests;
+namespace FileWorkbench.Gui.Tests;
 
 /// <summary>
 /// Runs WPF code on one long-lived STA thread with the application's resources loaded, the way the app does. A process
@@ -25,7 +25,7 @@ internal static class WpfHost
   internal static void Initialize()
   {
     Environment.SetEnvironmentVariable(AppDataPaths.DataDirectoryVariable,
-      Path.Combine(Path.GetTempPath(), $"fma-gui-test-data-{Environment.ProcessId}"));
+      Path.Combine(Path.GetTempPath(), $"file-workbench-gui-test-data-{Environment.ProcessId}"));
     // The screens the tests check are in Traditional Chinese, whatever language this Windows uses.
     AppText.Apply("zh-TW", []);
   }
@@ -110,7 +110,7 @@ internal static class WpfHost
       dispatcher = Dispatcher.CurrentDispatcher;
       SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(dispatcher));
       var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-      app.Resources.Source = new Uri("/FileMergeAssistant;component/Resources/ApplicationResources.xaml", UriKind.Relative);
+      app.Resources.Source = new Uri("/FileWorkbench;component/Resources/ApplicationResources.xaml", UriKind.Relative);
       PresentationTraceSources.Refresh();
       PresentationTraceSources.DataBindingSource.Listeners.Add(Listener);
       PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Error;

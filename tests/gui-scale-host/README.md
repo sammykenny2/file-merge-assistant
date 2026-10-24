@@ -10,7 +10,7 @@ The runner builds Debug and starts one owned child with a 180-second runtime
 limit (configurable). It retains events, process status, binary hashes, measured
 JSON and a finite 1440x900 screenshot under a new `build/gui-scale-<id>` tree.
 Failure, timeout or incomplete reports cannot pass. It never opens a visible
-window, installs, executes a plan, scans user files or closes another FMA.
+window, installs, executes a plan, scans user files or closes another File Workbench.
 
 The model is synthetic, derived from in-memory demo data: 10,001 stacks, a
 10,000-row folder comparison and all 10,000 conflicts. The existing 200-row

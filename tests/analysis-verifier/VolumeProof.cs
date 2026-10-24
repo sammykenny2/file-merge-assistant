@@ -1,9 +1,9 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Sources;
 
-namespace FileMergeAssistant.AnalysisVerifier;
+namespace FileWorkbench.AnalysisVerifier;
 
 internal sealed record VolumeProof(string? Identity, string Method, string Detail)
 {

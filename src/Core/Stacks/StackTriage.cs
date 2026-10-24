@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Stacks;
+namespace FileWorkbench.Stacks;
 
 /// <summary>Sections of the 「待整理」 list on the workbench.</summary>
 public enum StackGroup

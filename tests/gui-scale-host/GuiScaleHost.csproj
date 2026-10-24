@@ -3,8 +3,8 @@
     <OutputType>Exe</OutputType>
     <UseWPF>true</UseWPF>
     <IsPackable>false</IsPackable>
-    <AssemblyName>FileMergeAssistant.GuiScaleHost</AssemblyName>
-    <RootNamespace>FileMergeAssistant.Gui.Tests</RootNamespace>
+    <AssemblyName>FileWorkbench.GuiScaleHost</AssemblyName>
+    <RootNamespace>FileWorkbench.Gui.Tests</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Gui/Gui.csproj" />

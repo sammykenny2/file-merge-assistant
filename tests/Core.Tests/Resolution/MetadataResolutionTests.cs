@@ -1,8 +1,8 @@
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Resolution;
+using FileWorkbench.Models;
+using FileWorkbench.Resolution;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Resolution;
+namespace FileWorkbench.Tests.Resolution;
 
 public class MetadataResolutionTests
 {

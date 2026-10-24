@@ -22,7 +22,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$adapterRoot = Join-Path $projectRoot 'native/fma-czkawka-ffi'
+$adapterRoot = Join-Path $projectRoot 'native/file-workbench-czkawka-ffi'
 $fixtureRoot = Join-Path $projectRoot 'native/test-libraries/wrong-abi'
 $profile = $Configuration.ToLowerInvariant()
 $target = 'x86_64-pc-windows-msvc'
@@ -56,10 +56,10 @@ try {
 } finally { Pop-Location }
 
 $nativeDirectory = Join-Path $adapterTarget "$target/$profile"
-if (-not (Test-Path -LiteralPath (Join-Path $nativeDirectory 'fma_czkawka_ffi.dll'))) {
+if (-not (Test-Path -LiteralPath (Join-Path $nativeDirectory 'file_workbench_czkawka_ffi.dll'))) {
     throw 'Cargo did not produce the expected native adapter.'
 }
-Write-Host "Native adapter: $(Join-Path $nativeDirectory 'fma_czkawka_ffi.dll')"
+Write-Host "Native adapter: $(Join-Path $nativeDirectory 'file_workbench_czkawka_ffi.dll')"
 if (-not $Test) { return }
 
 Push-Location $fixtureRoot
@@ -69,13 +69,13 @@ try {
 } finally { Pop-Location }
 
 $testVariables = @{
-    FMA_NATIVE_LIBRARY_DIR = $nativeDirectory
-    FMA_WRONG_ABI_LIBRARY_DIR = Join-Path $fixtureTarget "$target/debug"
-    FMA_CANCEL_UPLOAD_LIBRARY_DIR = Join-Path $fixtureTarget "upload-cancel/$target/debug"
+    FWB_NATIVE_LIBRARY_DIR = $nativeDirectory
+    FWB_WRONG_ABI_LIBRARY_DIR = Join-Path $fixtureTarget "$target/debug"
+    FWB_CANCEL_UPLOAD_LIBRARY_DIR = Join-Path $fixtureTarget "upload-cancel/$target/debug"
 }
 $previousValues = @{}
 foreach ($name in $testVariables.Keys) {
-    if (-not (Test-Path -LiteralPath (Join-Path $testVariables[$name] 'fma_czkawka_ffi.dll'))) {
+    if (-not (Test-Path -LiteralPath (Join-Path $testVariables[$name] 'file_workbench_czkawka_ffi.dll'))) {
         throw "Missing native test library: $name"
     }
 }
@@ -85,7 +85,7 @@ foreach ($name in $testVariables.Keys) {
 }
 Push-Location $projectRoot
 try {
-    Invoke-Checked 'dotnet' @('test', 'file-merge-assistant.sln', '--configuration', 'Debug', '--verbosity', 'minimal', '--blame-hang-timeout', '60s', '--blame-hang-dump-type', 'none')
+    Invoke-Checked 'dotnet' @('test', 'messy-file-workbench.sln', '--configuration', 'Debug', '--verbosity', 'minimal', '--blame-hang-timeout', '60s', '--blame-hang-dump-type', 'none')
 } finally {
     Pop-Location
     foreach ($name in $testVariables.Keys) {

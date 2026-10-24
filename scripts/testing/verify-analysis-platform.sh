@@ -36,12 +36,12 @@ if [ -n "$SECOND_WORK_PARENT" ]; then
 fi
 [ -f "$KIT_ROOT/analysis-platform-kit.json" ] || { echo 'Run this from an exported analysis platform kit.' >&2; exit 2; }
 case "$(uname -s):$(uname -m)" in
-    Linux:aarch64|Linux:arm64) RID='linux-arm64'; TARGET='aarch64-unknown-linux-gnu'; LIBRARY='libfma_czkawka_ffi.so' ;;
-    Darwin:arm64) RID='osx-arm64'; TARGET='aarch64-apple-darwin'; LIBRARY='libfma_czkawka_ffi.dylib' ;;
+    Linux:aarch64|Linux:arm64) RID='linux-arm64'; TARGET='aarch64-unknown-linux-gnu'; LIBRARY='libfile_workbench_czkawka_ffi.so' ;;
+    Darwin:arm64) RID='osx-arm64'; TARGET='aarch64-apple-darwin'; LIBRARY='libfile_workbench_czkawka_ffi.dylib' ;;
     *) echo 'This kit currently selects Linux arm64 (glibc) or Apple Silicon macOS.' >&2; exit 2 ;;
 esac
 command -v cargo >/dev/null || { echo 'Install rustup/Rust and native build tools first; see README.md.' >&2; exit 2; }
-RUN_ROOT="$(mktemp -d "$WORK_PARENT/fma-platform.XXXXXX")"
+RUN_ROOT="$(mktemp -d "$WORK_PARENT/file-workbench-platform.XXXXXX")"
 RUN_ROOT="$(cd "$RUN_ROOT" && pwd)"
 echo "Retained reports: $RUN_ROOT"
 printf 'running\n' > "$RUN_ROOT/status.txt"
@@ -79,7 +79,7 @@ else
     (cd "$KIT_ROOT" && sha256sum -c CHECKSUMS.sha256) > "$RUN_ROOT/checksums.txt" 2>&1
 fi
 
-CRATE="$KIT_ROOT/native/fma-czkawka-ffi"
+CRATE="$KIT_ROOT/native/file-workbench-czkawka-ffi"
 TARGET_DIR="$RUN_ROOT/cargo-target"
 (
     cd "$CRATE"
@@ -100,12 +100,12 @@ else
     ldd "$NATIVE_DIR/$LIBRARY" > "$RUN_ROOT/native-dependencies.txt"
     sha256sum "$NATIVE_DIR/$LIBRARY" > "$RUN_ROOT/native.sha256"
 fi
-VERIFIER="$KIT_ROOT/bin/$RID/FileMergeAssistant.AnalysisVerifier"
+VERIFIER="$KIT_ROOT/bin/$RID/FileWorkbench.AnalysisVerifier"
 # Only the kit-owned apphost gets an executable bit; no security/quarantine settings are removed.
 chmod u+x "$VERIFIER"
 set -- "$VERIFIER" --work "$RUN_ROOT/verification" --native "$NATIVE_DIR" --fixtures "$KIT_ROOT/tests/Fixtures"
 if [ -n "$SECOND_WORK_PARENT" ]; then
-    SECOND_RUN_ROOT="$(mktemp -d "$SECOND_WORK_PARENT/fma-platform-second.XXXXXX")"
+    SECOND_RUN_ROOT="$(mktemp -d "$SECOND_WORK_PARENT/file-workbench-platform-second.XXXXXX")"
     SECOND_RUN_ROOT="$(cd "$SECOND_RUN_ROOT" && pwd)"
     printf '%s\n' "$SECOND_RUN_ROOT" > "$RUN_ROOT/second-root.txt"
     if [ "$(uname -s)" = 'Darwin' ]; then

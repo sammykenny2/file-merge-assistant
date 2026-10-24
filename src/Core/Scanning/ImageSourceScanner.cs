@@ -1,9 +1,9 @@
 using System.Collections.Immutable;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Sources;
 
-namespace FileMergeAssistant.Scanning;
+namespace FileWorkbench.Scanning;
 
 /// <summary>Inventory and checkpoint perceptual evidence through a separate publication entry point.</summary>
 internal sealed class ImageSourceScanner(IndexDatabase database, IFileAnalysisEngine engine, AnalysisEngineSnapshot snapshot)

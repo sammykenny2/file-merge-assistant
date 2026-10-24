@@ -2,10 +2,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Updates;
+using FileWorkbench.Localization;
+using FileWorkbench.Updates;
 
-namespace FileMergeAssistant.Gui.Updates;
+namespace FileWorkbench.Gui.Updates;
 
 public enum UpdateStatus
 {
@@ -136,7 +136,7 @@ public sealed partial class UpdateCoordinator : ObservableObject, IDisposable
       using (UpdateService.OpenVerifiedInstaller(installer, package))
       {
         var start = new ProcessStartInfo(installer) { UseShellExecute = false };
-        // installer/FileMergeAssistant.nsi: /S installs silently, /WAITPID waits for this process to exit, /RELAUNCH reopens the app.
+        // installer/FileWorkbench.nsi: /S installs silently, /WAITPID waits for this process to exit, /RELAUNCH reopens the app.
         start.ArgumentList.Add("/S");
         start.ArgumentList.Add($"/WAITPID={Environment.ProcessId}");
         start.ArgumentList.Add("/RELAUNCH");

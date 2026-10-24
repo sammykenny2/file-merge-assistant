@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Models;
+namespace FileWorkbench.Models;
 
 public enum ResolveAction
 {

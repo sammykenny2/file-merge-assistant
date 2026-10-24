@@ -11,14 +11,14 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.Windows.Automation;
 using System.Windows.Input;
-using FileMergeAssistant.Gui.ViewModels;
-using FileMergeAssistant.Gui.Workbench;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Workbench;
-using ReviewStack = FileMergeAssistant.Stacks.Stack;
+using FileWorkbench.Gui.ViewModels;
+using FileWorkbench.Gui.Workbench;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Stacks;
+using FileWorkbench.Workbench;
+using ReviewStack = FileWorkbench.Stacks.Stack;
 
-namespace FileMergeAssistant.Gui.Tests;
+namespace FileWorkbench.Gui.Tests;
 
 internal static class Program
 {
@@ -39,7 +39,7 @@ internal static class Program
       ["architecture"] = RuntimeInformation.ProcessArchitecture.ToString(), ["logicalProcessors"] = Environment.ProcessorCount,
       ["hostSha256"] = Digest(typeof(Program).Assembly.Location),
       ["coreSha256"] = Digest(typeof(IWorkbenchStore).Assembly.Location),
-      ["analysisSha256"] = Digest(typeof(FileMergeAssistant.Analysis.AnalysisEngineRegistry).Assembly.Location),
+      ["analysisSha256"] = Digest(typeof(FileWorkbench.Analysis.AnalysisEngineRegistry).Assembly.Location),
       ["guiSha256"] = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(typeof(ShellView).Assembly.Location))),
       ["limitations"] = "Synthetic in-memory demo-derived model; no real scan, native engine, disk index or visible window. Dispatcher queue delay is not physical input latency. Debug developer-host measurements are not release thresholds.",
     };

@@ -7,7 +7,7 @@ Accepted（2026-10-23：產品負責人要求依 GUI 流程 mock 實作新介面
 ## 背景
 
 - 現行 [`JsonScanResultStore`](../../src/Core/Services/JsonScanResultStore.cs) 把整份掃描結果寫成一個 JSON 檔。`File.Create` 會先清空舊檔再寫入，寫到一半中斷時，舊結果與新結果都可能遺失。
-- 現行 [`ScanCacheService`](../../src/Core/Services/ScanCacheService.cs) 依「掃描路徑加演算法」各存一個 JSON 檔，位於相對於工作目錄的 `fma-results/.cache`。大小與修改時間相同時，沿用快取的 hash。
+- 現行 [`ScanCacheService`](../../src/Core/Services/ScanCacheService.cs) 依「掃描路徑加演算法」各存一個 JSON 檔，位於相對於工作目錄的 `file-workbench-results/.cache`。大小與修改時間相同時，沿用快取的 hash。
 - [產品需求](../requirements.md) 與 [SPEC-001](../specs/SPEC-001-persistent-scan-workbench.md) 要求的資料責任，JSON 整檔讀寫難以支撐：
   - 保存所有已掃描檔案，不只重複檔（FR-003）。
   - 分批保存進度，中斷後可以接著做（FR-004）。
@@ -22,7 +22,7 @@ Accepted（2026-10-23：產品負責人要求依 GUI 流程 mock 實作新介面
 - 啟用 WAL 模式，讓掃描寫入時，介面仍可以讀取。依 SPEC-001，一次只有一個掃描工作寫入。
 - 每處理一批檔案就以一個交易提交；交易即為檢查點，中斷時只會重做尚未提交的那一批。
 - 資料庫記錄自己的結構版本，升級時依序遷移；遷移前先備份索引檔。
-- 索引檔放在使用者的應用程式資料位置（例如 `%LOCALAPPDATA%\FileMergeAssistant\`），不隨工作目錄改變，符合 FR-010（另見 [ADR-012](./ADR-012-release-packaging.md)）。
+- 索引檔放在使用者的應用程式資料位置（例如 `%LOCALAPPDATA%\FileWorkbench\`），不隨工作目錄改變，符合 FR-010（另見 [ADR-012](./ADR-012-release-packaging.md)）。
 - 需要保存的資料包括來源、掃描工作、檔案、指紋（含演算法與版本）、疊與決定、待執行計畫、操作紀錄與回收項目。這是資料責任的清單，不是最終的資料表設計。
 
 ## 影響

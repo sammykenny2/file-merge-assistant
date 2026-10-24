@@ -1,11 +1,11 @@
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Tests.Scanning;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Plans;
+using FileWorkbench.Sources;
+using FileWorkbench.Stacks;
+using FileWorkbench.Tests.Scanning;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Workbench;
+namespace FileWorkbench.Tests.Workbench;
 
 /// <summary>The real store end to end: add folders, scan them, find the stack, decide, re-check. Temp folders only.</summary>
 public sealed class IndexedWorkbenchStoreTests : IDisposable
@@ -428,10 +428,10 @@ public sealed class IndexedWorkbenchStoreTests : IDisposable
     // As if the app died mid-run: every item is still journalled as running, and one copy never reached the keeper.
     var copy = batch.Items.First(i => i.Kind == PlanItemKind.Copy);
     File.Delete(copy.CreatedPath!);
-    var database = FileMergeAssistant.Index.IndexDatabase.OpenOrCreate(_indexPath);
+    var database = FileWorkbench.Index.IndexDatabase.OpenOrCreate(_indexPath);
     using (var connection = database.Open())
     {
-      FileMergeAssistant.Index.IndexDatabase.Execute(connection, "UPDATE batch_items SET state = 'Running' WHERE batch_id = $b", ("$b", batch.Id));
+      FileWorkbench.Index.IndexDatabase.Execute(connection, "UPDATE batch_items SET state = 'Running' WHERE batch_id = $b", ("$b", batch.Id));
     }
 
     using var reopened = Open();
@@ -579,11 +579,11 @@ public sealed class IndexedWorkbenchStoreTests : IDisposable
     {
       await store.AddSourcesAsync([], new SourceOptions(true, true, []), startScan: false);
     }
-    var database = FileMergeAssistant.Index.IndexDatabase.OpenOrCreate(_indexPath);
+    var database = FileWorkbench.Index.IndexDatabase.OpenOrCreate(_indexPath);
     using (var connection = database.Open())
     {
-      FileMergeAssistant.Index.IndexDatabase.Execute(connection, "INSERT INTO batches(id, ran_at) VALUES ('b20261023-120000-abcd', '2026-10-23T12:00:00+08:00')");
-      FileMergeAssistant.Index.IndexDatabase.Execute(connection,
+      FileWorkbench.Index.IndexDatabase.Execute(connection, "INSERT INTO batches(id, ran_at) VALUES ('b20261023-120000-abcd', '2026-10-23T12:00:00+08:00')");
+      FileWorkbench.Index.IndexDatabase.Execute(connection,
         """
         INSERT INTO batch_items(batch_id, id, position, stack_id, kind, target, detail, state, bytes, file_count, failed_files, retried,
           original_path, recycled_path)

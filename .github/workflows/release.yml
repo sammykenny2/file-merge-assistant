@@ -97,20 +97,20 @@ jobs:
         run: |
           ./scripts/windows/Build-Installer.ps1 -Configuration Release -UpdateSummary $env:SUMMARY -UsePinnedNsis
           Move-Item -LiteralPath build-release-notes.md -Destination build/release-notes.md
-          foreach ($file in "FileMergeAssistant-$env:VERSION-x64-setup.exe", 'file-merge-assistant-update-windows.json') {
+          foreach ($file in "FileWorkbench-$env:VERSION-x64-setup.exe", 'file-workbench-update-windows.json') {
             if (-not (Test-Path -LiteralPath "build/$file")) { throw "build/$file was not produced." }
           }
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-windows
           path: |
-            build/FileMergeAssistant-${{ steps.version.outputs.version }}-x64-setup.exe
-            build/FileMergeAssistant-${{ steps.version.outputs.version }}-x64-setup.exe.sha256
-            build/FileMergeAssistant-${{ steps.version.outputs.version }}-x64-portable.zip
-            build/FileMergeAssistant-${{ steps.version.outputs.version }}-x64-portable.zip.sha256
-            build/FileMergeAssistant-${{ steps.version.outputs.version }}-czkawka-*-source.zip
-            build/FileMergeAssistant-${{ steps.version.outputs.version }}-czkawka-*-source.zip.sha256
-            build/file-merge-assistant-update-windows.json
+            build/FileWorkbench-${{ steps.version.outputs.version }}-x64-setup.exe
+            build/FileWorkbench-${{ steps.version.outputs.version }}-x64-setup.exe.sha256
+            build/FileWorkbench-${{ steps.version.outputs.version }}-x64-portable.zip
+            build/FileWorkbench-${{ steps.version.outputs.version }}-x64-portable.zip.sha256
+            build/FileWorkbench-${{ steps.version.outputs.version }}-czkawka-*-source.zip
+            build/FileWorkbench-${{ steps.version.outputs.version }}-czkawka-*-source.zip.sha256
+            build/file-workbench-update-windows.json
             build/release-notes.md
           if-no-files-found: error
           overwrite: true
@@ -135,13 +135,13 @@ jobs:
           CI_URL: ${{ needs.build.outputs.ci_url }}
         run: |
           {
-            echo "Preview of File Merge Assistant ${VERSION} for Windows x64, built from ${COMMIT}."
+            echo "Preview of File Workbench ${VERSION} for Windows x64, built from ${COMMIT}."
             echo "Validated by [CI](${CI_URL}); SHA-256 files accompany every binary/source archive."
             echo
             cat dist/release-notes.md
             echo
             echo '## Install'
-            echo "Download \`FileMergeAssistant-${VERSION}-x64-setup.exe\` and run it. It installs for the current user only and needs no administrator rights."
+            echo "Download \`FileWorkbench-${VERSION}-x64-setup.exe\` and run it. It installs for the current user only and needs no administrator rights."
             echo 'The setup program is unsigned; Windows may show a SmartScreen warning. Verify the published checksum and project source before deciding whether to run it.'
             echo 'This preview omits ImageSharp and the legacy perceptual/video-perceptual CLI algorithms. Native PNG/JPEG review is available.'
             echo 'Native analysis remains experimental. Owner-run filesystem and clean-machine lifecycle acceptance are still pending.'
@@ -149,14 +149,14 @@ jobs:
           } > "$RUNNER_TEMP/notes.md"
           (cd dist && sha256sum -c ./*.sha256)
           gh release create "v${VERSION}" --repo "$GITHUB_REPOSITORY" --target "$COMMIT" --draft --prerelease \
-            --title "File Merge Assistant ${VERSION} (preview)" --notes-file "$RUNNER_TEMP/notes.md" \
-            "dist/FileMergeAssistant-${VERSION}-x64-setup.exe" \
-            "dist/FileMergeAssistant-${VERSION}-x64-setup.exe.sha256" \
-            "dist/FileMergeAssistant-${VERSION}-x64-portable.zip" \
-            "dist/FileMergeAssistant-${VERSION}-x64-portable.zip.sha256" \
-            dist/FileMergeAssistant-${VERSION}-czkawka-*-source.zip \
-            dist/FileMergeAssistant-${VERSION}-czkawka-*-source.zip.sha256 \
-            dist/file-merge-assistant-update-windows.json
+            --title "File Workbench ${VERSION} (preview)" --notes-file "$RUNNER_TEMP/notes.md" \
+            "dist/FileWorkbench-${VERSION}-x64-setup.exe" \
+            "dist/FileWorkbench-${VERSION}-x64-setup.exe.sha256" \
+            "dist/FileWorkbench-${VERSION}-x64-portable.zip" \
+            "dist/FileWorkbench-${VERSION}-x64-portable.zip.sha256" \
+            dist/FileWorkbench-${VERSION}-czkawka-*-source.zip \
+            dist/FileWorkbench-${VERSION}-czkawka-*-source.zip.sha256 \
+            dist/file-workbench-update-windows.json
           count="$(gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
           test "$count" -eq 7
           gh release edit "v${VERSION}" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease --latest=false

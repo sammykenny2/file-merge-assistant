@@ -10,7 +10,7 @@
   <!-- Product identity. The installer, the release workflow and the in-app update check read these values. -->
   <PropertyGroup>
     <Version>0.3.0</Version>
-    <Product>File Merge Assistant</Product>
+    <Product>File Workbench</Product>
     <Company>sammykenny2</Company>
     <Authors>sammykenny2</Authors>
     <Copyright>Copyright (c) 2025-2026 sammykenny2</Copyright>

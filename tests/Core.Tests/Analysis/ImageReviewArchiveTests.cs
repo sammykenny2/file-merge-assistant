@@ -2,12 +2,12 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Tests.Scanning;
+using FileWorkbench.Analysis;
+using FileWorkbench.Scanning;
+using FileWorkbench.Tests.Scanning;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class ImageReviewArchiveTests
 {

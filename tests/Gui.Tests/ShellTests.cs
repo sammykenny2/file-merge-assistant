@@ -1,16 +1,16 @@
 using System.IO;
-using FileMergeAssistant.Gui.Localization;
-using FileMergeAssistant.Gui.Settings;
-using FileMergeAssistant.Gui.Shell;
-using FileMergeAssistant.Gui.Updates;
-using FileMergeAssistant.Gui.ViewModels;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Updates;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Gui.Localization;
+using FileWorkbench.Gui.Settings;
+using FileWorkbench.Gui.Shell;
+using FileWorkbench.Gui.Updates;
+using FileWorkbench.Gui.ViewModels;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Localization;
+using FileWorkbench.Updates;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Gui.Tests;
+namespace FileWorkbench.Gui.Tests;
 
 [CollectionDefinition(Name, DisableParallelization = true)]
 public sealed class DisplayLanguageTests
@@ -22,7 +22,25 @@ public sealed class DisplayLanguageTests
 [Collection(DisplayLanguageTests.Name)]
 public sealed class ShellTests : IDisposable
 {
-  private readonly string _directory = Path.Combine(Path.GetTempPath(), "fma-gui-shell-" + Guid.NewGuid().ToString("N"));
+  [Fact]
+  public void Product_Name_And_Tagline_Follow_The_Display_Language()
+  {
+    WpfHost.Run(() =>
+    {
+      AppText.Apply("zh-TW", []);
+      var window = new MainWindow();
+      Assert.Equal("貓檔家", window.Title);
+      Assert.Equal("整理檔案的專家", Loc.Instance["header.productTagline"]);
+      AppText.Apply("en", []);
+      window.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.DataBind);
+      Assert.Equal("File Workbench", window.Title);
+      Assert.Equal("Your file organization expert", Loc.Instance["header.productTagline"]);
+      Assert.StartsWith("Open File Workbench", AppText.Get("tray.open"), StringComparison.Ordinal);
+      window.Close();
+    });
+  }
+
+  private readonly string _directory = Path.Combine(Path.GetTempPath(), "file-workbench-gui-shell-" + Guid.NewGuid().ToString("N"));
 
   public void Dispose()
   {

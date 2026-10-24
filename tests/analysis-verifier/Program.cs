@@ -3,9 +3,9 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
+using FileWorkbench.Analysis;
 
-namespace FileMergeAssistant.AnalysisVerifier;
+namespace FileWorkbench.AnalysisVerifier;
 
 internal static class Program
 {
@@ -243,7 +243,7 @@ internal static class Program
       foreach (var (path, bytes) in expectedBytes) { Require(File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes), "A known-answer source changed."); }
       Checks.Add(new("known-answer-source-contents", "Passed", "All original known-answer bytes unchanged."));
       var loaded = AppDomain.CurrentDomain.GetAssemblies().Select(assembly => assembly.GetName().Name).ToArray();
-      Require(!loaded.Any(name => name is "FileMergeAssistant.Core" or "PresentationFramework" or "SixLabors.ImageSharp"), "Verifier unexpectedly loaded Windows workflow/UI/image dependencies.");
+      Require(!loaded.Any(name => name is "FileWorkbench.Core" or "PresentationFramework" or "SixLabors.ImageSharp"), "Verifier unexpectedly loaded Windows workflow/UI/image dependencies.");
       Checks.Add(new("portable-dependency-boundary", "Passed", "No Windows Core, WPF or ImageSharp assemblies loaded."));
       report["passed"] = Checks.All(check => !check.Required || check.Status == "Passed");
       return (bool)report["passed"]! ? 0 : 2;

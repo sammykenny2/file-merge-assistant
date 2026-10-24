@@ -1,10 +1,10 @@
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Scanning;
+using FileWorkbench.Plans;
+using FileWorkbench.Sources;
+using FileWorkbench.Stacks;
+using FileWorkbench.Analysis;
+using FileWorkbench.Scanning;
 
-namespace FileMergeAssistant.Workbench;
+namespace FileWorkbench.Workbench;
 
 /// <summary>What a <see cref="IWorkbenchStore.Changed"/> notification covers.</summary>
 public sealed class WorkbenchChangedEventArgs : EventArgs

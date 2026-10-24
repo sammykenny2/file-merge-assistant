@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Stacks;
+namespace FileWorkbench.Stacks;
 
 /// <summary>What to do with a stack (ADR-002).</summary>
 public enum StackAction

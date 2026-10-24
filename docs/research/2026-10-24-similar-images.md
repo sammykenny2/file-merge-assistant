@@ -18,7 +18,7 @@ Experimental。GUI／CLI 的候選審閱與完整工作流程尚待後續 slice�
   每檔保存 1–8 個排序、去重的 64-bit hash；全零／全一的無資訊 hash 排除。
 - `image 0.25.10`、`image_hasher 3.1.1` 與上游使用同一 lockfile 版本，
   沒有升級其他相依。MIT 衍生程式碼的完整聲明見
-  [THIRD-PARTY-NOTICES](../../native/fma-czkawka-ffi/THIRD-PARTY-NOTICES.md)。
+  [THIRD-PARTY-NOTICES](../../native/file-workbench-czkawka-ffi/THIRD-PARTY-NOTICES.md)。
 - FMA 自行定義候選配對與距離，不宣稱等同上游的 parent/group 選擇。
 
 版本化算法為 `image-mean8-d8-v1`，距離為兩份 transform hash 集合的

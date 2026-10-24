@@ -1,13 +1,13 @@
 using System.Runtime.InteropServices;
 
-namespace FileMergeAssistant.Analysis;
+namespace FileWorkbench.Analysis;
 
 /// <summary>Only executable-relative, package-owned locations; never searches source folders, CWD or PATH.</summary>
 public static class NativeAnalysisPaths
 {
   public const string PackageMarker = ".installed-by-file-merge-assistant-setup";
-  public static string LibraryName => OperatingSystem.IsWindows() ? "fma_czkawka_ffi.dll"
-    : OperatingSystem.IsMacOS() ? "libfma_czkawka_ffi.dylib" : "libfma_czkawka_ffi.so";
+  public static string LibraryName => OperatingSystem.IsWindows() ? "file_workbench_czkawka_ffi.dll"
+    : OperatingSystem.IsMacOS() ? "libfile_workbench_czkawka_ffi.dylib" : "libfile_workbench_czkawka_ffi.so";
 
   public static string Resolve(string executableDirectory)
   {

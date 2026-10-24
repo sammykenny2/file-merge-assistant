@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // Why a check, download or install did not finish (ADR-013). The code on UpdateException stays a stable English id.
 public static partial class AppText

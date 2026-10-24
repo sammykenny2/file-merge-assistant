@@ -1,6 +1,6 @@
-using FileMergeAssistant.Stacks;
+using FileWorkbench.Stacks;
 
-namespace FileMergeAssistant.Plans;
+namespace FileWorkbench.Plans;
 
 public enum PlanItemKind
 {

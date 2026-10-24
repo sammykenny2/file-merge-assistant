@@ -1,12 +1,12 @@
-using FileMergeAssistant.Infrastructure;
+using FileWorkbench.Infrastructure;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Infrastructure;
+namespace FileWorkbench.Tests.Infrastructure;
 
 /// <summary>Start at sign-in against in-memory keys; no test touches the real Run, StartupApproved or app keys.</summary>
 public class StartupRegistrationTests
 {
-  private const string Exe = @"C:\Users\someone\AppData\Local\Programs\FileMergeAssistant\app\FileMergeAssistant.exe";
+  private const string Exe = @"C:\Users\someone\AppData\Local\Programs\FileWorkbench\app\FileWorkbench.exe";
 
   [Fact]
   public void A_Copy_The_Setup_Program_Did_Not_Install_Cannot_Start_At_Sign_In()
@@ -84,7 +84,7 @@ public class StartupRegistrationTests
   public void The_First_Start_Removes_The_Entry_When_The_Preference_Is_Off()
   {
     var keys = new FakeStartupKeys();
-    keys.Run[StartupRegistration.ValueName] = "\"C:\\old\\FileMergeAssistant.exe\" --launch-at-login";
+    keys.Run[StartupRegistration.ValueName] = "\"C:\\old\\FileWorkbench.exe\" --launch-at-login";
     var startup = new StartupRegistration(keys, Exe);
     startup.Sync(false);
     Assert.True(keys.Applied);
@@ -95,7 +95,7 @@ public class StartupRegistrationTests
   public void An_Entry_Naming_Another_Copy_Is_Pointed_At_This_One()
   {
     var keys = new FakeStartupKeys { Applied = true };
-    keys.Run[StartupRegistration.ValueName] = "\"D:\\Apps\\FileMergeAssistant\\app\\FileMergeAssistant.exe\" --launch-at-login";
+    keys.Run[StartupRegistration.ValueName] = "\"D:\\Apps\\FileWorkbench\\app\\FileWorkbench.exe\" --launch-at-login";
     var startup = new StartupRegistration(keys, Exe);
     startup.Sync(true);
     Assert.Equal(startup.Command, keys.Run[StartupRegistration.ValueName]);

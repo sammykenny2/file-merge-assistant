@@ -85,7 +85,7 @@
 
 ### Phase 2：資料位置、持久索引與來源身份
 
-- [x] Task 2.1（2026-10-23 隨安裝檔提前完成）：新增 `AppDataPaths`，所有程式資料統一放到 `%LOCALAPPDATA%\FileMergeAssistant\`，取代快取、回收區、記錄檔與 GUI 中的相對路徑 `fma-results`（FR-010）。CLI 明確指定的 `--output` 維持原行為。
+- [x] Task 2.1（2026-10-23 隨安裝檔提前完成）：新增 `AppDataPaths`，所有程式資料統一放到 `%LOCALAPPDATA%\FileWorkbench\`，取代快取、回收區、記錄檔與 GUI 中的相對路徑 `file-workbench-results`（FR-010）。CLI 明確指定的 `--output` 維持原行為。
 - [x] Task 2.2：決定直接寫 SQL 或使用 ORM，記錄在 ADR-008 與本計畫的 Technical Decisions。決定：直接寫 SQL（Microsoft.Data.Sqlite）。
 - [x] Task 2.3（`src/Core/Index/IndexDatabase.cs`）：建立 SQLite 索引與第一版結構，包括來源、磁碟區、掃描工作、檔案與指紋（含演算法與版本）。啟用 WAL。
 - [ ] Task 2.4（結構版本與遷移前備份已完成；舊 JSON 結果與快取不匯入）：**索引遷移**。資料庫記錄自己的結構版本，遷移依序執行，遷移前備份索引檔。依 ADR-008 的決定，匯入或捨棄舊的 JSON 結果與快取。
@@ -138,7 +138,7 @@
   - 複製與驗證期間，以不允許其他程式寫入的方式開啟檔案，縮小檢查與執行之間的空窗。
 - [x] Task 5.3：保護檢查（ADR-003）擴大到所有會移除、移動或覆寫的動作，取代 `ResolutionService` 只檢查 Delete 的做法。
 - [x] Task 5.4（`PlanExecutor.CopyVerified`：先寫暫存檔、以指紋驗證、保留修改時間，再移到正本；目的地已有檔案就不執行）：在 `IFileOperationService` 新增「複製並驗證」與「另存為」（ADR-002），包括命名規則與失敗處理。
-- [x] Task 5.5（系統磁碟的回收區在 `%LOCALAPPDATA%\FileMergeAssistant\recycle-areas`，其他磁碟在根目錄的隱藏資料夾 `.fma-recycle`；保存期限與提醒尚未做）：**回收與還原衝突**。依 ADR-007 使用各磁碟區的回收區，集中保存紀錄：
+- [x] Task 5.5（系統磁碟的回收區在 `%LOCALAPPDATA%\FileWorkbench\recycle-areas`，其他磁碟在根目錄的隱藏資料夾 `.fma-recycle`；保存期限與提醒尚未做）：**回收與還原衝突**。依 ADR-007 使用各磁碟區的回收區，集中保存紀錄：
   - 還原時原位置已有檔案，絕不覆寫，讓使用者選擇改名還原、還原到其他位置，或先不還原。
   - 還原合併時，複製進正本的檔移入回收區。
 - [x] Task 5.6：逐項記錄結果；只重試失敗的項目；可以取消；不宣稱整批已回滾。

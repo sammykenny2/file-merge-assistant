@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Windows.Data;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 /// <summary>Formats a byte count the way the workbench does (2.2 GB, 38 MB, 48 KB).</summary>
 public sealed class BytesTextConverter : IValueConverter

@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using Microsoft.Win32.SafeHandles;
 
-namespace FileMergeAssistant.Analysis;
+namespace FileWorkbench.Analysis;
 
 public sealed class NativeAnalysisEngine : IFileAnalysisEngine
 {

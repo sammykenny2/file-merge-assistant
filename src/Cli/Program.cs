@@ -1,12 +1,12 @@
 using System.CommandLine;
-using FileMergeAssistant.Cli.Commands;
-using FileMergeAssistant.Cli.Reporting;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Reporting;
-using FileMergeAssistant.Analysis;
+using FileWorkbench.Cli.Commands;
+using FileWorkbench.Cli.Reporting;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Reporting;
+using FileWorkbench.Analysis;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace FileMergeAssistant.Cli;
+namespace FileWorkbench.Cli;
 
 static class Program
 {
@@ -22,7 +22,7 @@ static class Program
         .AddSingleton(_ => AnalysisEngineRegistry.CreateDefault())
         .BuildServiceProvider();
 
-      var rootCommand = new RootCommand("File Merge Assistant - Deduplicate and organize files");
+      var rootCommand = new RootCommand("File Workbench - Deduplicate and organize files");
       rootCommand.AddCommand(ScanCommand.Create(services));
       rootCommand.AddCommand(ResolveCommand.Create(services));
       rootCommand.AddCommand(ReportCommand.Create(services));

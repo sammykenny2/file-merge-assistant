@@ -1,10 +1,12 @@
-# File Merge Assistant
+# 貓檔家 · File Workbench
+
+> 整理檔案的專家
 
 > Windows native tool for deduplicating and organizing large file collections.
 
 ## Overview
 
-File Merge Assistant helps you clean up years of accumulated duplicate files across Windows drives. It handles:
+File Workbench helps you clean up years of accumulated duplicate files across Windows drives. It handles:
 
 - **File deduplication** - Find and resolve duplicate files scattered across directories using multiple hash algorithms (SHA-256, xxHash)
 - **Image candidate review** - Experimental native PNG/JPEG similarity with manual review. Legacy C# image/video hashing is disabled in the 0.3.0 preview.
@@ -90,7 +92,7 @@ platform acceptance. Analysis engines remain Experimental; see PLAN-002 and
 ## Project Structure
 
 ```
-file-merge-assistant/
+file-workbench/
 ├── src/analysis/          # Portable read-only analysis contracts and adapters
 ├── src/Core/              # Core library with business logic
 │   ├── Hashing/           # Hash algorithms (SHA-256, xxHash, Perceptual, Video)
@@ -124,7 +126,7 @@ file-merge-assistant/
 ## New Features
 
 ### Recycle Bin & Undo
-Files are moved to the recycle bin in `%LOCALAPPDATA%\FileMergeAssistant\recycle-bin` instead of being permanently deleted. Use the "Undo (Restore All)" button in the GUI or the recycle bin API to restore files.
+Files are moved to the recycle bin in `%LOCALAPPDATA%\FileWorkbench\recycle-bin` instead of being permanently deleted. Use the "Undo (Restore All)" button in the GUI or the recycle bin API to restore files.
 
 ### Metadata-Driven Resolution
 The "Smart (Metadata)" button analyzes EXIF data to keep the best file: highest resolution, earliest date taken, files with camera model info, and largest file size.
@@ -154,7 +156,7 @@ while preserving project-specific content.
 ```powershell
 Push-Location ..\project-bootstrap
 try {
-    .\scripts\windows\Update-Project.ps1 -TargetPath ..\file-merge-assistant
+    .\scripts\windows\Update-Project.ps1 -TargetPath ..\file-workbench
 } finally {
     Pop-Location
 }

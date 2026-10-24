@@ -1,13 +1,13 @@
 using System.Runtime.CompilerServices;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Tests;
+namespace FileWorkbench.Tests;
 
 internal static class TestEnvironment
 {
   /// <summary>Keeps every default data path under a throwaway folder so no test writes to the real %LOCALAPPDATA%.</summary>
-  public static readonly string DataRoot = Path.Combine(Path.GetTempPath(), $"fma-test-data-{Environment.ProcessId}");
+  public static readonly string DataRoot = Path.Combine(Path.GetTempPath(), $"file-workbench-test-data-{Environment.ProcessId}");
 
   [ModuleInitializer]
   internal static void Initialize()

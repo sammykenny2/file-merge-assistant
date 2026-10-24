@@ -1,19 +1,19 @@
 using System.Net;
 using System.Security.Cryptography;
-using FileMergeAssistant.Updates;
+using FileWorkbench.Updates;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Updates;
+namespace FileWorkbench.Tests.Updates;
 
 public sealed class UpdateServiceTests : IDisposable
 {
   private const string Repo = "owner/app";
   private const string FeedUrl = "https://github.com/owner/app/releases.atom";
   private const string ManifestUrl = "https://github.com/owner/app/releases/download/v0.2.0/" + UpdateFeed.ManifestFileName;
-  private const string InstallerName = "FileMergeAssistant-0.2.0-x64-setup.exe";
+  private const string InstallerName = "FileWorkbench-0.2.0-x64-setup.exe";
   private const string InstallerUrl = "https://github.com/owner/app/releases/download/v0.2.0/" + InstallerName;
   private static readonly Version Current = new(0, 1, 0);
-  private readonly string _downloads = Path.Combine(Path.GetTempPath(), $"fma-update-test-{Guid.NewGuid():N}");
+  private readonly string _downloads = Path.Combine(Path.GetTempPath(), $"file-workbench-update-test-{Guid.NewGuid():N}");
 
   public void Dispose()
   {
@@ -197,7 +197,7 @@ public sealed class UpdateServiceTests : IDisposable
   public async Task Download_Removes_Earlier_Installers_But_Leaves_Other_Files()
   {
     Directory.CreateDirectory(_downloads);
-    var old = Path.Combine(_downloads, "FileMergeAssistant-0.1.5-x64-setup.exe");
+    var old = Path.Combine(_downloads, "FileWorkbench-0.1.5-x64-setup.exe");
     var unrelated = Path.Combine(_downloads, "notes.txt");
     await File.WriteAllTextAsync(old, "old");
     await File.WriteAllTextAsync(unrelated, "keep");

@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 /// <summary>A small pile of sheets, one per copy (up to five); the front sheet is the accent colour.</summary>
 public sealed class StackGlyph : Canvas

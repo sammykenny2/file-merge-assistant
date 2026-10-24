@@ -4,7 +4,7 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <UseWPF>true</UseWPF>
-    <RootNamespace>FileMergeAssistant.Gui.Tests</RootNamespace>
+    <RootNamespace>FileWorkbench.Gui.Tests</RootNamespace>
     <!-- Allow underscores in test method names (common convention) -->
     <NoWarn>$(NoWarn);CA1707</NoWarn>
   </PropertyGroup>

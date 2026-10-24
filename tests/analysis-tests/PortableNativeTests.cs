@@ -1,9 +1,9 @@
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Tests.Scanning;
+using FileWorkbench.Analysis;
+using FileWorkbench.Sources;
+using FileWorkbench.Tests.Scanning;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class PortableNativeTests
 {
@@ -34,7 +34,7 @@ public sealed class PortableNativeTests
   public async Task Native_Exact_Analysis_Matches_The_Shared_Oracle_On_This_Runtime()
   {
     using var dataset = new KnownAnswerDataset();
-    var engine = new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR"));
+    var engine = new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR"));
     Assert.Equal(AnalysisAvailability.Available, engine.Descriptor.Availability);
     var snapshot = new AnalysisEngineRegistry([engine]).Snapshot("czkawka", AnalysisCapability.ExactDuplicates, ContentFingerprints.Blake3);
     var request = ManagedAnalysisEngineTests.Request(dataset) with { Engine = snapshot };
@@ -61,7 +61,7 @@ public sealed class PortableNativeTests
       File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "similar-images", name), path);
       inputs.Add(new(inputs.Count + 1, "s", path, FileObservation.Capture(path)));
     }
-    var engine = new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR"));
+    var engine = new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR"));
     var snapshot = new AnalysisEngineRegistry([engine]).Snapshot("czkawka", AnalysisCapability.SimilarImages, PerceptualFingerprints.Mean8D8);
     var request = new AnalysisRequest("portable-images", snapshot, [.. inputs]);
     var validator = new AnalysisResultValidator(request);
@@ -80,7 +80,7 @@ public sealed class PortableNativeFactAttribute : FactAttribute
 {
   public PortableNativeFactAttribute()
   {
-    if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR")))
-    { Skip = "Set the absolute FMA_NATIVE_LIBRARY_DIR to run the optional native cases; skipped is not platform acceptance."; }
+    if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR")))
+    { Skip = "Set the absolute FWB_NATIVE_LIBRARY_DIR to run the optional native cases; skipped is not platform acceptance."; }
   }
 }

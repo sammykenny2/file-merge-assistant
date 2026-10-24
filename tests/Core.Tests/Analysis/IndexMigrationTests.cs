@@ -1,8 +1,8 @@
-using FileMergeAssistant.Index;
+using FileWorkbench.Index;
 using Microsoft.Data.Sqlite;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class IndexMigrationTests
 {

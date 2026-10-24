@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Sources;
+namespace FileWorkbench.Sources;
 
 /// <summary>Source-root naming and physical observations; independent of scan/analysis implementations.</summary>
 public interface ISourcePathService

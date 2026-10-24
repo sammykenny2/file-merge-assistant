@@ -4,7 +4,7 @@ using System.Text;
 using System.Security.Cryptography;
 using System.Text.Json;
 
-namespace FileMergeAssistant.Stacks;
+namespace FileWorkbench.Stacks;
 
 /// <summary>
 /// A short fingerprint of a copy's file list: every relative path with its size and modification time. A decision

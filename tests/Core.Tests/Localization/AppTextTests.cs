@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Localization;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Localization;
+namespace FileWorkbench.Tests.Localization;
 
 public partial class AppTextTests
 {
@@ -38,7 +38,7 @@ public partial class AppTextTests
   public void Every_Key_Written_In_The_Code_Exists()
   {
     var root = new DirectoryInfo(AppContext.BaseDirectory);
-    while (root is not null && !File.Exists(Path.Combine(root.FullName, "file-merge-assistant.sln")))
+    while (root is not null && !File.Exists(Path.Combine(root.FullName, "messy-file-workbench.sln")))
     {
       root = root.Parent;
     }

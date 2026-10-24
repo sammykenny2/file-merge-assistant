@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // Stack detection (StackDetector): how the copies were found to be the same, why a copy is the suggested keeper, and the
 // notes on a copy. The keeper's reasons are listed with the separator and the closing punctuation of each language.

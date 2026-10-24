@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // The shared formats of the workbench screens (Gui Workbench Fmt): relative days, date patterns, and how lists,
 // clauses and sentences are joined. The date patterns are .NET custom date and time format strings, read with

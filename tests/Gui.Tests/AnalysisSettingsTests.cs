@@ -1,22 +1,22 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Gui.Settings;
-using FileMergeAssistant.Gui.ViewModels;
-using FileMergeAssistant.Gui.Workbench;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Workbench;
-using FileMergeAssistant.Index;
+using FileWorkbench.Analysis;
+using FileWorkbench.Gui.Settings;
+using FileWorkbench.Gui.ViewModels;
+using FileWorkbench.Gui.Workbench;
+using FileWorkbench.Localization;
+using FileWorkbench.Sources;
+using FileWorkbench.Workbench;
+using FileWorkbench.Index;
 using Xunit;
 
-namespace FileMergeAssistant.Gui.Tests;
+namespace FileWorkbench.Gui.Tests;
 
 [Collection(DisplayLanguageTests.Name)]
 public sealed class AnalysisSettingsTests : IDisposable
 {
-  private readonly string _root = Path.Combine(Path.GetTempPath(), "fma-analysis-ui-" + Guid.NewGuid().ToString("N"));
+  private readonly string _root = Path.Combine(Path.GetTempPath(), "file-workbench-analysis-ui-" + Guid.NewGuid().ToString("N"));
 
   public void Dispose()
   {
@@ -87,7 +87,7 @@ public sealed class AnalysisSettingsTests : IDisposable
       Assert.Contains("尚未安裝", settings.AnalysisDiagnostics, StringComparison.Ordinal);
       var shell = new ShellView { DataContext = main };
       var bitmap = WpfHost.Render(shell, 1440);
-      if (Environment.GetEnvironmentVariable("FMA_SNAPSHOT_DIR") is { } snapshots)
+      if (Environment.GetEnvironmentVariable("FWB_SNAPSHOT_DIR") is { } snapshots)
       {
         Directory.CreateDirectory(snapshots);
         WpfHost.Save(bitmap, Path.Combine(snapshots, "analysis-settings-zh.png"));
@@ -116,7 +116,7 @@ public sealed class AnalysisSettingsTests : IDisposable
     var errors = WpfHost.Run(() =>
     {
       AppText.Apply("en", []);
-      var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR"))]);
+      var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR"))]);
       var index = Path.Combine(_root, "data", "index.db");
       using var store = IndexedWorkbenchStore.Open(index, new Volumes(), context: null, engines: registry);
       Assert.Empty(WpfHost.Wait(store.AddSourcesAsync([source], new SourceOptions(true, true, []), startScan: true)));
@@ -145,7 +145,7 @@ public sealed class AnalysisSettingsTests : IDisposable
       WpfHost.Flush();
       Assert.Contains("一致", settings.ComparisonStatus, StringComparison.Ordinal);
       var bitmap = WpfHost.Render(new ShellView { DataContext = main }, 1440);
-      if (Environment.GetEnvironmentVariable("FMA_SNAPSHOT_DIR") is { } snapshots)
+      if (Environment.GetEnvironmentVariable("FWB_SNAPSHOT_DIR") is { } snapshots)
       {
         Directory.CreateDirectory(snapshots);
         WpfHost.Save(bitmap, Path.Combine(snapshots, "analysis-comparison-zh.png"));
@@ -165,7 +165,7 @@ public sealed class AnalysisSettingsTests : IDisposable
     var errors = WpfHost.Run(() =>
     {
       AppText.Apply("en", []);
-      var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR"))]);
+      var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR"))]);
       var index = Path.Combine(_root, "data", "index.db");
       using var store = IndexedWorkbenchStore.Open(index, new Volumes(), context: null, startWorker: false, engines: registry);
       Assert.Empty(WpfHost.Wait(store.AddSourcesAsync([source], new SourceOptions(true, true, []), startScan: true)));
@@ -204,7 +204,7 @@ public sealed class NativeGuiFactAttribute : FactAttribute
 {
   public NativeGuiFactAttribute()
   {
-    if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR")))
+    if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR")))
     {
       Skip = "Optional native GUI integration: run Build-NativeAnalysis.ps1 -Test.";
     }

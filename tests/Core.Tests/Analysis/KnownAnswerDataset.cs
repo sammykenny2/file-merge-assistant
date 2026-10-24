@@ -1,8 +1,8 @@
 using System.Text;
 using System.Text.Json;
-using FileMergeAssistant.Tests.Scanning;
+using FileWorkbench.Tests.Scanning;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 internal sealed class KnownAnswerDataset : IDisposable
 {

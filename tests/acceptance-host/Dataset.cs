@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 
-namespace FileMergeAssistant.AcceptanceHost;
+namespace FileWorkbench.AcceptanceHost;
 
 internal sealed class Dataset
 {
@@ -71,7 +71,7 @@ internal sealed class Dataset
     var key = ContentKey(i);
     var bytes = new byte[256 + key % 64 * 16];
     for (var j = 0; j < bytes.Length; j++) { bytes[j] = (byte)((key * 31L + j + Seed) % 251); }
-    Encoding.ASCII.GetBytes(string.Create(CultureInfo.InvariantCulture, $"FMA-fixture-v1 seed={Seed} key={key:D9}\n")).CopyTo(bytes, 0);
+    Encoding.ASCII.GetBytes(string.Create(CultureInfo.InvariantCulture, $"File Workbench-fixture-v1 seed={Seed} key={key:D9}\n")).CopyTo(bytes, 0);
     return bytes;
   }
   private string PrimaryPath(int i)

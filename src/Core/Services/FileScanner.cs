@@ -1,9 +1,9 @@
 using System.Runtime.CompilerServices;
-using FileMergeAssistant.Hashing;
-using FileMergeAssistant.Models;
+using FileWorkbench.Hashing;
+using FileWorkbench.Models;
 using Serilog;
 
-namespace FileMergeAssistant.Services;
+namespace FileWorkbench.Services;
 
 public class FileScanner : IFileScanner
 {

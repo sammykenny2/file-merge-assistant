@@ -7,7 +7,7 @@ Accepted（2026-10-23：產品負責人同意依提議實作，見 PR #10）
 ## 背景
 
 - [產品需求](../requirements.md) 規定第一階段以可追蹤的回收／隔離方式移除檔案；移入回收區不等於釋放空間。
-- 現行 [`RecycleBinService`](../../src/Core/Services/RecycleBinService.cs) 預設把檔移到 `fma-results/.recycle-bin`，這個路徑相對於程式啟動時的工作目錄，並以 `manifest.json` 記錄。程式有 `PurgeAsync` 與 `PurgeOlderThanAsync`，但沒有保存期限設定；GUI 目前只提供全部還原。
+- 現行 [`RecycleBinService`](../../src/Core/Services/RecycleBinService.cs) 預設把檔移到 `file-workbench-results/.recycle-bin`，這個路徑相對於程式啟動時的工作目錄，並以 `manifest.json` 記錄。程式有 `PurgeAsync` 與 `PurgeOlderThanAsync`，但沒有保存期限設定；GUI 目前只提供全部還原。
 - 跨磁碟移動等於複製再刪除。把 E:\ 的檔移進 C:\ 的回收區，會佔用 C:\ 的空間，也比較花時間。
 - 外接硬碟拔掉後，放在它上面的回收內容就無法還原。
 - FR-010 要求資料位置不隨工作目錄改變。

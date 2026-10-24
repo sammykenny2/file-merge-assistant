@@ -1,14 +1,14 @@
 using System.CommandLine;
-using FileMergeAssistant.Cli.UI;
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Resolution;
-using FileMergeAssistant.Services;
-using FileMergeAssistant.Utilities;
+using FileWorkbench.Cli.UI;
+using FileWorkbench.Models;
+using FileWorkbench.Resolution;
+using FileWorkbench.Services;
+using FileWorkbench.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Spectre.Console;
 
-namespace FileMergeAssistant.Cli.Commands;
+namespace FileWorkbench.Cli.Commands;
 
 public static class ResolveCommand
 {

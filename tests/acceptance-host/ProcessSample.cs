@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace FileMergeAssistant.AcceptanceHost;
+namespace FileWorkbench.AcceptanceHost;
 
 internal sealed record ProcessSample(ulong ReadBytes, ulong WriteBytes, long WorkingSet, double CpuMilliseconds)
 {

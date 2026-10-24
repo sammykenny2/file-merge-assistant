@@ -2,16 +2,16 @@ using System.Diagnostics;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Stacks;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Localization;
+using FileWorkbench.Plans;
+using FileWorkbench.Scanning;
+using FileWorkbench.Sources;
+using FileWorkbench.Stacks;
 using Microsoft.Data.Sqlite;
 
-namespace FileMergeAssistant.Workbench;
+namespace FileWorkbench.Workbench;
 
 /// <summary>
 /// The workbench over the real index: sources and scan jobs in SQLite, stacks detected from the index, decisions and

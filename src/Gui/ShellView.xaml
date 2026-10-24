@@ -1,8 +1,8 @@
-<UserControl x:Class="FileMergeAssistant.Gui.ShellView"
+<UserControl x:Class="FileWorkbench.Gui.ShellView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="clr-namespace:FileMergeAssistant.Gui.ViewModels"
-             xmlns:l="clr-namespace:FileMergeAssistant.Gui.Localization"
+             xmlns:vm="clr-namespace:FileWorkbench.Gui.ViewModels"
+             xmlns:l="clr-namespace:FileWorkbench.Gui.Localization"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -25,7 +25,10 @@
               <Border Canvas.Left="3.5" Canvas.Top="2.5" Width="14" Height="17" BorderBrush="{StaticResource HintBrush}" BorderThickness="1.5" CornerRadius="2" Background="{StaticResource SurfaceBrush}" />
               <Border Canvas.Left="0" Canvas.Top="5" Width="14" Height="17" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1.5" CornerRadius="2" Background="{StaticResource AccentSoftBrush}" />
             </Canvas>
-            <TextBlock Text="File Merge Assistant" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" />
+            <StackPanel VerticalAlignment="Center" Margin="0,8">
+              <TextBlock Text="{l:T header.productName}" FontSize="16" FontWeight="Bold" />
+              <TextBlock Text="{l:T header.productTagline}" FontSize="11" Foreground="{StaticResource MutedBrush}" />
+            </StackPanel>
           </StackPanel>
         </Button>
 

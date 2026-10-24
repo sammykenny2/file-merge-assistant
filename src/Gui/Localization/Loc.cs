@@ -2,9 +2,9 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Markup;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Gui.Localization;
+namespace FileWorkbench.Gui.Localization;
 
 /// <summary>
 /// The catalog as a binding source: <c>{Binding [key], Source={x:Static l:Loc.Instance}}</c>, or <c>{l:T key}</c>.

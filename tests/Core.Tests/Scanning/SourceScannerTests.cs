@@ -1,11 +1,11 @@
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Analysis;
 using System.Runtime.CompilerServices;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Scanning;
+using FileWorkbench.Sources;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Scanning;
+namespace FileWorkbench.Tests.Scanning;
 
 public sealed class SourceScannerTests : IDisposable
 {

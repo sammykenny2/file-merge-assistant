@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Sources;
+namespace FileWorkbench.Sources;
 
 /// <summary>What the index knows about a source right now.</summary>
 public enum SourceState

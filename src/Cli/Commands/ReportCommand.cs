@@ -1,10 +1,10 @@
 using System.CommandLine;
-using FileMergeAssistant.Reporting;
-using FileMergeAssistant.Services;
+using FileWorkbench.Reporting;
+using FileWorkbench.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
 
-namespace FileMergeAssistant.Cli.Commands;
+namespace FileWorkbench.Cli.Commands;
 
 public static class ReportCommand
 {

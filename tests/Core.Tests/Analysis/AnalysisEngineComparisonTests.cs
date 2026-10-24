@@ -1,11 +1,11 @@
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Workbench;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Tests.Scanning;
+using FileWorkbench.Analysis;
+using FileWorkbench.Scanning;
+using FileWorkbench.Workbench;
+using FileWorkbench.Index;
+using FileWorkbench.Tests.Scanning;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class AnalysisEngineComparisonTests
 {
@@ -184,7 +184,7 @@ public sealed class AnalysisEngineComparisonTests
     Assert.NotNull(report.Second!.Metrics.ProcessReadBytes);
     Assert.True(report.Second.Metrics.ProcessLifetimePeakWorkingSetBytes > 0);
     Assert.All(dataset.Files, file => Assert.Equal(file.Bytes, File.ReadAllBytes(file.Path)));
-    if (Environment.GetEnvironmentVariable("FMA_COMPARISON_REPORT_DIR") is { } reports)
+    if (Environment.GetEnvironmentVariable("FWB_COMPARISON_REPORT_DIR") is { } reports)
     {
       Directory.CreateDirectory(reports);
       await File.WriteAllTextAsync(Path.Combine(reports, "known-answer-comparison.json"), report.ToJson());

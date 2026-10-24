@@ -1,6 +1,6 @@
 using Serilog;
 
-namespace FileMergeAssistant.Services;
+namespace FileWorkbench.Services;
 
 public class WatchService : IWatchService
 {

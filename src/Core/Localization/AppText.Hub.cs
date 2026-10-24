@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // The workbench (hub): the summary, the since-last-time banner, the suggested next stack, the list of stacks to
 // consolidate, and the side panel (pending stacks, where copies overlap, type and sort).

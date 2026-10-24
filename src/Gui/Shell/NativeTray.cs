@@ -1,9 +1,9 @@
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Windows.Threading;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Gui.Shell;
+namespace FileWorkbench.Gui.Shell;
 
 /// <summary>
 /// ADR-014: the app's notification-area icon and its keyboard-accessible native menu, as in desktop-work-fleet. Labels
@@ -37,7 +37,7 @@ public sealed class NativeTray : IDisposable
     _ownsIcon = Environment.ProcessPath is { } path && ExtractIconExW(path, 0, null, small, 1) > 0 && small[0] != IntPtr.Zero;
     _icon = _ownsIcon ? small[0] : LoadIconW(IntPtr.Zero, new IntPtr(32512));
     // A hidden top-level window receives TaskbarCreated broadcasts; message-only windows do not.
-    _receiver = new HwndSource(new HwndSourceParameters("File Merge Assistant notification area")
+    _receiver = new HwndSource(new HwndSourceParameters("File Workbench notification area")
     {
       Width = 0,
       Height = 0,

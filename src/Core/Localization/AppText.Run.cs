@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // Running the plan, retrying and restoring (PlanExecutor): why an item was skipped, failed or not restored. These
 // sentences are written into the run journal and keep the language they were written in (docs/i18n.md).
@@ -30,7 +30,7 @@ public static partial class AppText
     ["run.recycle.keeperVanished"] = "The keeper disappeared when this copy was moved away, so they're the same place; the copy was put back right away.",
     ["run.separate.same"] = "This copy and the keeper may be the same place (another name for the same folder, or one inside the other), so nothing was moved.",
     ["run.separate.unknown"] = "Couldn't confirm that this copy and the keeper are different places (the check file can't be written here), so nothing was moved.",
-    ["run.separate.appFolder"] = "This copy contains File Merge Assistant's own folder, or that can't be ruled out, so nothing was moved.",
+    ["run.separate.appFolder"] = "This copy contains File Workbench's own folder, or that can't be ruled out, so nothing was moved.",
     ["run.separate.otherDrive"] = "This copy is actually on another drive (through a link, mount point or network path); nothing is moved across drives.",
     ["run.move.link"] = "{path} is a link (a junction or shortcut), so it wasn't moved.",
     ["run.move.newer"] = "{path} was added or modified after the run started, so it wasn't moved.",
@@ -66,7 +66,7 @@ public static partial class AppText
     ["run.recycle.keeperVanished"] = "移走這份之後正本也不見了，表示兩者是同一個位置；已經立刻放回原處。",
     ["run.separate.same"] = "這份和正本可能是同一個位置（同一個資料夾的另一個名稱，或其中一個包含另一個），所以沒有移動。",
     ["run.separate.unknown"] = "無法確認這份和正本是不同的位置（這裡不能寫入確認用的暫存檔），所以沒有移動。",
-    ["run.separate.appFolder"] = "這份裡面有 File Merge Assistant 自己的資料夾，或無法確認沒有，所以沒有移動。",
+    ["run.separate.appFolder"] = "這份裡面有 貓檔家 自己的資料夾，或無法確認沒有，所以沒有移動。",
     ["run.separate.otherDrive"] = "這份實際上在另一顆磁碟上（經由連結、掛載點或網路路徑），不會跨磁碟搬移。",
     ["run.move.link"] = "{path} 是連結（junction 或捷徑），沒有移動。",
     ["run.move.newer"] = "{path} 是整理開始之後才新增或修改的檔，沒有移動。",

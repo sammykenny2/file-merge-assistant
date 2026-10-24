@@ -1085,7 +1085,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fma-czkawka-ffi"
+name = "file-workbench-czkawka-ffi"
 version = "0.2.0"
 dependencies = [
  "czkawka_core",

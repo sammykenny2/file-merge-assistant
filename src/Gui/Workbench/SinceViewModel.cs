@@ -1,10 +1,10 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Localization;
+using FileWorkbench.Workbench;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 public enum NoticeIcon
 {

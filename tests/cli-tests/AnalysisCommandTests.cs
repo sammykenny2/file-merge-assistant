@@ -2,23 +2,23 @@ using System.CommandLine;
 using System.CommandLine.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Tests.Scanning;
-using FileMergeAssistant.Cli.Commands;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Tests.Analysis;
+using FileWorkbench.Analysis;
+using FileWorkbench.Tests.Scanning;
+using FileWorkbench.Cli.Commands;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Localization;
+using FileWorkbench.Tests.Analysis;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace FileMergeAssistant.Cli.Tests;
+namespace FileWorkbench.Cli.Tests;
 
 public sealed class AnalysisCommandTests
 {
   [ModuleInitializer]
   internal static void IsolateData()
   {
-    Environment.SetEnvironmentVariable(AppDataPaths.DataDirectoryVariable, Path.Combine(Path.GetTempPath(), "fma-cli-tests-" + Environment.ProcessId));
+    Environment.SetEnvironmentVariable(AppDataPaths.DataDirectoryVariable, Path.Combine(Path.GetTempPath(), "file-workbench-cli-tests-" + Environment.ProcessId));
     AppText.Apply("en", []);
   }
 
@@ -112,7 +112,7 @@ public sealed class AnalysisCommandTests
   public async Task Native_Analysis_Is_Explicit_And_Reports_The_Pinned_Version()
   {
     using var dataset = new KnownAnswerDataset();
-    var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR"))]);
+    var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR"))]);
     using var services = new ServiceCollection().AddSingleton(registry).BuildServiceProvider();
     var console = new TestConsole();
     Assert.Equal(0, await Root(services, DataRoot()).InvokeAsync(["analyze", dataset.Root, "--engine", "czkawka"], console));
@@ -146,7 +146,7 @@ public sealed class AnalysisCommandTests
     var fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", "similar-images");
     File.Copy(Path.Combine(fixture, "a-original.png"), tree.PathOf("original.png"));
     File.Copy(Path.Combine(fixture, "a-resize.png"), tree.PathOf("resize.png"));
-    var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR"))]);
+    var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR"))]);
     using var services = new ServiceCollection().AddSingleton(registry).BuildServiceProvider();
     var console = new TestConsole();
     Assert.Equal(0, await Root(services, DataRoot()).InvokeAsync(["similar-images", tree.Root, "--distance", "6"], console));
@@ -203,7 +203,7 @@ public sealed class AnalysisCommandTests
     Assert.True(parsed.GetValueForOption((Option<bool>)legacy.Options.Single(option => option.Name == "recursive")));
     Assert.False(parsed.GetValueForOption((Option<bool>)legacy.Options.Single(option => option.Name == "cleanup-empty")));
     Assert.Equal("all", parsed.GetValueForOption((Option<string>)legacy.Options.Single(option => option.Name == "format")));
-    Assert.Equal("./fma-results/", parsed.GetValueForOption((Option<string>)legacy.Options.Single(option => option.Name == "output")));
+    Assert.Equal("./file-workbench-results/", parsed.GetValueForOption((Option<string>)legacy.Options.Single(option => option.Name == "output")));
     Assert.False(resolved);
   }
 }
@@ -213,6 +213,6 @@ public sealed class CliNativeFactAttribute : FactAttribute
 {
   public CliNativeFactAttribute()
   {
-    if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR"))) { Skip = "Optional native CLI integration: run Build-NativeAnalysis.ps1 -Test."; }
+    if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR"))) { Skip = "Optional native CLI integration: run Build-NativeAnalysis.ps1 -Test."; }
   }
 }

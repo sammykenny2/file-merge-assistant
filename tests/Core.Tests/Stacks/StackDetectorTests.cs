@@ -1,7 +1,7 @@
-using FileMergeAssistant.Stacks;
+using FileWorkbench.Stacks;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Stacks;
+namespace FileWorkbench.Tests.Stacks;
 
 /// <summary>Detection over an in-memory index with known ground truth.</summary>
 public class StackDetectorTests

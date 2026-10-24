@@ -1,9 +1,9 @@
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Services;
+using FileWorkbench.Models;
+using FileWorkbench.Services;
 using NSubstitute;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Services;
+namespace FileWorkbench.Tests.Services;
 
 public class DuplicateDetectorExtendedTests
 {

@@ -1,10 +1,10 @@
 using System.Globalization;
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Resolution;
-using FileMergeAssistant.Utilities;
+using FileWorkbench.Models;
+using FileWorkbench.Resolution;
+using FileWorkbench.Utilities;
 using Spectre.Console;
 
-namespace FileMergeAssistant.Cli.UI;
+namespace FileWorkbench.Cli.UI;
 
 public static class InteractiveResolver
 {

@@ -2,12 +2,12 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Localization;
+using FileWorkbench.Sources;
+using FileWorkbench.Stacks;
+using FileWorkbench.Workbench;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 public sealed record PlaceChip(string Name, bool IsOffline);
 

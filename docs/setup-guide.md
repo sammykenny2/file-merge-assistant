@@ -1,8 +1,14 @@
 # Setup Guide
 
-FMA currently runs on Windows x64 with a C#/.NET 10 WPF GUI, CLI and SQLite
+File Workbench currently runs on Windows x64 with a C#/.NET 10 WPF GUI, CLI and SQLite
 index. The optional analysis DLL is a pinned Rust wrapper around Czkawka core.
 Python and Node.js are not application prerequisites.
+
+The product is **File Workbench**, or **貓檔家** in Traditional Chinese, with
+the subtitle **整理檔案的專家**. Assemblies use `FileWorkbench.*`; the packaged
+CLI command is `file-workbench`. Fresh profiles use `%LOCALAPPDATA%\FileWorkbench`;
+existing `%LOCALAPPDATA%\FileMergeAssistant` data is reused without moving files.
+`FWB_DATA_DIR` takes priority over the legacy `FMA_DATA_DIR` alias.
 
 ## Run a local package
 
@@ -15,12 +21,12 @@ End users need neither a .NET SDK/runtime nor a Rust/MSVC toolchain.
 For an isolated GUI preview, extract the ZIP into a new folder and run:
 
 ```powershell
-$env:FMA_DATA_DIR = Join-Path $env:TEMP ('fma-preview-' + [guid]::NewGuid().ToString('N'))
-.\app\FileMergeAssistant.exe
+$env:FWB_DATA_DIR = Join-Path $env:TEMP ('file-workbench-preview-' + [guid]::NewGuid().ToString('N'))
+.\app\FileWorkbench.exe
 ```
 
 Use generated/sample folders initially. `--demo` shows simulated workbench data.
-Closing the window may keep FMA in the tray; use its Exit command to stop it.
+Closing the window may keep File Workbench in the tray; use its Exit command to stop it.
 Do not install over a running instance. Data and installation ownership are
 explained in [deployment](deployment.md).
 
@@ -32,8 +38,8 @@ with a Windows SDK. The Cargo lockfile pins the upstream commit; no sibling fork
 checkout is used. The local validation baseline uses .NET SDK 10.0.402.
 
 ```powershell
-dotnet restore file-merge-assistant.sln
-dotnet build file-merge-assistant.sln --configuration Debug
+dotnet restore messy-file-workbench.sln
+dotnet build messy-file-workbench.sln --configuration Debug
 .\scripts\windows\Build-NativeAnalysis.ps1 -Test
 ```
 
@@ -58,7 +64,7 @@ Debug; measurements must distinguish those configurations.
 The 0.3.0 Preview omits ImageSharp/CoenM and needs no Six Labors key, including
 Release builds. Legacy C# `perceptual`/`video-perceptual` algorithms are disabled;
 native PNG/JPEG analysis and review remain available. See
-[the pinned notice policy](../native/fma-czkawka-ffi/third-party-notices/README.md)
+[the pinned notice policy](../native/file-workbench-czkawka-ffi/third-party-notices/README.md)
 for original notices and the two explicitly labeled standard MIT supplements.
 
 ## Development entry points
@@ -100,7 +106,7 @@ Preview publication remains manual and requires successful CI for the same commi
 `src/analysis/Analysis.csproj` targets `net10.0` independently of Windows Core,
 WPF and ImageSharp. Its [standalone tests](testing.md#portable-analysis-leaf)
 can run with a .NET 10 SDK. This is a read-only engine surface, not a portable
-FMA application. Native compilation is still required for each target.
+File Workbench application. Native compilation is still required for each target.
 
 To prepare the owner's private self-contained Windows x64/Linux arm64/macOS
 arm64 verifier and vendored source archive on Windows:

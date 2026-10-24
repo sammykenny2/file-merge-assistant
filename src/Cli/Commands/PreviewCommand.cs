@@ -1,12 +1,12 @@
 using System.CommandLine;
 using System.Globalization;
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Services;
-using FileMergeAssistant.Utilities;
+using FileWorkbench.Models;
+using FileWorkbench.Services;
+using FileWorkbench.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
 
-namespace FileMergeAssistant.Cli.Commands;
+namespace FileWorkbench.Cli.Commands;
 
 public static class PreviewCommand
 {
@@ -189,7 +189,7 @@ public static class PreviewCommand
     AnsiConsole.WriteLine();
     AnsiConsole.Write(new Rule().RuleStyle("grey"));
     AnsiConsole.MarkupLine("[grey]To resolve duplicates, run:[/]");
-    AnsiConsole.MarkupLine($"[bold]  fma resolve \"{resultPath.FullName}\"[/]");
+    AnsiConsole.MarkupLine($"[bold]  file-workbench resolve \"{resultPath.FullName}\"[/]");
     AnsiConsole.MarkupLine("[grey]  Add --dry-run to simulate without making changes.[/]");
     AnsiConsole.WriteLine();
   }

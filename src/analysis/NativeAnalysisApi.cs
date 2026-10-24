@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
-namespace FileMergeAssistant.Analysis;
+namespace FileWorkbench.Analysis;
 
 internal sealed class NativeAnalysisApi
 {

@@ -3,8 +3,8 @@
     Add or remove one folder in the current user's PATH without changing any other entry.
 
 .DESCRIPTION
-    Used by the File Merge Assistant setup program and uninstaller (installer/FileMergeAssistant.nsi) for the
-    optional fma command-line tool. NSIS string operations are limited to 1024 characters and would truncate a long
+    Used by the File Workbench setup program and uninstaller (installer/FileWorkbench.nsi) for the
+    optional file-workbench command-line tool. NSIS string operations are limited to 1024 characters and would truncate a long
     PATH, so the registry is edited here instead.
 
     The value is read without expanding variables such as %USERPROFILE%, and its registry kind is kept
@@ -27,10 +27,10 @@
     Name of the value to edit. Defaults to Path.
 
 .EXAMPLE
-    .\Set-UserPath.ps1 -KeyPath Environment -Add "$env:LOCALAPPDATA\Programs\FileMergeAssistant\cli"
+    .\Set-UserPath.ps1 -KeyPath Environment -Add "$env:LOCALAPPDATA\Programs\FileWorkbench\cli"
 
 .EXAMPLE
-    .\Set-UserPath.ps1 -KeyPath Environment -Remove "$env:LOCALAPPDATA\Programs\FileMergeAssistant\cli"
+    .\Set-UserPath.ps1 -KeyPath Environment -Remove "$env:LOCALAPPDATA\Programs\FileWorkbench\cli"
 #>
 [CmdletBinding(DefaultParameterSetName = 'Add')]
 param(

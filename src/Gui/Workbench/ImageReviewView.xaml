@@ -1,7 +1,7 @@
-<UserControl x:Class="FileMergeAssistant.Gui.Workbench.ImageReviewView"
+<UserControl x:Class="FileWorkbench.Gui.Workbench.ImageReviewView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:l="clr-namespace:FileMergeAssistant.Gui.Localization">
+             xmlns:l="clr-namespace:FileWorkbench.Gui.Localization">
   <ScrollViewer Style="{StaticResource PageScroll}">
     <StackPanel Margin="40,28,40,40">
       <TextBlock Text="{l:T images.title}" Style="{StaticResource H1}" />

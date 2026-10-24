@@ -1,9 +1,9 @@
-using FileMergeAssistant.Services;
+using FileWorkbench.Services;
 using NSubstitute;
 using Serilog;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Services;
+namespace FileWorkbench.Tests.Services;
 
 public class RecycleBinServiceTests : IDisposable
 {
@@ -13,7 +13,7 @@ public class RecycleBinServiceTests : IDisposable
 
   public RecycleBinServiceTests()
   {
-    _tempDir = Path.Combine(Path.GetTempPath(), $"fma-test-{Guid.NewGuid():N}");
+    _tempDir = Path.Combine(Path.GetTempPath(), $"file-workbench-test-{Guid.NewGuid():N}");
     Directory.CreateDirectory(_tempDir);
     _recycleBinDir = Path.Combine(_tempDir, ".recycle-bin");
     var logger = Substitute.For<ILogger>();

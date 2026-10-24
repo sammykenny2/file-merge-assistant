@@ -3,12 +3,12 @@ using System.Globalization;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Localization;
+using FileWorkbench.Plans;
+using FileWorkbench.Workbench;
 using Microsoft.Win32;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 public sealed record BatchItemViewModel(ChipInfo Status, string Verb, string Target, string Detail, bool CanRestore, IRelayCommand Restore)
 {

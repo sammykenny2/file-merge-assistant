@@ -1,11 +1,11 @@
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Tests.Scanning;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Sources;
+using FileWorkbench.Tests.Scanning;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class ProcessRecoveryTests : IDisposable
 {
@@ -24,7 +24,7 @@ public sealed class ProcessRecoveryTests : IDisposable
   public async Task Process_Loss_During_Native_Upload_Recovers_The_Original_Snapshot_And_Committed_Checkpoints()
   {
     var realDirectory = Environment.GetEnvironmentVariable(NativeFactAttribute.LibraryDirectoryVariable)!;
-    var blockingDirectory = Environment.GetEnvironmentVariable("FMA_CANCEL_UPLOAD_LIBRARY_DIR");
+    var blockingDirectory = Environment.GetEnvironmentVariable("FWB_CANCEL_UPLOAD_LIBRARY_DIR");
     Assert.False(string.IsNullOrWhiteSpace(blockingDirectory), "Build native test fixtures with Build-NativeAnalysis.ps1 -Test.");
     var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(realDirectory)]);
     for (var i = 0; i < 450; i++) { _tree.Write($@"source\file-{i:0000}.txt", "fixture data"); }

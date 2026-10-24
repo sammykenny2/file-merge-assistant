@@ -3,7 +3,7 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <RootNamespace>FileMergeAssistant.Tests</RootNamespace>
+    <RootNamespace>FileWorkbench.Tests</RootNamespace>
     <!-- Allow underscores in test method names (common convention) -->
     <NoWarn>$(NoWarn);CA1707</NoWarn>
   </PropertyGroup>

@@ -1,8 +1,8 @@
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Services;
+using FileWorkbench.Models;
+using FileWorkbench.Services;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Services;
+namespace FileWorkbench.Tests.Services;
 
 public class SmartMergeServiceTests
 {

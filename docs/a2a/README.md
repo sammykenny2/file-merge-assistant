@@ -74,7 +74,7 @@ dependency or a complete A2A conformance suite.
 This repository retains `agent-card.json.example` and `agent-card.yaml.example`
 as compatibility copies of the public card. The legacy `task.json.example` and
 `task.yaml.example` contain deprecation notices linking to the replacement files.
-The examples describe a hypothetical agent; File Merge Assistant does not expose
+The examples describe a hypothetical agent; File Workbench does not expose
 an A2A server.
 
 ## Fixed References

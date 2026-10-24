@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <RootNamespace>FileMergeAssistant.Cli.Tests</RootNamespace>
+    <RootNamespace>FileWorkbench.Cli.Tests</RootNamespace>
     <NoWarn>$(NoWarn);CA1707</NoWarn>
   </PropertyGroup>
   <ItemGroup>

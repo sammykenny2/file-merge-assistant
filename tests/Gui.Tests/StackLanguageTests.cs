@@ -1,11 +1,11 @@
-using FileMergeAssistant.Gui.ViewModels;
-using FileMergeAssistant.Gui.Workbench;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Gui.ViewModels;
+using FileWorkbench.Gui.Workbench;
+using FileWorkbench.Localization;
+using FileWorkbench.Stacks;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Gui.Tests;
+namespace FileWorkbench.Gui.Tests;
 
 /// <summary>The stack screen redraws in a new display language without losing what the user has not submitted yet.</summary>
 [Collection(DisplayLanguageTests.Name)]

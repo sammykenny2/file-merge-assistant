@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Serilog;
 
-namespace FileMergeAssistant.Services;
+namespace FileWorkbench.Services;
 
 public interface IHardlinkDetector
 {

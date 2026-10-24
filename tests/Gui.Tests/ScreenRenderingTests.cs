@@ -1,21 +1,21 @@
 using System.IO;
-using FileMergeAssistant.Gui.ViewModels;
-using FileMergeAssistant.Gui.Workbench;
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Gui.ViewModels;
+using FileWorkbench.Gui.Workbench;
+using FileWorkbench.Plans;
+using FileWorkbench.Stacks;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Gui.Tests;
+namespace FileWorkbench.Gui.Tests;
 
 /// <summary>
 /// Walks through every workbench screen with the demo data, renders the whole window body at the mock's width and fails
-/// on any WPF binding error. Set FMA_SNAPSHOT_DIR to also save each rendering as a PNG.
+/// on any WPF binding error. Set FWB_SNAPSHOT_DIR to also save each rendering as a PNG.
 /// </summary>
 public class ScreenRenderingTests
 {
   private const double Width = 1440;
-  private static readonly string? SnapshotDirectory = Environment.GetEnvironmentVariable("FMA_SNAPSHOT_DIR");
+  private static readonly string? SnapshotDirectory = Environment.GetEnvironmentVariable("FWB_SNAPSHOT_DIR");
 
   [Fact]
   public void Every_Screen_Renders_Without_Binding_Errors()
@@ -93,7 +93,7 @@ public class ScreenRenderingTests
       Snap("15-hub-after");
 
       main.ShowSettings();
-      Assert.IsType<FileMergeAssistant.Gui.Settings.SettingsViewModel>(main.CurrentPage);
+      Assert.IsType<FileWorkbench.Gui.Settings.SettingsViewModel>(main.CurrentPage);
       Assert.True(main.IsSettingsSelected);
       Snap("16-settings");
       main.ShowImages();

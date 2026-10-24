@@ -17,6 +17,7 @@ These important documents live in the project root:
 |----------|--------|-------------|
 | [requirements.md](./requirements.md) | Draft | GUI product requirements, current gaps, priorities, and open decisions |
 | [architecture.md](./architecture.md) | Current | WPF/CLI, C# Core, native analysis, persistence and operation boundaries |
+| [Product rename](./decisions/ADR-017-file-workbench-product-identity.md) | Accepted | File Workbench／貓檔家 naming and legacy data/install compatibility |
 | [api.md](./api.md) | Template | API specification (REST/WebSocket) |
 
 ## GUI Product and Design

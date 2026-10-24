@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace FileMergeAssistant;
+namespace FileWorkbench;
 
 /// <summary>Paths crossing UTF-8 JSON/SQLite boundaries must preserve every UTF-16 code unit.</summary>
 public static class PathText

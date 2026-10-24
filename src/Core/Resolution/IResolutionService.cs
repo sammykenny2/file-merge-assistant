@@ -1,6 +1,6 @@
-using FileMergeAssistant.Models;
+using FileWorkbench.Models;
 
-namespace FileMergeAssistant.Resolution;
+namespace FileWorkbench.Resolution;
 
 public interface IResolutionService
 {

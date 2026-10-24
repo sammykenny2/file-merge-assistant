@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Workbench;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 /// <summary>Moves between the workbench screens.</summary>
 public interface INavigator

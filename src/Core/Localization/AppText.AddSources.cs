@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // The add-sources screen: the first run, and adding more folders later. The example stack's paths are sample data;
 // only the parts a Windows in that language would name differently are translated.

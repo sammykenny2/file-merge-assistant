@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Models;
+namespace FileWorkbench.Models;
 
 public record ScanOptions
 {
@@ -7,7 +7,7 @@ public record ScanOptions
   public bool Recursive { get; init; } = true;
   public string Algorithm { get; init; } = "sha256";
   public string MatchMode { get; init; } = "content";
-  public string OutputDirectory { get; init; } = "./fma-results/";
+  public string OutputDirectory { get; init; } = "./file-workbench-results/";
   public long MinSizeBytes { get; init; }
   public long MaxSizeBytes { get; init; }
   public IReadOnlyList<string> ExcludePatterns { get; init; } = [];

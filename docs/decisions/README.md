@@ -55,6 +55,7 @@ Use [000-template.md](./000-template.md) as the starting point for new ADRs.
 | [ADR-014](./ADR-014-tray-startup-and-display-language.md) | 系統匣、啟動行為與顯示語言 | Accepted | 2026-10-23 |
 | [ADR-015](./ADR-015-pluggable-analysis-engines.md) | 可切換的 C# 與 Czkawka 分析引擎（D-02） | Accepted；依 PLAN-002 實作 | 2026-10-24 |
 | [ADR-016](./ADR-016-public-native-preview.md) | Public native-integration Preview and notice collection | Accepted | 2026-10-24 |
+| [ADR-017](./ADR-017-file-workbench-product-identity.md) | File Workbench／貓檔家命名與升級相容性 | Accepted | 2026-10-25 |
 <!-- Add new ADRs above this line -->
 
 ## For AI Agents

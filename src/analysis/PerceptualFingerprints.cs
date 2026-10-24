@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 
-namespace FileMergeAssistant.Analysis;
+namespace FileWorkbench.Analysis;
 
 /// <summary>Perceptual evidence is never accepted as an exact-content fingerprint.</summary>
 public static class PerceptualFingerprints

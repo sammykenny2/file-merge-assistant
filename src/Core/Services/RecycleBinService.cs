@@ -1,10 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Models;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Models;
 using Serilog;
 
-namespace FileMergeAssistant.Services;
+namespace FileWorkbench.Services;
 
 public class RecycleBinService : IRecycleBinService
 {

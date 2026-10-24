@@ -3,11 +3,11 @@ using System.Globalization;
 using System.IO.Hashing;
 using System.Text;
 using System.Text.RegularExpressions;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Localization;
+using FileWorkbench.Scanning;
+using FileWorkbench.Sources;
 
-namespace FileMergeAssistant.Plans;
+namespace FileWorkbench.Plans;
 
 /// <summary>
 /// Where recycled items go (ADR-007): a recycle area on the same volume, so recycling is a rename and never copies data.

@@ -1,11 +1,11 @@
 [package]
-name = "fma-wrong-abi-fixture"
+name = "file-workbench-wrong-abi-fixture"
 version = "0.0.0"
 edition = "2024"
 publish = false
 
 [lib]
-name = "fma_czkawka_ffi"
+name = "file_workbench_czkawka_ffi"
 path = "lib.rs"
 crate-type = ["cdylib"]
 

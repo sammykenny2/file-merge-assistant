@@ -1,10 +1,10 @@
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Services;
+using FileWorkbench.Models;
+using FileWorkbench.Services;
 using NSubstitute;
 using Serilog;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Services;
+namespace FileWorkbench.Tests.Services;
 
 public class ScanCacheServiceTests : IDisposable
 {
@@ -13,7 +13,7 @@ public class ScanCacheServiceTests : IDisposable
 
   public ScanCacheServiceTests()
   {
-    _tempDir = Path.Combine(Path.GetTempPath(), $"fma-test-cache-{Guid.NewGuid():N}");
+    _tempDir = Path.Combine(Path.GetTempPath(), $"file-workbench-test-cache-{Guid.NewGuid():N}");
     Directory.CreateDirectory(_tempDir);
     var cacheDir = Path.Combine(_tempDir, ".cache");
     var logger = Substitute.For<ILogger>();

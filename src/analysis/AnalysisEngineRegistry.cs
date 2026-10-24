@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 
-namespace FileMergeAssistant.Analysis;
+namespace FileWorkbench.Analysis;
 
 public sealed class AnalysisEngineRegistry
 {

@@ -14,7 +14,7 @@ hashes, unavailable-engine diagnostics and resume using the original engine.
 This simulates process loss, not an assertion that native aborts are catchable.
 
 `restore` starts fresh with an explicitly absent native installation directory.
-The parent removes native-test environment variables; the child verifies no FMA
+The parent removes native-test environment variables; the child verifies no File Workbench
 native module is loaded both before and after restoring the journalled batch.
 This covers history/restore without an already-resident Rust library. All paths
 belong to the tests' temporary source trees and isolated index directory.

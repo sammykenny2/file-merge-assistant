@@ -1,22 +1,22 @@
 using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Gui.ViewModels;
-using FileMergeAssistant.Gui.Workbench;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Analysis;
+using FileWorkbench.Gui.ViewModels;
+using FileWorkbench.Gui.Workbench;
+using FileWorkbench.Index;
+using FileWorkbench.Localization;
+using FileWorkbench.Scanning;
+using FileWorkbench.Sources;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Gui.Tests;
+namespace FileWorkbench.Gui.Tests;
 
 [Collection(DisplayLanguageTests.Name)]
 public sealed class ImageReviewTests : IDisposable
 {
-  private readonly string _root = Path.Combine(Path.GetTempPath(), "fma-image-ui-" + Guid.NewGuid().ToString("N"));
+  private readonly string _root = Path.Combine(Path.GetTempPath(), "file-workbench-image-ui-" + Guid.NewGuid().ToString("N"));
   private sealed class Volumes : IVolumeInfoProvider
   {
     public VolumeInfo? Describe(string path) => new(Path.GetPathRoot(path)!, "FIXTURE", "fixture", VolumeKind.Fixed);
@@ -43,7 +43,7 @@ public sealed class ImageReviewTests : IDisposable
     {
       AppText.Apply("zh-TW", []);
       var index = Path.Combine(_root, "data", "index.db");
-      var engines = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR"))]);
+      var engines = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR"))]);
       using var store = IndexedWorkbenchStore.Open(index, new Volumes(), startWorker: false, engines: engines);
       Assert.Empty(WpfHost.Wait(store.AddSourcesAsync([source], new SourceOptions(false, true, []), startScan: false)));
       using (var connection = IndexDatabase.OpenOrCreate(index).Open()) { IndexDatabase.Execute(connection, "UPDATE sources SET exclusions='private'"); }
@@ -71,7 +71,7 @@ public sealed class ImageReviewTests : IDisposable
       Assert.Equal(["private"], Assert.Single(archive.Sources).Source.Exclusions);
       var shell = new ShellView { DataContext = main };
       var bitmap = WpfHost.Render(shell, 1440);
-      if (Environment.GetEnvironmentVariable("FMA_SNAPSHOT_DIR") is { } snapshots)
+      if (Environment.GetEnvironmentVariable("FWB_SNAPSHOT_DIR") is { } snapshots)
       {
         Directory.CreateDirectory(snapshots);
         WpfHost.Save(bitmap, Path.Combine(snapshots, "image-review-zh.png"));
@@ -142,7 +142,7 @@ public sealed class ImageReviewTests : IDisposable
       var first = Path.Combine(source, "first.png");
       using (var output = File.Open(first, FileMode.CreateNew)) { encoder.Save(output); }
       File.Copy(first, Path.Combine(source, "second.png"));
-      var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR"))]);
+      var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR"))]);
       using var store = IndexedWorkbenchStore.Open(Path.Combine(_root, "data", "index.db"), new Volumes(), startWorker: false, engines: registry);
       Assert.Empty(WpfHost.Wait(store.AddSourcesAsync([source], new SourceOptions(false, true, []), startScan: false)));
       var main = new MainViewModel(store);
@@ -172,7 +172,7 @@ public sealed class ImageReviewTests : IDisposable
     File.Copy(Path.Combine(fixture, "a-resize.png"), Path.Combine(source, "resized.png"));
     var errors = WpfHost.Run(() =>
     {
-      var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR"))]);
+      var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR"))]);
       using var store = IndexedWorkbenchStore.Open(Path.Combine(_root, "data", "index.db"), new Volumes(), startWorker: false, engines: registry);
       Assert.Empty(WpfHost.Wait(store.AddSourcesAsync([source], new SourceOptions(false, true, []), startScan: false)));
       var engine = registry.Snapshot(NativeAnalysisEngine.EngineId, AnalysisCapability.SimilarImages, PerceptualFingerprints.Mean8D8);
@@ -202,7 +202,7 @@ public sealed class NativeGuiTheoryAttribute : TheoryAttribute
 {
   public NativeGuiTheoryAttribute()
   {
-    if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR")))
+    if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FWB_NATIVE_LIBRARY_DIR")))
     { Skip = "Optional native GUI integration: run Build-NativeAnalysis.ps1 -Test."; }
   }
 }

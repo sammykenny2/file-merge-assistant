@@ -1,8 +1,8 @@
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Reporting;
+using FileWorkbench.Models;
+using FileWorkbench.Reporting;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Reporting;
+namespace FileWorkbench.Tests.Reporting;
 
 public class PowerShellScriptGeneratorTests : IDisposable
 {
@@ -11,7 +11,7 @@ public class PowerShellScriptGeneratorTests : IDisposable
 
   public PowerShellScriptGeneratorTests()
   {
-    _tempDir = Path.Combine(Path.GetTempPath(), $"fma-test-ps-{Guid.NewGuid():N}");
+    _tempDir = Path.Combine(Path.GetTempPath(), $"file-workbench-test-ps-{Guid.NewGuid():N}");
     Directory.CreateDirectory(_tempDir);
   }
 
@@ -48,7 +48,7 @@ public class PowerShellScriptGeneratorTests : IDisposable
 
     var content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "resolve-duplicates.ps1"));
     Assert.Contains("#Requires -Version 5.1", content);
-    Assert.Contains("File Merge Assistant", content);
+    Assert.Contains("File Workbench", content);
     Assert.Contains("SupportsShouldProcess", content);
   }
 

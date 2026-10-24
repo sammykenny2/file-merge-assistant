@@ -1,10 +1,10 @@
 using System.Data.Common;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Analysis;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Gui.Settings;
+namespace FileWorkbench.Gui.Settings;
 
 public sealed record AnalysisChoice(AnalysisEngineSnapshot Snapshot, string Label, string Detail, bool Enabled);
 

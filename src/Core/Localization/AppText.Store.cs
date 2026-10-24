@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // The workbench over the real index: why a folder can't be added, why an item is held back when the plan is checked
 // against the disk, why a failed item is not retried, and how a restore conflict was settled. Sentences about the keeper
@@ -10,7 +10,7 @@ public static partial class AppText
   {
     ["store.add.invalid"] = "{path}: not a valid folder path.",
     ["store.add.missing"] = "{path}: this folder can't be found.",
-    ["store.add.appFolder"] = "{path}: this is File Merge Assistant's own folder and can't be added.",
+    ["store.add.appFolder"] = "{path}: this is File Workbench's own folder and can't be added.",
     ["store.add.same"] = "{path}: already added as the source “{name}” ({root}).",
     ["store.add.inside"] = "{path}: already inside the source “{name}” ({root}).",
     ["store.add.around"] = "{path}: contains the source “{name}” ({root}), which is already added. A file can't belong to two sources, so add a different folder or remove that source first.",
@@ -60,7 +60,7 @@ public static partial class AppText
   {
     ["store.add.invalid"] = "{path}：不是有效的資料夾路徑。",
     ["store.add.missing"] = "{path}：找不到這個資料夾。",
-    ["store.add.appFolder"] = "{path}：這是 File Merge Assistant 自己的資料夾，不能加入。",
+    ["store.add.appFolder"] = "{path}：這是 貓檔家 自己的資料夾，不能加入。",
     ["store.add.same"] = "{path}：已經是來源「{name}」（{root}）。",
     ["store.add.inside"] = "{path}：已經包含在來源「{name}」（{root}）裡。",
     ["store.add.around"] = "{path}：包含已加入的來源「{name}」（{root}）。同一個檔不能屬於兩個來源，請改加其他資料夾或先移除那個來源。",

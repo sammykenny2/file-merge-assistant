@@ -1,13 +1,13 @@
 using System.Text;
 
-namespace FileMergeAssistant.Tests.Scanning;
+namespace FileWorkbench.Tests.Scanning;
 
 /// <summary>A throwaway folder tree under %TEMP% for scanner and store tests. Never points at real user folders.</summary>
 internal sealed class TempTree : IDisposable
 {
   public TempTree()
   {
-    Root = Path.Combine(Path.GetTempPath(), "fma-tree-" + Guid.NewGuid().ToString("N")[..8]);
+    Root = Path.Combine(Path.GetTempPath(), "file-workbench-tree-" + Guid.NewGuid().ToString("N")[..8]);
     Directory.CreateDirectory(Root);
   }
 

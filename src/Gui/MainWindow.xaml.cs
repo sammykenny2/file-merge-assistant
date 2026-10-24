@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Interop;
 
-namespace FileMergeAssistant.Gui;
+namespace FileWorkbench.Gui;
 
 public partial class MainWindow : Window
 {

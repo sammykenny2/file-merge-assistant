@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
-    Validate FMA install, reinstall/upgrade and uninstall in a disposable Windows Sandbox or VM.
+    Validate File Workbench install, reinstall/upgrade and uninstall in a disposable Windows Sandbox or VM.
 .DESCRIPTION
-    Refuses a pre-existing installation, FMA process, startup entry, shortcut or
+    Refuses a pre-existing installation, File Workbench process, startup entry, shortcut or
     default data directory. Installs only under a new report directory, exercises
     the actual packaged CLI, verifies CLI choice/PATH preservation on upgrade,
     then checks uninstall preserves unrelated CLI files and user data. Does not
@@ -20,7 +20,7 @@
 .PARAMETER DisposableMachine
     Required acknowledgement that this is a disposable Sandbox/VM user profile.
 .EXAMPLE
-    .\Test-InstallerLifecycle.ps1 -Installer C:\FmaKit\FileMergeAssistant-0.2.1-x64-debug-setup.exe -FixturesRoot C:\FmaKit\Fixtures -ReportParent C:\FmaReports -DisposableMachine
+    .\Test-InstallerLifecycle.ps1 -Installer C:\FileWorkbenchKit\FileWorkbench-0.2.1-x64-debug-setup.exe -FixturesRoot C:\FileWorkbenchKit\Fixtures -ReportParent C:\FmaReports -DisposableMachine
 #>
 [CmdletBinding()]
 param(
@@ -94,13 +94,19 @@ $upgradeKind = if ($baselineVersion -lt $currentVersion) { 'lower-version-upgrad
 $appKey = 'HKCU:\Software\FileMergeAssistant'
 $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\FileMergeAssistant'
 $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
-$data = Join-Path $env:LOCALAPPDATA 'FileMergeAssistant'
-$shortcuts = @((Join-Path ([Environment]::GetFolderPath('Programs')) 'File Merge Assistant.lnk'), (Join-Path ([Environment]::GetFolderPath('Desktop')) 'File Merge Assistant.lnk'))
-Require (-not (Test-Path -LiteralPath $appKey) -and -not (Test-Path -LiteralPath $uninstallKey)) 'An FMA installation is already registered; use a fresh disposable user profile.'
-Require (@(Get-Process -Name FileMergeAssistant,fma -ErrorAction SilentlyContinue).Count -eq 0) 'An FMA process is running; use a fresh VM.'
-Require (-not (Get-ItemProperty -LiteralPath $runKey -Name FileMergeAssistant -ErrorAction SilentlyContinue)) 'An FMA startup entry already exists.'
-Require (-not (Test-Path -LiteralPath $data)) 'FMA user data already exists; use a fresh disposable profile.'
-foreach ($shortcut in $shortcuts) { Require (-not (Test-Path -LiteralPath $shortcut)) 'An FMA shortcut already exists.' }
+$data = Join-Path $env:LOCALAPPDATA 'FileWorkbench'
+$legacyData = Join-Path $env:LOCALAPPDATA 'FileMergeAssistant'
+$shortcuts = @(
+    (Join-Path ([Environment]::GetFolderPath('Programs')) 'File Workbench.lnk'),
+    (Join-Path ([Environment]::GetFolderPath('Desktop')) 'File Workbench.lnk'),
+    (Join-Path ([Environment]::GetFolderPath('Programs')) 'File Merge Assistant.lnk'),
+    (Join-Path ([Environment]::GetFolderPath('Desktop')) 'File Merge Assistant.lnk')
+)
+Require (-not (Test-Path -LiteralPath $appKey) -and -not (Test-Path -LiteralPath $uninstallKey)) 'An File Workbench installation is already registered; use a fresh disposable user profile.'
+Require (@(Get-Process -Name FileWorkbench,file-workbench,FileMergeAssistant,fma -ErrorAction SilentlyContinue).Count -eq 0) 'A File Workbench or legacy FMA process is running; use a fresh VM.'
+Require (-not (Get-ItemProperty -LiteralPath $runKey -Name FileMergeAssistant -ErrorAction SilentlyContinue)) 'A startup entry already exists.'
+Require (-not (Test-Path -LiteralPath $data) -and -not (Test-Path -LiteralPath $legacyData)) 'A current or legacy data folder already exists; use a fresh disposable profile.'
+foreach ($shortcut in $shortcuts) { Require (-not (Test-Path -LiteralPath $shortcut)) 'An File Workbench shortcut already exists.' }
 Assert-NoReparse $ReportParent
 Assert-NoReparse $env:LOCALAPPDATA
 $originalPath = Read-UserPath
@@ -128,9 +134,11 @@ try {
     $checks.Add('foreign unmarked application folder refused before registration or PATH changes')
 
     Invoke-Setup $firstInstaller "/S /CLI /D=$install" 'install-with-cli'
+    if (Test-Path -LiteralPath (Join-Path $install 'app/FileMergeAssistant.exe')) { $data = $legacyData }
     Require ((Get-ItemProperty -LiteralPath $appKey).InstallDir -eq $install) 'InstallDir does not match the owned target.'
     Require ((Get-ItemProperty -LiteralPath $appKey).CliInstalled -eq 1) 'CLI selection was not saved.'
-    Require (Test-Path -LiteralPath (Join-Path $install 'cli/fma.exe')) 'CLI was not installed.'
+    Require ((Test-Path -LiteralPath (Join-Path $install 'cli/file-workbench.exe')) -or
+        (Test-Path -LiteralPath (Join-Path $install 'cli/fma.exe'))) 'CLI was not installed.'
     Require (@((Read-UserPath).text -split ';' | Where-Object { $_.Trim().TrimEnd('\') -eq (Join-Path $install 'cli') }).Count -eq 1) 'CLI PATH entry missing or duplicated.'
     New-Item -ItemType Directory -Path $data | Out-Null
     $dataSentinel = Join-Path $data 'validation-user-data.txt'
@@ -140,9 +148,20 @@ try {
     foreach ($path in @($otherCli, $otherRoot)) { [IO.File]::WriteAllText($path, 'Unrelated file must survive.') }
     $obsolete = Join-Path $install 'app/obsolete-test-payload.txt'
     [IO.File]::WriteAllText($obsolete, 'Replace this owned application payload on upgrade.')
+    $legacyStartup = Test-Path -LiteralPath (Join-Path $install 'app/FileMergeAssistant.exe')
+    if ($legacyStartup) {
+        New-Item -Path $runKey -Force | Out-Null
+        New-ItemProperty -LiteralPath $runKey -Name FileMergeAssistant -Value ('"' + (Join-Path $install 'app/FileMergeAssistant.exe') + '" --launch-at-login') -PropertyType String | Out-Null
+    }
 
     # No /CLI on the second call: setup must preserve the registered choice.
     Invoke-Setup $Installer "/S /D=$install" 'upgrade-preserves-cli-choice'
+    Require (-not (Test-Path -LiteralPath (Join-Path $install 'cli/fma.exe'))) 'Upgrade left the legacy CLI executable.'
+    if ($legacyStartup) {
+        Require ((Get-ItemPropertyValue -LiteralPath $runKey -Name FileMergeAssistant) -eq
+            ('"' + (Join-Path $install 'app/FileWorkbench.exe') + '" --launch-at-login')) 'Upgrade did not retarget its legacy startup command.'
+        $checks.Add('legacy startup command retargeted without changing its Windows identity')
+    }
     Require (-not (Test-Path -LiteralPath $obsolete)) 'Upgrade left obsolete owned app payload.'
     Require ((Get-ItemProperty -LiteralPath $appKey).CliInstalled -eq 1) 'Upgrade lost the CLI choice.'
     Require (@((Read-UserPath).text -split ';' | Where-Object { $_.Trim().TrimEnd('\') -eq (Join-Path $install 'cli') }).Count -eq 1) 'Upgrade duplicated or removed CLI PATH.'
@@ -152,7 +171,7 @@ try {
 
     # Exercise the app-owned startup value; preflight proved it did not pre-exist.
     New-Item -Path $runKey -Force | Out-Null
-    New-ItemProperty -LiteralPath $runKey -Name FileMergeAssistant -Value ('"' + (Join-Path $install 'app/FileMergeAssistant.exe') + '"') -PropertyType String | Out-Null
+    New-ItemProperty -LiteralPath $runKey -Name FileMergeAssistant -Value ('"' + (Join-Path $install 'app/FileWorkbench.exe') + '"') -PropertyType String -Force | Out-Null
     Invoke-Setup (Join-Path $install 'uninstall.exe') '/S' 'uninstall'
     # NSIS may run its uninstaller from a temporary child process. Observe completion explicitly.
     $wait = [Diagnostics.Stopwatch]::StartNew()
@@ -160,7 +179,7 @@ try {
     Require (-not (Test-Path -LiteralPath $appKey) -and -not (Test-Path -LiteralPath $uninstallKey)) 'Uninstall registration remains.'
     Require (-not (Get-ItemProperty -LiteralPath $runKey -Name FileMergeAssistant -ErrorAction SilentlyContinue)) 'Uninstall kept its startup value.'
     foreach ($shortcut in $shortcuts) { Require (-not (Test-Path -LiteralPath $shortcut)) 'Uninstall kept its shortcut.' }
-    Require (-not (Test-Path -LiteralPath (Join-Path $install 'app')) -and -not (Test-Path -LiteralPath (Join-Path $install 'cli/fma.exe'))) 'Owned app or CLI payload remains.'
+    Require (-not (Test-Path -LiteralPath (Join-Path $install 'app')) -and -not (Test-Path -LiteralPath (Join-Path $install 'cli/file-workbench.exe'))) 'Owned app or CLI payload remains.'
     foreach ($path in @($otherCli, $otherRoot)) { Require ((Get-Content -LiteralPath $path -Raw) -eq 'Unrelated file must survive.') 'Uninstall changed an unrelated file.' }
     Require ((Get-Content -LiteralPath $dataSentinel -Raw) -eq 'User data must survive upgrade and uninstall.') 'User data was changed or removed.'
     Assert-OriginalPath

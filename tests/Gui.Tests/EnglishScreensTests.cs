@@ -5,14 +5,14 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
-using FileMergeAssistant.Gui.ViewModels;
-using FileMergeAssistant.Gui.Workbench;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Gui.ViewModels;
+using FileWorkbench.Gui.Workbench;
+using FileWorkbench.Localization;
+using FileWorkbench.Stacks;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Gui.Tests;
+namespace FileWorkbench.Gui.Tests;
 
 /// <summary>
 /// Every screen over a real index of ASCII-named folders, in English: no Chinese may be left on screen and no catalog
@@ -21,8 +21,8 @@ namespace FileMergeAssistant.Gui.Tests;
 [Collection(DisplayLanguageTests.Name)]
 public sealed partial class EnglishScreensTests : IDisposable
 {
-  private static readonly string? SnapshotDirectory = Environment.GetEnvironmentVariable("FMA_SNAPSHOT_DIR");
-  private readonly string _root = Path.Combine(Path.GetTempPath(), "fma-gui-english-" + Guid.NewGuid().ToString("N")[..8]);
+  private static readonly string? SnapshotDirectory = Environment.GetEnvironmentVariable("FWB_SNAPSHOT_DIR");
+  private readonly string _root = Path.Combine(Path.GetTempPath(), "file-workbench-gui-english-" + Guid.NewGuid().ToString("N")[..8]);
 
   public void Dispose()
   {

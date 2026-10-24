@@ -2,11 +2,11 @@ using System.CommandLine;
 using System.CommandLine.IO;
 using System.Data.Common;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Scanning;
+using FileWorkbench.Analysis;
+using FileWorkbench.Scanning;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace FileMergeAssistant.Cli.Commands;
+namespace FileWorkbench.Cli.Commands;
 
 /// <summary>Explicit versioned analysis commands. The legacy scan/resolve/report contracts stay separate.</summary>
 public static class AnalysisCommands

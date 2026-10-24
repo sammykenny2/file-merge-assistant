@@ -4,14 +4,14 @@ using System.Diagnostics;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Gui.Workbench;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Analysis;
+using FileWorkbench.Gui.Workbench;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Localization;
+using FileWorkbench.Scanning;
+using FileWorkbench.Sources;
 
-namespace FileMergeAssistant.Gui.Settings;
+namespace FileWorkbench.Gui.Settings;
 
 public sealed partial class SettingsViewModel
 {

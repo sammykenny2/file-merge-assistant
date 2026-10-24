@@ -1,14 +1,14 @@
 using System.Collections.Immutable;
 using System.Security.Cryptography;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Tests.Scanning;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Analysis;
+using FileWorkbench.Tests.Scanning;
+using FileWorkbench.Index;
+using FileWorkbench.Scanning;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class PerceptualAnalysisTests
 {

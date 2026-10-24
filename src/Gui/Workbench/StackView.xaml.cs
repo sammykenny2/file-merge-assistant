@@ -1,6 +1,6 @@
 using System.Windows.Controls;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 public partial class StackView : UserControl
 {

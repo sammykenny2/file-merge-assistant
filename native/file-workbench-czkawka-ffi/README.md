@@ -1,6 +1,6 @@
-# FMA Czkawka adapter
+# File Workbench Czkawka adapter
 
-This crate owns FMA's read-only integration with the pinned `czkawka_core` commit
+This crate owns File Workbench's read-only integration with the pinned `czkawka_core` commit
 in `Cargo.toml`. It does not depend on a sibling checkout. `Cargo.lock` and
 `rust-toolchain.toml` are committed; build artifacts are ignored.
 
@@ -44,8 +44,8 @@ On Windows x64, build and run both Rust and real-DLL .NET tests from the repo ro
 
 This also builds the isolated fixtures in `native/test-libraries/wrong-abi`.
 Those intentionally incompatible/racing DLLs are test-only and must not ship.
-For manual test runs set `FMA_NATIVE_LIBRARY_DIR`, `FMA_WRONG_ABI_LIBRARY_DIR` and
-`FMA_CANCEL_UPLOAD_LIBRARY_DIR` to the three directories printed or selected by
+For manual test runs set `FWB_NATIVE_LIBRARY_DIR`, `FWB_WRONG_ABI_LIBRARY_DIR` and
+`FWB_CANCEL_UPLOAD_LIBRARY_DIR` to the three directories printed or selected by
 the script. Without the first variable, optional native .NET tests are skipped;
 that is not native acceptance. The runner uses Debug .NET tests; it does not
 waive ImageSharp Release licensing requirements.

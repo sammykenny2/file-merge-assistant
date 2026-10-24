@@ -1,12 +1,12 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO.Enumeration;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Sources;
 using Microsoft.Data.Sqlite;
 
-namespace FileMergeAssistant.Scanning;
+namespace FileWorkbench.Scanning;
 
 /// <summary>What a scan needs to know about its source.</summary>
 public sealed record ScanSource(

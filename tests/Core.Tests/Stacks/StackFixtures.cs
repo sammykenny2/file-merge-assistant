@@ -1,6 +1,6 @@
-using FileMergeAssistant.Stacks;
+using FileWorkbench.Stacks;
 
-namespace FileMergeAssistant.Tests.Stacks;
+namespace FileWorkbench.Tests.Stacks;
 
 /// <summary>Small hand-built stacks for the review and plan tests.</summary>
 internal static class StackFixtures

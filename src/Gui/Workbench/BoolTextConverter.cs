@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Windows.Data;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 /// <summary>
 /// Shows the catalog text of one of two keys for a boolean, in the display language at the time of binding. Use it

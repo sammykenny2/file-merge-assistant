@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace FileMergeAssistant.Sources;
+namespace FileWorkbench.Sources;
 
 /// <summary>Opaque volume/file identity. Windows additionally records the local volume GUID when available.</summary>
 public readonly record struct FileIdentity(uint VolumeSerial, ulong FileId, string? VolumeGuid)

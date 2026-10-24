@@ -3,9 +3,9 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Localization;
 
-namespace FileMergeAssistant.Updates;
+namespace FileWorkbench.Updates;
 
 /// <summary>A published release found in the feed: tag <c>vX.Y.Z</c> of the configured repository.</summary>
 public sealed record UpdateRelease(string Repository, string Tag, Version Version, Uri PageUrl);
@@ -31,7 +31,7 @@ public sealed class UpdateException : Exception
 public static partial class UpdateFeed
 {
   public const string Platform = "windows";
-  public const string ManifestFileName = "file-merge-assistant-update-windows.json";
+  public const string ManifestFileName = "file-workbench-update-windows.json";
   public const long MaxPackageBytes = 512L * 1024 * 1024;
   public const int MaxFeedBytes = 2 * 1024 * 1024;
   public const int MaxManifestBytes = 64 * 1024;
@@ -77,7 +77,7 @@ public static partial class UpdateFeed
 
   /// <summary>The only installer name a release may offer: what scripts/windows/Build-Installer.ps1 produces.</summary>
   public static string InstallerFileName(Version version, string architecture) =>
-    $"FileMergeAssistant-{version.ToString(3)}-{architecture}-setup.exe";
+    $"FileWorkbench-{version.ToString(3)}-{architecture}-setup.exe";
 
   public static Uri AssetUrl(UpdateRelease release, string fileName)
   {

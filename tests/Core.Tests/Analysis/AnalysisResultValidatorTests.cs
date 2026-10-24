@@ -1,7 +1,7 @@
-using FileMergeAssistant.Analysis;
+using FileWorkbench.Analysis;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class AnalysisResultValidatorTests
 {

@@ -3,7 +3,7 @@
     Test installer/Set-UserPath.ps1 against a scratch registry key.
 
 .DESCRIPTION
-    Creates HKCU\Software\FileMergeAssistantTests\<guid>, runs the PATH helper against values in that key and
+    Creates HKCU\Software\FileWorkbenchTests\<guid>, runs the PATH helper against values in that key and
     deletes the key afterwards. The real HKCU\Environment\Path is never read or written. Checks long values, the
     REG_EXPAND_SZ kind, unexpanded %VARIABLES%, trailing separators, case-insensitive matches, idempotent adds and
     that add-then-remove restores the original text exactly. Exits with code 1 when a check fails.
@@ -17,7 +17,7 @@ param()
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Helper = Join-Path $ProjectRoot 'installer/Set-UserPath.ps1'
-$KeyPath = "Software\FileMergeAssistantTests\$([guid]::NewGuid().ToString('N'))"
+$KeyPath = "Software\FileWorkbenchTests\$([guid]::NewGuid().ToString('N'))"
 $Failures = 0
 
 function Set-Value([string]$Value, [Microsoft.Win32.RegistryValueKind]$Kind) {
@@ -47,7 +47,7 @@ function Assert-Equal($Expected, $Actual, [string]$Name) {
     else { Write-Output "FAIL $Name`n  expected: $Expected`n  actual:   $Actual"; $script:Failures++ }
 }
 
-$Cli = 'C:\Users\someone\AppData\Local\Programs\FileMergeAssistant\cli'
+$Cli = 'C:\Users\someone\AppData\Local\Programs\FileWorkbench\cli'
 try {
     $Long = (1..120 | ForEach-Object { "C:\Tools\Folder$_\bin" }) -join ';'
     $Original = "%USERPROFILE%\bin;$Long;%LOCALAPPDATA%\Microsoft\WindowsApps"
@@ -83,10 +83,10 @@ try {
     Assert-Equal $null (Get-Value) 'removing the only entry deletes the value'
 } finally {
     [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($KeyPath, $false)
-    $Parent = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\FileMergeAssistantTests')
+    $Parent = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\FileWorkbenchTests')
     if ($Parent -and $Parent.SubKeyCount -eq 0 -and $Parent.ValueCount -eq 0) {
         $Parent.Dispose()
-        [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKey('Software\FileMergeAssistantTests', $false)
+        [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKey('Software\FileWorkbenchTests', $false)
     } elseif ($Parent) { $Parent.Dispose() }
 }
 

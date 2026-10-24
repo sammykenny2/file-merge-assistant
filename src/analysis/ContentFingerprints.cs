@@ -2,7 +2,7 @@ using System.Buffers;
 using System.IO.Hashing;
 using System.Security.Cryptography;
 
-namespace FileMergeAssistant.Analysis;
+namespace FileWorkbench.Analysis;
 
 public static class ContentFingerprints
 {

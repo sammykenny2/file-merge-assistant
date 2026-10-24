@@ -1,11 +1,11 @@
 <#
 .SYNOPSIS
-    Build the File Merge Assistant setup program (NSIS) for Windows x64.
+    Build the File Workbench setup program (NSIS) for Windows x64.
 
 .DESCRIPTION
-    Runs the Core tests, publishes the GUI (self-contained, win-x64) and the fma command-line tool (self-contained
+    Runs the Core tests, publishes the GUI (self-contained, win-x64) and the file-workbench command-line tool (self-contained
     single file), stages the pinned native adapter with its rebuild source, collects runtime/NuGet/Cargo notices, and compiles
-    installer/FileMergeAssistant.nsi with NSIS.
+    installer/FileWorkbench.nsi with NSIS.
 
     The version, publisher and update repository come from Directory.Build.props. makensis.exe is taken from
     -NsisPath, PATH or Program Files; otherwise the pinned portable NSIS archive is downloaded into build/tools and
@@ -13,9 +13,9 @@
     and the MSVC x64 C++/Windows SDK build tools. End-user machines need none of these SDKs.
 
     Results go to build/ (each build/installer/run-<id> work folder is kept for inspection):
-      Release: FileMergeAssistant-<version>-x64-setup.exe, its .sha256, and file-merge-assistant-update-windows.json,
+      Release: FileWorkbench-<version>-x64-setup.exe, its .sha256, and file-workbench-update-windows.json,
                the manifest the in-app update check reads from the GitHub release.
-      Debug:   FileMergeAssistant-<version>-x64-debug-setup.exe and its .sha256. No update manifest is written, so a
+      Debug:   FileWorkbench-<version>-x64-debug-setup.exe and its .sha256. No update manifest is written, so a
                Debug build can never be offered as an update.
 
     This preview omits ImageSharp and its legacy media algorithms; native image
@@ -163,7 +163,7 @@ function Copy-LicenseNotices([string]$AppStage, [string[]]$AssetsFiles) {
     $LicenseRoot = Join-Path $AppStage 'Licenses'
     New-Item -ItemType Directory -Path $LicenseRoot -Force | Out-Null
     $Lines = [Collections.Generic.List[string]]::new()
-    $Lines.Add('Third-party software included in File Merge Assistant')
+    $Lines.Add('Third-party software included in File Workbench')
     $Lines.Add('=======================================================')
     $Lines.Add('')
     $Lines.Add('Each folder here holds the license and notice files shipped in that package. License names are')
@@ -171,7 +171,7 @@ function Copy-LicenseNotices([string]$AppStage, [string[]]$AssetsFiles) {
     $Lines.Add('')
 
     # The bundled .NET runtimes: their license and third-party notices come from the runtime packs.
-    $RuntimeConfig = Get-Content -LiteralPath (Join-Path $AppStage 'FileMergeAssistant.runtimeconfig.json') -Raw | ConvertFrom-Json
+    $RuntimeConfig = Get-Content -LiteralPath (Join-Path $AppStage 'FileWorkbench.runtimeconfig.json') -Raw | ConvertFrom-Json
     $PackagesRoot = (& dotnet nuget locals global-packages --list) -replace '^global-packages:\s*', ''
     foreach ($Framework in $RuntimeConfig.runtimeOptions.includedFrameworks) {
         $PackageId = switch ($Framework.name) {
@@ -268,7 +268,7 @@ try {
     $Properties = Get-ProjectProperties
     $Version = $Properties.Version
     $Suffix = if ($Configuration -eq 'Release') { '' } else { '-' + $Configuration.ToLowerInvariant() }
-    Write-Output "File Merge Assistant $Version ($Configuration)"
+    Write-Output "File Workbench $Version ($Configuration)"
 
     if (-not $SkipTests) {
         Invoke-Checked 'Core tests' {
@@ -301,12 +301,12 @@ try {
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
             --output $CliPublish
     }
-    Copy-Item -LiteralPath (Join-Path $CliPublish 'fma.exe') -Destination $CliStage
+    Copy-Item -LiteralPath (Join-Path $CliPublish 'FileWorkbench.Cli.exe') -Destination (Join-Path $CliStage 'file-workbench.exe')
 
     # The CLI shares the mandatory sibling app payload only when both package folders are marked.
     foreach ($PackageDirectory in @($AppStage, $CliStage)) {
         [IO.File]::WriteAllText((Join-Path $PackageDirectory '.installed-by-file-merge-assistant-setup'),
-            "Owned File Merge Assistant package directory.`n", [Text.UTF8Encoding]::new($false))
+            "Owned File Workbench package directory.`n", [Text.UTF8Encoding]::new($false))
     }
 
     Copy-Item -LiteralPath (Join-Path $ProjectRoot 'LICENSE') -Destination (Join-Path $AppStage 'LICENSE.txt')
@@ -320,7 +320,7 @@ try {
         & (Join-Path $PSScriptRoot 'Export-NativeAnalysis.ps1') -Destination $AppStage -SourceKitRoot $SourceKit `
             -Configuration Release -AllowIncompleteNotices:($Configuration -eq 'Debug')
         $NativeManifest = Get-Content -LiteralPath (Join-Path $AppStage 'runtimes/win-x64/native/native-manifest.json') -Raw | ConvertFrom-Json
-        $NativeSourceArchive = Join-Path $Work "FileMergeAssistant-$Version-czkawka-$($NativeManifest.engineVersion)$Suffix-source.zip"
+        $NativeSourceArchive = Join-Path $Work "FileWorkbench-$Version-czkawka-$($NativeManifest.engineVersion)$Suffix-source.zip"
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         [IO.Compression.ZipFile]::CreateFromDirectory($SourceKit, $NativeSourceArchive, [IO.Compression.CompressionLevel]::Optimal, $false)
         $SourceSha = Write-Checksum $NativeSourceArchive
@@ -335,19 +335,19 @@ try {
     $NsisReported = (& $Makensis /VERSION) -join ''
     if ($NsisReported -notmatch '^v?3\.') { throw "NSIS 3 is required; $Makensis reports '$NsisReported'." }
 
-    $SetupName = "FileMergeAssistant-$Version-x64$Suffix-setup.exe"
+    $SetupName = "FileWorkbench-$Version-x64$Suffix-setup.exe"
     $Setup = Join-Path $Work $SetupName
     Invoke-Checked 'NSIS compile' {
         & $Makensis /V2 /INPUTCHARSET UTF8 "/DVERSION=$Version" "/DCONFIGURATION=$Configuration" "/DSTAGE=$Stage" `
             "/DOUTFILE=$Setup" "/DPUBLISHER=$($Properties.Company)" "/DREPOSITORY=$($Properties.UpdateRepository)" `
-            (Join-Path $ProjectRoot 'installer/FileMergeAssistant.nsi')
+            (Join-Path $ProjectRoot 'installer/FileWorkbench.nsi')
     }
     $Sha256 = Write-Checksum $Setup
     $Delivered = @($Setup, "$Setup.sha256")
     if ($NativeSourceArchive) { $Delivered += @($NativeSourceArchive, "$NativeSourceArchive.sha256") }
 
     # Keep app/ and cli/ together: the CLI resolves the same package-owned adapter as the GUI.
-    $Portable = Join-Path $Work "FileMergeAssistant-$Version-x64$Suffix-portable.zip"
+    $Portable = Join-Path $Work "FileWorkbench-$Version-x64$Suffix-portable.zip"
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [IO.Compression.ZipFile]::CreateFromDirectory($Stage, $Portable, [IO.Compression.CompressionLevel]::Optimal, $false)
     $null = Write-Checksum $Portable
@@ -359,7 +359,7 @@ try {
             $UpdateSummary = (& (Join-Path $PSScriptRoot 'Get-ReleaseNotes.ps1') -Version $Version -Summary) -join ' '
         }
         if ($UpdateSummary.Length -gt 500) { throw 'The update summary must be at most 500 characters.' }
-        $Manifest = Join-Path $Work 'file-merge-assistant-update-windows.json'
+        $Manifest = Join-Path $Work 'file-workbench-update-windows.json'
         $Update = [ordered]@{
             schemaVersion = 1
             platform = 'windows'
@@ -375,7 +375,7 @@ try {
     # Only a complete set replaces earlier results in build/. A Debug build also removes a Release manifest left
     # from an earlier build, so a manifest never sits next to a setup program it does not describe.
     $Delivery = Join-Path $ProjectRoot 'build'
-    $OldManifest = Join-Path $Delivery 'file-merge-assistant-update-windows.json'
+    $OldManifest = Join-Path $Delivery 'file-workbench-update-windows.json'
     if ($Configuration -ne 'Release' -and (Test-Path -LiteralPath $OldManifest)) { Remove-Item -LiteralPath $OldManifest -Force }
     Move-Item -LiteralPath $Delivered -Destination $Delivery -Force
     foreach ($File in $Delivered) { Write-Output "Built: $(Join-Path $Delivery (Split-Path -Leaf $File))" }

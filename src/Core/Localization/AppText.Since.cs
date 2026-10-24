@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // The since-last-time screen: what changed while the app was away, the notices' actions and the open-stack count.
 // The notices' own titles and descriptions come from Core.

@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // The sources screen: one card per source, and the scan jobs (running, waiting, needing attention, recently
 // finished). Each card's Settings button uses settings.title.

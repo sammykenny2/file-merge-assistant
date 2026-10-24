@@ -1,10 +1,10 @@
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Services;
+using FileWorkbench.Models;
+using FileWorkbench.Services;
 using NSubstitute;
 using Serilog;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Services;
+namespace FileWorkbench.Tests.Services;
 
 public class FileScannerExclusionTests : IDisposable
 {
@@ -13,7 +13,7 @@ public class FileScannerExclusionTests : IDisposable
 
   public FileScannerExclusionTests()
   {
-    _tempDir = Path.Combine(Path.GetTempPath(), $"fma-test-excl-{Guid.NewGuid():N}");
+    _tempDir = Path.Combine(Path.GetTempPath(), $"file-workbench-test-excl-{Guid.NewGuid():N}");
     Directory.CreateDirectory(_tempDir);
 
     var metadataExtractor = Substitute.For<IMetadataExtractor>();

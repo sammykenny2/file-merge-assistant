@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Hashing;
+namespace FileWorkbench.Hashing;
 
 public static class HashAlgorithmFactory
 {

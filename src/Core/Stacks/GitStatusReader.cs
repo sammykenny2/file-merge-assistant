@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 
-namespace FileMergeAssistant.Stacks;
+namespace FileWorkbench.Stacks;
 
 /// <summary>
 /// Reads git facts about copies, read-only (ADR-005): branch, HEAD, uncommitted changes, and how far a copy is behind or

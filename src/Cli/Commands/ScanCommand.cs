@@ -1,15 +1,15 @@
 using System.CommandLine;
-using FileMergeAssistant.Hashing;
-using FileMergeAssistant.Cli.UI;
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Reporting;
-using FileMergeAssistant.Services;
-using FileMergeAssistant.Utilities;
+using FileWorkbench.Hashing;
+using FileWorkbench.Cli.UI;
+using FileWorkbench.Models;
+using FileWorkbench.Reporting;
+using FileWorkbench.Services;
+using FileWorkbench.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Spectre.Console;
 
-namespace FileMergeAssistant.Cli.Commands;
+namespace FileWorkbench.Cli.Commands;
 
 public static class ScanCommand
 {
@@ -26,7 +26,7 @@ public static class ScanCommand
       if (string.Equals(value, "perceptual", StringComparison.OrdinalIgnoreCase)) { result.ErrorMessage = PerceptualHashAlgorithm.DisabledReason; }
       if (string.Equals(value, "video-perceptual", StringComparison.OrdinalIgnoreCase)) { result.ErrorMessage = VideoFrameHashAlgorithm.DisabledReason; }
     });
-    var outputOption = new Option<string>(["--output", "-o"], () => "./fma-results/", "Output directory for results");
+    var outputOption = new Option<string>(["--output", "-o"], () => "./file-workbench-results/", "Output directory for results");
     var formatOption = new Option<string>(["--format", "-f"], () => "all", "Report format: console, json, csv, all");
     var minSizeOption = new Option<long>("--min-size", () => 0, "Minimum file size in bytes");
     var maxSizeOption = new Option<long>("--max-size", () => 0, "Maximum file size in bytes (0 = no limit)");

@@ -6,14 +6,14 @@ using System.Text.Json;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Analysis;
+using FileWorkbench.Localization;
+using FileWorkbench.Scanning;
+using FileWorkbench.Sources;
+using FileWorkbench.Workbench;
 using Microsoft.Win32;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 public sealed class ImagePairRow(SimilarImagePair pair, AnalysisSessionFile first, AnalysisSessionFile second) : ObservableObject
 {

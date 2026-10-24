@@ -1,6 +1,6 @@
-using FileMergeAssistant.Analysis;
+using FileWorkbench.Analysis;
 
-namespace FileMergeAssistant.AnalysisVerifier;
+namespace FileWorkbench.AnalysisVerifier;
 
 internal static class VerificationRoots
 {

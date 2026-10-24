@@ -1,9 +1,9 @@
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Stacks;
+using FileWorkbench.Plans;
+using FileWorkbench.Stacks;
 using Xunit;
-using static FileMergeAssistant.Tests.Stacks.StackFixtures;
+using static FileWorkbench.Tests.Stacks.StackFixtures;
 
-namespace FileMergeAssistant.Tests.Stacks;
+namespace FileWorkbench.Tests.Stacks;
 
 public class PlanBuilderTests
 {

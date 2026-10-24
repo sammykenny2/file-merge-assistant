@@ -13,7 +13,7 @@
 
 2026-10-23 起，WPF 程式已依這份 mock 做出 7 個畫面（`src/Gui/Workbench/`），取代原本的 Scan、Results、Reports 分頁（已移除；CLI 仍保留原本的功能）。
 
-- 畫面只透過 `IWorkbenchStore` 讀寫資料。預設接真實的索引（`IndexedWorkbenchStore`，`%LOCALAPPDATA%\FileMergeAssistant\index.db`）：加入資料夾後在背景分段掃描，掃描中就能看到已確認的疊。
+- 畫面只透過 `IWorkbenchStore` 讀寫資料。預設接真實的索引（`IndexedWorkbenchStore`，`%LOCALAPPDATA%\FileWorkbench\index.db`）：加入資料夾後在背景分段掃描，掃描中就能看到已確認的疊。
 - 以 `--demo` 啟動時改接 `DemoWorkbenchStore`，內容是這份 mock 的模擬資料，頂端標示「模擬資料」，不會讀取或改動真正的檔案。
 - 一疊的比對規則（`StackReview`）、疊的偵測（`StackDetector`）與待執行項目（`PlanBuilder`）都是真的程式邏輯。
 - 「執行」（PLAN-001 Phase 5，`PlanExecutor`）：先複製並以內容指紋驗證，再把其他份移入同一磁碟區的回收區；絕不覆寫；同一疊有複製沒完成時不回收；受保護的不回收也不覆寫；每一項執行前再檢查一次。歷史頁可以只重試失敗的項目、單項或整批還原、處理還原衝突、清空回收區。這部分依 ADR-002、003、007 的提議實作，等產品負責人確認後才合併。

@@ -6,10 +6,10 @@ using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 
-namespace FileMergeAssistant.Gui.Shell;
+namespace FileWorkbench.Gui.Shell;
 
 /// <summary>
-/// ADR-014: one File Merge Assistant per user and data folder, as in desktop-work-fleet. A second launch asks the
+/// ADR-014: one File Workbench per user and data folder, as in desktop-work-fleet. A second launch asks the
 /// running one to show its main window and exits, so a window waiting in the tray is never out of reach.
 /// </summary>
 public sealed class SingleInstance : IDisposable
@@ -83,6 +83,7 @@ public sealed class SingleInstance : IDisposable
   {
     var owner = WindowsIdentity.GetCurrent().User?.Value ?? string.Empty;
     var digest = SHA256.HashData(Encoding.UTF8.GetBytes(owner + "\n" + Path.GetFullPath(directory).ToUpperInvariant()));
+    // Shared with published FMA builds: an upgrade must not open the same index twice.
     return "FileMergeAssistant-" + Convert.ToHexString(digest)[..32];
   }
 

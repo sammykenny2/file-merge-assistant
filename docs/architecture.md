@@ -1,6 +1,6 @@
 # System architecture
 
-FMA keeps source policies, inventory, persistent jobs, review, operation planning
+File Workbench keeps source policies, inventory, persistent jobs, review, operation planning
 and restore in C# Core. Analysis is delegated through versioned contracts. WPF
 remains the Windows GUI; a future cross-platform UI is a separate decision.
 
@@ -9,7 +9,7 @@ remains the Windows GUI; a future cross-platform UI is a separate decision.
                    |                       |
                    +--> [C# Core] --> [IFileAnalysisEngine]
                    |       |               |
-[FMA CLI] ---------+       |               +-- [Rust C ABI] --> [czkawka_core]
+[File Workbench CLI] ---------+       |               +-- [Rust C ABI] --> [czkawka_core]
                            |
                     [SQLite / local archives]
                            |
@@ -18,7 +18,7 @@ remains the Windows GUI; a future cross-platform UI is a separate decision.
                   [PlanExecutor / recycle / restore]
 ```
 
-The native engine never receives an operation plan or writes FMA's SQLite data.
+The native engine never receives an operation plan or writes File Workbench's SQLite data.
 It reads approved file inputs and streams bounded per-file evidence. The Czkawka
 CLI and Krokiet are independent upstream frontends, not runtime dependencies.
 
@@ -31,7 +31,7 @@ CLI and Krokiet are independent upstream frontends, not runtime dependencies.
 | `src/Core/Workbench/` | Shared workbench API, source registration, selection and immutable policy capture |
 | `src/Core/Scanning/` | Inventory, background scheduling, frozen jobs, observation checks and generation publication |
 | `src/analysis/` | Portable `net10.0` engine contracts, registry, capability/result validation and adapters |
-| `native/fma-czkawka-ffi/` | Pinned Rust wrapper, ABI 1, controlled lifetime and cancellation |
+| `native/file-workbench-czkawka-ffi/` | Pinned Rust wrapper, ABI 1, controlled lifetime and cancellation |
 | `src/Core/Index/` | SQLite schema, backed-up migrations and connection helpers |
 | `src/Core/Stacks/`, `Plans/` | Stack evidence, decisions, revalidation, copy/recycle execution and restore |
 
@@ -119,6 +119,6 @@ Deployment/scale acceptance and non-Windows validation are PLAN-002 Phase 5/6.
   [ADR-007 recycle](decisions/ADR-007-recycle-area-policy.md),
   [ADR-010 identities](decisions/ADR-010-source-identity.md)
 - [Testing](testing.md), [CLI contracts](analysis-cli.md),
-  [native ABI](../native/fma-czkawka-ffi/ABI.md)
+  [native ABI](../native/file-workbench-czkawka-ffi/ABI.md)
 
 Updated 2026-10-24.

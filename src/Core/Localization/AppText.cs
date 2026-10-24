@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 /// <summary>
 /// The text the app shows, in English and Traditional Chinese (ADR-014, docs/i18n.md). The display language is

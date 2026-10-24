@@ -1,8 +1,8 @@
-# File Merge Assistant 產品需求
+# File Workbench 產品需求
 
 狀態：Draft。最後更新：2026-10-24。
 
-File Merge Assistant 的目標是讓使用者透過 Windows GUI，持續整理分散在不同資料夾與硬碟的檔案。使用者可以分次加入來源、累積檔案索引，並在看懂差異與影響後，決定保留哪些版本及處理哪些副本。
+File Workbench 的目標是讓使用者透過 Windows GUI，持續整理分散在不同資料夾與硬碟的檔案。使用者可以分次加入來源、累積檔案索引，並在看懂差異與影響後，決定保留哪些版本及處理哪些副本。
 
 本文件建立需求與設計依據。畫面 layout 由後續設計人員規劃；本文件不代表功能已交付。技術選型的目前狀態以 [ADR 索引](decisions/README.md) 為準。
 

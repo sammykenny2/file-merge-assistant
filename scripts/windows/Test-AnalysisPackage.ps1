@@ -3,7 +3,7 @@
     Verify a staged or installed Windows x64 analysis package without changing its installation.
 .DESCRIPTION
     Uses the real published CLI with a system-only PATH, no SDK/toolchain paths,
-    isolated FMA data and bundle extraction directories, and generated known-answer
+    isolated File Workbench data and bundle extraction directories, and generated known-answer
     files. Checks the native manifest, PE imports, both exact engines, image
     candidates and a missing-library diagnostic. This is a sanitized-host test;
     it is not evidence of a clean VM unless actually run there. Never installs.
@@ -54,12 +54,12 @@ function Invoke-PackageCli([string]$Executable, [string[]]$Arguments, [string]$N
     $start.StandardOutputEncoding = [Text.UTF8Encoding]::new($false)
     $start.WorkingDirectory = $run
     $start.EnvironmentVariables['PATH'] = Join-Path $env:SystemRoot 'System32'
-    foreach ($environmentName in @('DOTNET_ROOT', 'DOTNET_ROOT_X64', 'DOTNET_ROOT(x86)', 'FMA_NATIVE_LIBRARY_DIR', 'FMA_WRONG_ABI_LIBRARY_DIR', 'FMA_CANCEL_UPLOAD_LIBRARY_DIR')) {
+    foreach ($environmentName in @('DOTNET_ROOT', 'DOTNET_ROOT_X64', 'DOTNET_ROOT(x86)', 'FWB_NATIVE_LIBRARY_DIR', 'FWB_WRONG_ABI_LIBRARY_DIR', 'FWB_CANCEL_UPLOAD_LIBRARY_DIR')) {
         $start.EnvironmentVariables.Remove($environmentName)
     }
     $start.EnvironmentVariables['DOTNET_MULTILEVEL_LOOKUP'] = '0'
     $start.EnvironmentVariables['DOTNET_BUNDLE_EXTRACT_BASE_DIR'] = Join-Path $run 'bundles'
-    $start.EnvironmentVariables['FMA_DATA_DIR'] = Join-Path $run ('data-' + $Name)
+    $start.EnvironmentVariables['FWB_DATA_DIR'] = Join-Path $run ('data-' + $Name)
     $process = New-Object Diagnostics.Process
     $process.StartInfo = $start
     try {
@@ -80,22 +80,22 @@ function Invoke-PackageCli([string]$Executable, [string[]]$Arguments, [string]$N
 
 try {
     $app = Join-Path $PackageRoot 'app'
-    $cli = Join-Path $PackageRoot 'cli/fma.exe'
+    $cli = Join-Path $PackageRoot 'cli/file-workbench.exe'
     foreach ($folder in @($app, (Split-Path -Parent $cli))) {
         Require (Test-Path -LiteralPath (Join-Path $folder '.installed-by-file-merge-assistant-setup') -PathType Leaf) "Missing package ownership marker: $folder"
     }
     Require (Test-Path -LiteralPath $cli -PathType Leaf) 'Missing published CLI.'
-    Require (Test-Path -LiteralPath (Join-Path $app 'FileMergeAssistant.exe') -PathType Leaf) 'Missing GUI.'
+    Require (Test-Path -LiteralPath (Join-Path $app 'FileWorkbench.exe') -PathType Leaf) 'Missing GUI.'
     Require (-not (Test-Path -LiteralPath (Join-Path $app 'SixLabors.ImageSharp.dll'))) 'ImageSharp must not ship in this preview.'
-    $dependencies = Get-Content -LiteralPath (Join-Path $app 'FileMergeAssistant.deps.json') -Encoding UTF8 -Raw
+    $dependencies = Get-Content -LiteralPath (Join-Path $app 'FileWorkbench.deps.json') -Encoding UTF8 -Raw
     Require ($dependencies -notmatch 'SixLabors\.ImageSharp|CoenM\.ImageSharp') 'Preview dependency graph contains a removed legacy image library.'
-    $runtime = Get-Content -LiteralPath (Join-Path $app 'FileMergeAssistant.runtimeconfig.json') -Encoding UTF8 -Raw | ConvertFrom-Json
+    $runtime = Get-Content -LiteralPath (Join-Path $app 'FileWorkbench.runtimeconfig.json') -Encoding UTF8 -Raw | ConvertFrom-Json
     Require (@($runtime.runtimeOptions.includedFrameworks).Count -eq 2) 'GUI must include both .NET and Windows Desktop runtimes.'
     $unexpected = @(Get-ChildItem -LiteralPath $PackageRoot -Recurse -File | Where-Object { $_.Name -match '(wrong-abi|scan-host|upload-cancel|\.Tests\.)' })
     Require ($unexpected.Count -eq 0) 'Test-only artifacts must not ship.'
     $native = Join-Path $app 'runtimes/win-x64/native'
     $manifest = Get-Content -LiteralPath (Join-Path $native 'native-manifest.json') -Encoding UTF8 -Raw | ConvertFrom-Json
-    $dll = Join-Path $native 'fma_czkawka_ffi.dll'
+    $dll = Join-Path $native 'file_workbench_czkawka_ffi.dll'
     Require ($manifest.formatVersion -eq 1 -and $manifest.target -eq 'x86_64-pc-windows-msvc' -and $manifest.staticCrt) 'Unexpected native package manifest.'
     Require ((Get-FileHash -LiteralPath $dll -Algorithm SHA256).Hash.ToLowerInvariant() -eq $manifest.sha256) 'Native DLL checksum mismatch.'
     Require (Test-Path -LiteralPath (Join-Path $app 'Licenses/Rust/DEPENDENCIES.json') -PathType Leaf) 'Native dependency notices are missing.'
@@ -128,7 +128,7 @@ try {
     Require ((($declaredOnly | Sort-Object) -join '|') -eq (($manifest.missingNotices | Sort-Object) -join '|')) 'Missing notice summary contradicts dependency records.'
     $sourceReference = Get-Content -LiteralPath (Join-Path $app 'Licenses/Rust/SOURCE.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     Require ($sourceReference.formatVersion -eq 1 -and $sourceReference.sha256 -match '^[0-9a-f]{64}$' -and
-        $sourceReference.archive -match '^FileMergeAssistant-[0-9.]+-czkawka-[0-9.]+(?:-debug)?-source\.zip$') 'Invalid native rebuild source reference.'
+        $sourceReference.archive -match '^FileWorkbench-[0-9.]+-czkawka-[0-9.]+(?:-debug)?-source\.zip$') 'Invalid native rebuild source reference.'
 
     # Minimal bounded PE32+ reader. No SDK, dumpbin or external module is required on the validation VM.
     if (-not ('FmaPackagePe' -as [type])) {
@@ -228,7 +228,7 @@ public static class FmaPackagePe {
     $missing = Join-Path $run 'missing/cli'
     New-Item -ItemType Directory -Path $missing | Out-Null
     Copy-Item -LiteralPath $cli -Destination $missing
-    $missingCli = Join-Path $missing 'fma.exe'
+    $missingCli = Join-Path $missing 'file-workbench.exe'
     $missingEngines = Invoke-PackageCli $missingCli @('engines') 'missing-engines'
     Require (($missingEngines.engines | Where-Object { $_.id -eq 'czkawka' }).availability -eq 'MissingDependency') 'Missing native DLL must remain visible.'
     $failure = Invoke-PackageCli $missingCli @('analyze', $dataset, '--engine', 'czkawka') 'missing-analysis' 2

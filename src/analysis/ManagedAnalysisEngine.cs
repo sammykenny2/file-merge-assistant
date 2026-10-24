@@ -3,12 +3,12 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
-namespace FileMergeAssistant.Analysis;
+namespace FileWorkbench.Analysis;
 
 public sealed class ManagedAnalysisEngine : IFileAnalysisEngine
 {
   public const string EngineId = "csharp";
-  public AnalysisEngineDescriptor Descriptor { get; } = new(EngineId, "FMA C#", "1.0.0", null, 1, 0,
+  public AnalysisEngineDescriptor Descriptor { get; } = new(EngineId, "File Workbench C#", "1.0.0", null, 1, 0,
     RuntimeInformation.RuntimeIdentifier, AnalysisAvailability.Available, null,
     [new(AnalysisCapability.ExactDuplicates, [ContentFingerprints.XxHash128, ContentFingerprints.Sha256], AnalysisMaturity.Experimental)]);
 

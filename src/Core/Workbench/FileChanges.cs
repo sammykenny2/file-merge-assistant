@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Workbench;
+namespace FileWorkbench.Workbench;
 
 /// <summary>
 /// Counts the store operations that are moving or deleting the user's files right now: running the plan, retrying,

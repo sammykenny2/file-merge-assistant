@@ -1,4 +1,4 @@
-namespace FileMergeAssistant.Localization;
+namespace FileWorkbench.Localization;
 
 // The pending plan (screen 5): what will run, the re-check before running and the space it frees. The history screen
 // uses the item verbs (plan.verb.*), the file counts (plan.item.files.*) and the list joiners (plan.join.*) too.

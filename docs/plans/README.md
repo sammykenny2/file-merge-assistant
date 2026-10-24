@@ -49,6 +49,7 @@ Use [000-template.md](./000-template.md) as the starting point for new plans.
 | [000-template](./000-template.md) | Template | - | - |
 | [PLAN-001](./PLAN-001-batch-consolidation-workbench.md) | 分批收斂工作台第一階段 | Draft | [SPEC-001](../specs/SPEC-001-persistent-scan-workbench.md) |
 | [PLAN-002](./PLAN-002-pluggable-analysis-engines.md) | 雙分析引擎與 Rust 核心介接 | In progress | [SPEC-002](../specs/SPEC-002-pluggable-analysis-engines.md) |
+| [PLAN-003](./PLAN-003-file-workbench-rename.md) | File Workbench／貓檔家更名與相容性 | In progress | [SPEC-003](../specs/SPEC-003-file-workbench-rename.md) |
 <!-- Add new plans above this line -->
 
 ## For AI Agents

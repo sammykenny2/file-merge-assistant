@@ -1,10 +1,10 @@
 using System.Globalization;
 using System.Text.Json;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
 using Microsoft.Data.Sqlite;
 
-namespace FileMergeAssistant.Scanning;
+namespace FileWorkbench.Scanning;
 
 /// <summary>Checkpoints reusable per-file evidence separately from the active, complete result generation.</summary>
 internal sealed class AnalysisEvidenceStore

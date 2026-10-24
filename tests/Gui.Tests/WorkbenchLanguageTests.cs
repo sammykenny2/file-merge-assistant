@@ -1,17 +1,17 @@
 using System.IO;
-using FileMergeAssistant.Gui.ViewModels;
-using FileMergeAssistant.Gui.Workbench;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Gui.ViewModels;
+using FileWorkbench.Gui.Workbench;
+using FileWorkbench.Localization;
+using FileWorkbench.Workbench;
 using Xunit;
 
-namespace FileMergeAssistant.Gui.Tests;
+namespace FileWorkbench.Gui.Tests;
 
 /// <summary>The header, hub, sources, add-sources and since screens switch language in place and render in English.</summary>
 [Collection(DisplayLanguageTests.Name)]
 public sealed class WorkbenchLanguageTests : IDisposable
 {
-  private static readonly string? SnapshotDirectory = Environment.GetEnvironmentVariable("FMA_SNAPSHOT_DIR");
+  private static readonly string? SnapshotDirectory = Environment.GetEnvironmentVariable("FWB_SNAPSHOT_DIR");
 
   public void Dispose() => AppText.Apply("zh-TW", []);
 

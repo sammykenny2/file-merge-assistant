@@ -1,6 +1,6 @@
 using Spectre.Console;
 
-namespace FileMergeAssistant.Cli.UI;
+namespace FileWorkbench.Cli.UI;
 
 public static class ProgressReporter
 {

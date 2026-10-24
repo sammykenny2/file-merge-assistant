@@ -1,19 +1,19 @@
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Index;
-using FileMergeAssistant.Infrastructure;
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Scanning;
-using FileMergeAssistant.Services;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Tests.Scanning;
-using FileMergeAssistant.Workbench;
+using FileWorkbench.Analysis;
+using FileWorkbench.Index;
+using FileWorkbench.Infrastructure;
+using FileWorkbench.Models;
+using FileWorkbench.Plans;
+using FileWorkbench.Scanning;
+using FileWorkbench.Services;
+using FileWorkbench.Stacks;
+using FileWorkbench.Sources;
+using FileWorkbench.Tests.Scanning;
+using FileWorkbench.Workbench;
 using NSubstitute;
 using Serilog;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class PathTextTests
 {

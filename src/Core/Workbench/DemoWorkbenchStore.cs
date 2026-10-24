@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using System.Globalization;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Plans;
-using FileMergeAssistant.Sources;
-using FileMergeAssistant.Stacks;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Scanning;
+using FileWorkbench.Localization;
+using FileWorkbench.Plans;
+using FileWorkbench.Sources;
+using FileWorkbench.Stacks;
+using FileWorkbench.Analysis;
+using FileWorkbench.Scanning;
 
-namespace FileMergeAssistant.Workbench;
+namespace FileWorkbench.Workbench;
 
 /// <summary>
 /// An in-memory store with the GUI flow mock's simulated data. Decisions, the pending plan, runs and restores behave
@@ -41,7 +41,7 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
   public AnalysisEngineSnapshot NewJobEngine { get; private set; } = AnalysisEngineRegistry.ManagedOnly()
     .Snapshot(ManagedAnalysisEngine.EngineId, AnalysisCapability.ExactDuplicates, ContentFingerprints.XxHash128);
   public string? AnalysisConfigurationError => null;
-  public ImageReviewArchive ImageReviews => new(FileMergeAssistant.Infrastructure.AppDataPaths.Root);
+  public ImageReviewArchive ImageReviews => new(FileWorkbench.Infrastructure.AppDataPaths.Root);
   public Task<SimilarImageReport> AnalyzeImagesAsync(AnalysisEngineSnapshot engine, int threshold,
     IProgress<System.Collections.Immutable.ImmutableArray<AnalysisSessionJob>>? progress = null, CancellationToken cancellationToken = default)
     => throw new InvalidOperationException("Image analysis requires real sources.");

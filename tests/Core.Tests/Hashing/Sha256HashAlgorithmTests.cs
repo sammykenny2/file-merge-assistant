@@ -1,7 +1,7 @@
-using FileMergeAssistant.Hashing;
+using FileWorkbench.Hashing;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Hashing;
+namespace FileWorkbench.Tests.Hashing;
 
 public class Sha256HashAlgorithmTests : IDisposable
 {
@@ -10,7 +10,7 @@ public class Sha256HashAlgorithmTests : IDisposable
 
   public Sha256HashAlgorithmTests()
   {
-    _tempDir = Path.Combine(Path.GetTempPath(), $"fma-test-{Guid.NewGuid():N}");
+    _tempDir = Path.Combine(Path.GetTempPath(), $"file-workbench-test-{Guid.NewGuid():N}");
     Directory.CreateDirectory(_tempDir);
   }
 

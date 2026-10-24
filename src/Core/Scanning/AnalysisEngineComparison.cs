@@ -1,10 +1,10 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using System.Data.Common;
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Analysis;
+using FileWorkbench.Sources;
 
-namespace FileMergeAssistant.Scanning;
+namespace FileWorkbench.Scanning;
 
 public sealed record AnalysisComparisonProgress(int Pass, string EngineId, ImmutableArray<AnalysisSessionJob> Jobs, string Stage = "Analysis");
 public sealed record AnalysisComparisonReport(int FormatVersion, string Outcome, bool ObservationsMatch, string ObservationRule,

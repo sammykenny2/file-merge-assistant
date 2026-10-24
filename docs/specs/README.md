@@ -51,6 +51,7 @@ Use [000-template.md](./000-template.md) as the starting point for new specs.
 | [000-template](./000-template.md) | Template | - | - |
 | [SPEC-001](./SPEC-001-persistent-scan-workbench.md) | 多來源掃描與持續索引工作流程 | Draft | [PLAN-001](../plans/PLAN-001-batch-consolidation-workbench.md) (Draft; starts after the related ADRs are decided) |
 | [SPEC-002](./SPEC-002-pluggable-analysis-engines.md) | 可切換的檔案分析引擎 | Approved for staged implementation | [PLAN-002](../plans/PLAN-002-pluggable-analysis-engines.md) (In progress) |
+| [SPEC-003](./SPEC-003-file-workbench-rename.md) | File Workbench／貓檔家更名 | Approved; implementation in progress | [PLAN-003](../plans/PLAN-003-file-workbench-rename.md) |
 <!-- Add new specs above this line -->
 
 ## For AI Agents

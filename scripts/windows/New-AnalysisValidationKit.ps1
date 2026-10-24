@@ -22,12 +22,12 @@ $suffix = if ($Configuration -eq 'Debug') { '-debug' } else { '' }
 $build = Join-Path $root 'build'
 $kit = Join-Path $build ('windows-validation-' + [guid]::NewGuid().ToString('N'))
 if ((Get-Item -LiteralPath $build -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'build/ must not be a reparse point.' }
-$portable = "FileMergeAssistant-$version-x64$suffix-portable.zip"
-$installer = "FileMergeAssistant-$version-x64$suffix-setup.exe"
-$crate = Get-Content -LiteralPath (Join-Path $root 'native/fma-czkawka-ffi/Cargo.toml') -Raw -Encoding UTF8
+$portable = "FileWorkbench-$version-x64$suffix-portable.zip"
+$installer = "FileWorkbench-$version-x64$suffix-setup.exe"
+$crate = Get-Content -LiteralPath (Join-Path $root 'native/file-workbench-czkawka-ffi/Cargo.toml') -Raw -Encoding UTF8
 $engineVersion = [regex]::Match($crate, '(?m)^version = "(\d+\.\d+\.\d+)"').Groups[1].Value
 if (-not $engineVersion) { throw 'Invalid native adapter version.' }
-$source = "FileMergeAssistant-$version-czkawka-$engineVersion$suffix-source.zip"
+$source = "FileWorkbench-$version-czkawka-$engineVersion$suffix-source.zip"
 $artifacts = @($installer, $portable, $source)
 foreach ($name in $artifacts) {
     $path = Join-Path $build $name
@@ -84,7 +84,7 @@ for files listed in CHECKSUMS.sha256 (it does not execute them):
 First test the portable package without installing anything. Choose a new
 extraction directory; do not overwrite an existing application:
 
-    $portableRoot = Join-Path $env:TEMP ('fma-portable-' + [guid]::NewGuid().ToString('N'))
+    $portableRoot = Join-Path $env:TEMP ('file-workbench-portable-' + [guid]::NewGuid().ToString('N'))
     Expand-Archive -LiteralPath .\{{PORTABLE}} -DestinationPath $portableRoot
     .\Test-AnalysisPackage.ps1 -PackageRoot $portableRoot -FixturesRoot C:\FmaKit\Fixtures -ReportParent C:\FmaReports
 
@@ -92,7 +92,7 @@ For install/reinstall/uninstall validation, run ONLY in the disposable profile:
 
     .\Test-InstallerLifecycle.ps1 -Installer C:\FmaKit\{{INSTALLER}} -FixturesRoot C:\FmaKit\Fixtures -ReportParent C:\FmaReports -DisposableMachine
 
-The script refuses an existing FMA installation, process, startup entry, shortcut
+The script refuses an existing File Workbench installation, process, startup entry, shortcut
 or data directory. It intentionally leaves reports and sentinel files for review.
 It exercises silent NSIS install, preserved CLI selection, PATH, native loading,
 replacement of obsolete app payload and uninstall ownership/user-data behavior.
@@ -102,8 +102,8 @@ parameter. The report distinguishes the two cases.
 
 Also open the extracted GUI using a NEW test data directory:
 
-    $env:FMA_DATA_DIR = Join-Path $env:TEMP ('fma-gui-' + [guid]::NewGuid().ToString('N'))
-    & "$portableRoot\app\FileMergeAssistant.exe"
+    $env:FWB_DATA_DIR = Join-Path $env:TEMP ('file-workbench-gui-' + [guid]::NewGuid().ToString('N'))
+    & "$portableRoot\app\FileWorkbench.exe"
 
 Check English/Traditional
 Chinese, engine selection, exact scan, image candidate review, cancel/reopen,

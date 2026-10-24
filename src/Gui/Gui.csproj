@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>FileMergeAssistant.Gui</RootNamespace>
-    <AssemblyName>FileMergeAssistant</AssemblyName>
+    <RootNamespace>FileWorkbench.Gui</RootNamespace>
+    <AssemblyName>FileWorkbench</AssemblyName>
     <UseWPF>true</UseWPF>
     <!-- scripts/windows/New-AppIcon.ps1 draws it; the tray, the window and the setup program's shortcuts show it. -->
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>

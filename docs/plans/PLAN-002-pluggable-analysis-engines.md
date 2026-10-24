@@ -29,7 +29,7 @@ CI 停用的限制已由這次指示取代。依 [ADR-016](../decisions/ADR-016-
 
 ### Phase 0：基準與適配驗證
 
-- [x] Task 0.1：記錄實作開始時的 FMA／上游 commit、.NET／Rust 版本與測試結果；依 testing.md 跑現有 Core 與 GUI 測試，不沿用本文件日期的測試數作為新結果。
+- [x] Task 0.1：記錄實作開始時的 File Workbench／上游 commit、.NET／Rust 版本與測試結果；依 testing.md 跑現有 Core 與 GUI 測試，不沿用本文件日期的測試數作為新結果。
 - [x] Task 0.2：建立小型、可重建且有已知答案的資料，包含唯一檔、同大小不同內容、空檔、改名及跨來源副本。隔離索引及引擎快取，不用個人檔案當測試樣本。
 - [x] Task 0.3：以調查基準 `eb8b91d` 的完整 commit 為首輪候選，確認可建置的依賴來源與 lockfile。正式建置不得引用本機 `../../fork/czkawka-fork/`。
 - [x] Task 0.4：驗證上游的路徑／檔案輸入、排除條件、硬連結及最小檔案預設值；確認能回傳所有候選的逐檔證據與終態、完整範圍、進度及取消，量測是否重複讀取。
@@ -57,9 +57,9 @@ CI 停用的限制已由這次指示取代。依 [ADR-016](../decisions/ADR-016-
 
 ### Phase 2：Rust C ABI 與 .NET 適配
 
-- [x] Task 2.1：在 FMA 的 `native/fma-czkawka-ffi/` 建立獨立包裝 crate，固定上游完整 commit、Rust 工具鏈、Cargo.lock 與最小建置功能；先產出 Windows x64 `cdylib`。
+- [x] Task 2.1：在 File Workbench 的 `native/file-workbench-czkawka-ffi/` 建立獨立包裝 crate，固定上游完整 commit、Rust 工具鏈、Cargo.lock 與最小建置功能；先產出 Windows x64 `cdylib`。
 - [x] Task 2.2：實作版本／能力查詢、job handle、開始、輪詢、批次、取消及釋放協定。記錄字串編碼、結構大小／版本、長度上限與記憶體所有權。
-- [x] Task 2.3：包裝只呼叫讀取／分析能力；明確關閉來源變更操作，快取及暫存只進 FMA 分配目錄。先驗證精確去重，不一次包完上游工具。
+- [x] Task 2.3：包裝只呼叫讀取／分析能力；明確關閉來源變更操作，快取及暫存只進 File Workbench 分配目錄。先驗證精確去重，不一次包完上游工具。
 - [x] Task 2.4：在 Core 建立以 SafeHandle／P/Invoke 為基礎的 Czkawka 適配，按受控絕對路徑載入，先檢查版本／ABI／架構，再執行工作。
 - [x] Task 2.5：加入原生邊界測試：錯誤輸入、缺 DLL、錯誤架構、ABI 不符、重複取消、完成後釋放、執行中關閉、批次背壓、反覆執行的記憶體及來源不變性。
 - [x] Task 2.6：可恢復錯誤不跨 ABI 展開；程序級崩潰案例在隔離的測試程序內驗證下次啟動的恢復，不能靠 catch 宣稱有程序隔離。
@@ -68,7 +68,7 @@ CI 停用的限制已由這次指示取代。依 [ADR-016](../decisions/ADR-016-
 
 **Gate G2**：Rust 各自通過已知答案與來源不變測試，AC-E07 通過；獨立審閱原生記憶體、生命週期與取消流程。失敗時仍保留 C# 原路徑，不提升原生預設值。
 
-2026-10-24：G2 的 Windows x64 interop 範圍通過獨立審閱：Rust 10、Core 421、GUI 16 通過，原生整合 5 項零略過。短緩衝區保留事件、輸出長度上限、背壓、8 個實際 worker 上限、取消停止確認與上傳途中取消皆有回歸。協定見 [ABI.md](../../native/fma-czkawka-ffi/ABI.md)，重現指令為 `scripts/windows/Build-NativeAnalysis.ps1 -Test`。Task 2.6 的程序中斷持久恢復留在 Phase 3 完成，不能用本次 interop 測試代替。
+2026-10-24：G2 的 Windows x64 interop 範圍通過獨立審閱：Rust 10、Core 421、GUI 16 通過，原生整合 5 項零略過。短緩衝區保留事件、輸出長度上限、背壓、8 個實際 worker 上限、取消停止確認與上傳途中取消皆有回歸。協定見 [ABI.md](../../native/file-workbench-czkawka-ffi/ABI.md)，重現指令為 `scripts/windows/Build-NativeAnalysis.ps1 -Test`。Task 2.6 的程序中斷持久恢復留在 Phase 3 完成，不能用本次 interop 測試代替。
 
 ### Phase 3：持久任務、索引與舊紀錄遷移
 
@@ -152,7 +152,7 @@ load-more 的同步累計時間不等於單次點擊或實體輸入延遲，限�
 
 - [x] Task 6.1：盤點並抽象化 Windows 路徑／磁碟／檔案身份及系統整合，將可攜的 Core／契約測試分離出目前 `net10.0-windows` 目標限制。來源服務接線與可攜分析 leaf 已完成；真正 Unix provider 與平台執行證據仍由 6.2／6.3 驗證，不代表整套 Core 已移植。
 - [ ] Task 6.2：依可用硬體選定 macOS／Linux 平台及架構，建置對應 `.dylib`／`.so`，以小型資料驗證大小寫、Unicode、連結、權限與跨磁碟行為。
-- [ ] Task 6.3：記錄各平台與檔案系統的支援證據；尚未完成執行／還原驗收的平台先限制為分析與檢視，不標為完整 FMA 支援。
+- [ ] Task 6.3：記錄各平台與檔案系統的支援證據；尚未完成執行／還原驗收的平台先限制為分析與檢視，不標為完整 File Workbench 支援。
 - [x] Task 6.4：另行決定 Avalonia 技術驗證與 ADR-009 的後續狀態；只有通過驗證並取得 UI 採用決定後，才建立 GUI 移植計畫。現階段保留 WPF，Avalonia 驗證延後，未建立 GUI 移植計畫。
 
 **Deliverables**：平台支援矩陣及 UI 技術評估。相似影片另訂能力驗收，不作為前面階段的必要條件。
@@ -197,7 +197,7 @@ audit 未找到其他當前範圍內必要本機程式缺口；G5／G6 與 owner
 | 路徑 | 預計動作 | 責任 |
 |------|----------|------|
 | `src/analysis/` | 新增（Phase 6 從 Core 抽出） | 可攜引擎介面、契約、registry、C# 與 Czkawka 適配 |
-| `native/fma-czkawka-ffi/` | 新增 | C ABI 包裝、版本固定、Rust 測試與建置設定 |
+| `native/file-workbench-czkawka-ffi/` | 新增 | C ABI 包裝、版本固定、Rust 測試與建置設定 |
 | `src/Core/Scanning/SourceScanner.cs`、`ScanWorker.cs` | 調整 | 保留探索／排程／索引責任，委派分析 |
 | `src/Core/Index/IndexDatabase.cs`、`src/Core/Sources/ScanJobInfo.cs` | 調整 | 任務快照、證據來源、世代與遷移 |
 | `src/Core/Stacks/`、`src/Core/Plans/` | 必要時調整 | 分離新分析證據與既有操作驗證，保持還原相容 |
@@ -207,7 +207,7 @@ audit 未找到其他當前範圍內必要本機程式缺口；G5／G6 與 owner
 
 ## Testing Strategy
 
-- **既有回歸**：依 [testing.md](../testing.md) 執行 `dotnet test file-merge-assistant.sln --verbosity minimal`；只記錄實際執行結果。新 Rust crate 的測試命令在 crate 建立後寫入 testing.md，不把目前不存在的測試寫成已通過。
+- **既有回歸**：依 [testing.md](../testing.md) 執行 `dotnet test messy-file-workbench.sln --verbosity minimal`；只記錄實際執行結果。新 Rust crate 的測試命令在 crate 建立後寫入 testing.md，不把目前不存在的測試寫成已通過。
 - **契約與整合**：兩個引擎各自對已知答案驗證，涵蓋空集合、失敗、部分覆蓋、來源變動、未知 ID、取消與版本不符；相似媒體用標註資料，結果一致不等於正確。
 - **資料相容**：用真實舊 schema 的隔離 fixture 驗證備份、遷移、混合指紋、疊／計畫重新驗證、歷史及缺少引擎時還原；不可使用個人索引作破壞性測試。
 - **原生與操作**：壓力測試記憶體生命週期、批次上限與程序異常；確認唯讀分析不動來源，檔案變更測試仍只透過 Core 的既有操作入口。

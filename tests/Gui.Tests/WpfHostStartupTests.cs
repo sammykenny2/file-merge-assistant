@@ -1,8 +1,8 @@
 using System.Windows;
-using FileMergeAssistant.Localization;
+using FileWorkbench.Localization;
 using Xunit;
 
-namespace FileMergeAssistant.Gui.Tests;
+namespace FileWorkbench.Gui.Tests;
 
 [Collection(DisplayLanguageTests.Name)]
 public sealed class WpfHostStartupTests

@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace FileMergeAssistant.Sources;
+namespace FileWorkbench.Sources;
 
 /// <summary>
 /// The real location behind a path (ADR-010). A junction, a symbolic link, a <c>subst</c> drive, a mapped drive or a UNC
@@ -16,7 +16,7 @@ public static partial class PathIdentity
   private const uint BackupSemantics = 0x02000000;
 
   /// <summary>Name prefix of the probe files <see cref="ProbeSeenAt"/> writes for a moment; scans never index them.</summary>
-  public const string ProbePrefix = ".fma-probe-";
+  public const string ProbePrefix = ".file-workbench-probe-";
 
   /// <summary>The final path of an existing file or folder, or the full path when Windows cannot resolve it.</summary>
   public static string Resolve(string path)

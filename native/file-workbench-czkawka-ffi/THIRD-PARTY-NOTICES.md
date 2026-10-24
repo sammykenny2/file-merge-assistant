@@ -3,7 +3,7 @@
 `src/images.rs` adapts `compute_hashes_for_image` and its validity rule from
 `czkawka_core/src/tools/similar_images/core.rs` at commit
 `eb8b91dbb4d25dff416202674ee0de84ee4b5e5c`. The upstream decoder is used through
-its public API. FMA owns the restricted format/resource policy, per-file evidence
+its public API. File Workbench owns the restricted format/resource policy, per-file evidence
 encoding and pairwise grouping; it does not call the upstream private grouping.
 Other dependencies and their full distribution notices are tracked for packaging.
 

@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.Input;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 /// <summary>Colour and icon of a status chip; never the only carrier of meaning, the chip always has text.</summary>
 public enum Tone

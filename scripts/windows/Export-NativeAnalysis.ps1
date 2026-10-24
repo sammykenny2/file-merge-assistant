@@ -29,7 +29,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 $buildRoot = Join-Path $projectRoot 'build'
-$adapterRoot = Join-Path $projectRoot 'native/fma-czkawka-ffi'
+$adapterRoot = Join-Path $projectRoot 'native/file-workbench-czkawka-ffi'
 $target = 'x86_64-pc-windows-msvc'
 
 function Assert-BuildPath([string]$Path) {
@@ -84,10 +84,10 @@ while ($pending.Count -gt 0) {
 $nativeDirectory = Join-Path $Destination 'runtimes/win-x64/native'
 $noticeRoot = Join-Path $Destination 'Licenses/Rust'
 New-Item -ItemType Directory -Path $nativeDirectory, $noticeRoot -Force | Out-Null
-$sourceLibrary = Join-Path $adapterRoot "target/$target/$($Configuration.ToLowerInvariant())/fma_czkawka_ffi.dll"
+$sourceLibrary = Join-Path $adapterRoot "target/$target/$($Configuration.ToLowerInvariant())/file_workbench_czkawka_ffi.dll"
 Copy-Item -LiteralPath $sourceLibrary -Destination $nativeDirectory -Force
 Copy-Item -LiteralPath (Join-Path $adapterRoot 'THIRD-PARTY-NOTICES.md') -Destination $noticeRoot
-Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination (Join-Path $noticeRoot 'FMA-LICENSE.txt')
+Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination (Join-Path $noticeRoot 'FileWorkbench-LICENSE.txt')
 $packages = [Collections.Generic.List[object]]::new()
 $missingNotices = [Collections.Generic.List[string]]::new()
 $curatedRoot = Join-Path $adapterRoot 'third-party-notices'
@@ -188,7 +188,7 @@ foreach ($name in @('COPYRIGHT-library.html', 'COPYRIGHT.html', 'README.md')) {
 }
 
 # Preserve crate layout so include_str! test fixtures work after extraction.
-$sourceCrate = Join-Path $SourceKitRoot 'native/fma-czkawka-ffi'
+$sourceCrate = Join-Path $SourceKitRoot 'native/file-workbench-czkawka-ffi'
 $sourceConfig = Join-Path $sourceCrate '.cargo'
 New-Item -ItemType Directory -Path $sourceConfig -Force | Out-Null
 foreach ($name in @('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'rustfmt.toml', 'README.md', 'ABI.md', 'THIRD-PARTY-NOTICES.md', 'third-party-notices', 'src')) {
@@ -213,7 +213,7 @@ $pinnedConfig = Get-Content -LiteralPath (Join-Path $adapterRoot '.cargo/config.
 $readme = @'
 # Native rebuild source
 
-This archive contains FMA's native wrapper, its pinned Cargo dependencies and test
+This archive contains File Workbench's native wrapper, its pinned Cargo dependencies and test
 fixture. DEPENDENCIES.json lists the resolved non-development
 dependency licenses; the vendor tree also includes build/test/platform sources.
 DeclaredSpdxTerms records a reviewed upstream MIT declaration accompanied by the
@@ -224,7 +224,7 @@ Czkawka core's MIT license is separate from dependency licenses (including rawle
 LGPL-2.1 and symphonia MPL-2.0). Preserve their notices and source when distributing.
 
 On Windows x64, install the pinned Rust toolchain and MSVC/Windows SDK build tools,
-then run from native/fma-czkawka-ffi:
+then run from native/file-workbench-czkawka-ffi:
 
     $buildTarget = [IO.Path]::GetFullPath((Join-Path (Get-Location) '../../../target'))
     cargo build --locked --offline --release --target x86_64-pc-windows-msvc --target-dir $buildTarget
@@ -233,14 +233,14 @@ then run from native/fma-czkawka-ffi:
 Use a short extraction path if MSVC reports LNK1104 or a path-length failure.
 Use a normalized absolute target directory, rather than one containing '..'.
 
-Replace app/runtimes/win-x64/native/fma_czkawka_ffi.dll in a closed local package
+Replace app/runtimes/win-x64/native/file_workbench_czkawka_ffi.dll in a closed local package
 with the rebuilt DLL. ABI/version checks still apply. The source supports rebuild
 and modification; no bit-identical binary guarantee is made. End users running
 the packaged app do not need this compiler toolchain.
 '@
 [IO.File]::WriteAllText((Join-Path $SourceKitRoot 'REBUILD.md'), $readme.Replace("`r`n", "`n") + "`n", [Text.UTF8Encoding]::new($false))
 
-$sha = (Get-FileHash -LiteralPath (Join-Path $nativeDirectory 'fma_czkawka_ffi.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
+$sha = (Get-FileHash -LiteralPath (Join-Path $nativeDirectory 'file_workbench_czkawka_ffi.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
 $manifest = [ordered]@{
     formatVersion = 1; engine = 'czkawka'; engineVersion = $packageById[$metadata.resolve.root].version
     abiVersion = 1; target = $target; profile = $Configuration; rust = $rustVersion; staticCrt = $true

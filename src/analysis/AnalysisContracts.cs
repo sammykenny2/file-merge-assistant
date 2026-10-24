@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Sources;
 
-namespace FileMergeAssistant.Analysis;
+namespace FileWorkbench.Analysis;
 
 public enum AnalysisCapability { ExactDuplicates, SimilarImages, SimilarVideos }
 public enum AnalysisMaturity { Experimental, Preview, Validated }

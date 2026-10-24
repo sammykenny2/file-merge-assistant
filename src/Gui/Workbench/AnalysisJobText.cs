@@ -1,8 +1,8 @@
-using FileMergeAssistant.Analysis;
-using FileMergeAssistant.Localization;
-using FileMergeAssistant.Sources;
+using FileWorkbench.Analysis;
+using FileWorkbench.Localization;
+using FileWorkbench.Sources;
 
-namespace FileMergeAssistant.Gui.Workbench;
+namespace FileWorkbench.Gui.Workbench;
 
 internal static class AnalysisJobText
 {

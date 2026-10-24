@@ -1,6 +1,6 @@
 using System.Windows.Controls;
 
-namespace FileMergeAssistant.Gui.Settings;
+namespace FileWorkbench.Gui.Settings;
 
 public partial class SettingsView : UserControl
 {

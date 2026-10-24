@@ -1,7 +1,7 @@
-using FileMergeAssistant.Hashing;
+using FileWorkbench.Hashing;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Hashing;
+namespace FileWorkbench.Tests.Hashing;
 
 public class HashAlgorithmFactoryExtendedTests
 {

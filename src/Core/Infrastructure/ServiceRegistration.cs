@@ -1,10 +1,10 @@
-using FileMergeAssistant.Reporting;
-using FileMergeAssistant.Resolution;
-using FileMergeAssistant.Services;
+using FileWorkbench.Reporting;
+using FileWorkbench.Resolution;
+using FileWorkbench.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
-namespace FileMergeAssistant.Infrastructure;
+namespace FileWorkbench.Infrastructure;
 
 public static class ServiceRegistration
 {

@@ -1,5 +1,16 @@
 # Testing Strategy
 
+The 2026-10-25 product rename is specified in
+[SPEC-003](specs/SPEC-003-file-workbench-rename.md). Debug and Release full
+solution regression passed Core 515, GUI 27, CLI 14 and portable analysis 27,
+all with zero skipped against the renamed native DLL and ABI/cancellation
+fixtures. Rust tests (13), format and Clippy also passed. New coverage verifies
+legacy data reuse without moving journals, new/legacy override precedence and
+the live localized window title/subtitle. Windows lifecycle acceptance remains
+owner-run; these checks do not claim a clean-VM upgrade passed.
+Release packaging and real package verification also passed; the retained
+report and GUI rendering evidence are recorded in [PLAN-003](plans/PLAN-003-file-workbench-rename.md).
+
 The 0.3.0 DLL-integration Preview omits ImageSharp/CoenM. Full Release regression
 after removal passed Core 510, GUI 25, CLI 14 and portable analysis 27, with zero
 skips against the real native DLLs. Legacy media algorithms are rejected before
@@ -38,7 +49,7 @@ separate from physical keyboard, scanning-input, high-DPI and VM acceptance.
 ImageSharp dependency. Its tests are separate from the Windows workflow suite:
 
 ```powershell
-$env:FMA_NATIVE_LIBRARY_DIR = (Resolve-Path native/fma-czkawka-ffi/target/x86_64-pc-windows-msvc/release).Path
+$env:FWB_NATIVE_LIBRARY_DIR = (Resolve-Path native/file-workbench-czkawka-ffi/target/x86_64-pc-windows-msvc/release).Path
 dotnet test tests/analysis-tests/Analysis.Tests.csproj --configuration Release --verbosity minimal
 ```
 
@@ -65,7 +76,7 @@ cross-publishing and a Windows run do not validate foreign platforms. The
 the remaining Windows workflow boundaries. This leaf's Release build has no
 ImageSharp; it does not clear the full application's missing Release key.
 
-File Merge Assistant uses xUnit for the .NET 10 Windows-targeted core library.
+File Workbench uses xUnit for the .NET 10 Windows-targeted core library.
 Tests live in `tests/Core.Tests/`, grouped under `Hashing/`, `Reporting/`,
 `Resolution/`, `Services/`, `Stacks/`, `Updates/` and `Workbench/`. NSubstitute supplies test
 doubles; file-operation fixtures create temporary directories and clean them up after each test.
@@ -86,18 +97,18 @@ on any Chinese left on screen or any catalog key shown instead of its text. It s
 suggestions over the real store come from the real user profile.
 
 The scanner and real-store tests (`Scanning/`, `Workbench/IndexedWorkbenchStoreTests`) build folder
-trees under `%TEMP%` (`TempTree`) and an index under `FMA_DATA_DIR`. No test scans or reads the real
+trees under `%TEMP%` (`TempTree`) and an index under `FWB_DATA_DIR`. No test scans or reads the real
 user profile; the first-run folder suggestions are not exercised against the real store. It needs no visible desktop, so it
-also runs while the session is locked. Set `FMA_SNAPSHOT_DIR` to a folder to save each screen as
+also runs while the session is locked. Set `FWB_SNAPSHOT_DIR` to a folder to save each screen as
 a PNG:
 
 ```powershell
-$env:FMA_SNAPSHOT_DIR = "$env:TEMP\fma-shots"; dotnet test tests/Gui.Tests/Gui.Tests.csproj
+$env:FWB_SNAPSHOT_DIR = "$env:TEMP\file-workbench-shots"; dotnet test tests/Gui.Tests/Gui.Tests.csproj
 ```
 
-The app writes its data under `%LOCALAPPDATA%\FileMergeAssistant` (`AppDataPaths`), or
-under `FMA_DATA_DIR` when that is set. `tests/Core.Tests/TestEnvironment.cs` sets
-`FMA_DATA_DIR` to a temporary folder when the test assembly loads, so no test writes to
+The app writes its data under `%LOCALAPPDATA%\FileWorkbench` (`AppDataPaths`), or
+under `FWB_DATA_DIR` when that is set. `tests/Core.Tests/TestEnvironment.cs` sets
+`FWB_DATA_DIR` to a temporary folder when the test assembly loads, so no test writes to
 the real data folder; `AppDataPathsTests` checks this. The update tests use a fake
 `HttpMessageHandler` and never reach GitHub.
 
@@ -112,7 +123,7 @@ Run from the repository root on Windows with the .NET 10 SDK installed
 (`global.json` selects the latest installed 10.0 feature band):
 
 ```powershell
-dotnet test file-merge-assistant.sln --verbosity minimal
+dotnet test messy-file-workbench.sln --verbosity minimal
 ```
 
 After dependencies have already been restored, add `--no-restore`. To collect
@@ -132,7 +143,7 @@ Debug/Release profiles, model notifications, OS-cache limits and index growth.
 300k and GUI/physical-device/clean-machine gates are not inferred from these runs.
 The runner rejects empty/duplicate matrices and records Running/TimedOut/Failed
 states under a whole-child deadline. Both finite and sustained output timeout
-probes passed without touching the installed FMA process.
+probes passed without touching the installed File Workbench process.
 
 Slice 5b path-encoding validation passes **507 Core / 25 GUI / 12 CLI**, zero
 skips. The 13 focused cases also pass independently, including actual native
@@ -211,7 +222,7 @@ Before PLAN-002 implementation, commit `a01ba97` passed the full solution suite:
 checked independently by `AnalysisBaselineTests` and the native adapter's Rust
 tests. The focused C# baseline test passes; the native adapter has 3 passing tests.
 
-Run Rust checks from `native/fma-czkawka-ffi/` so its pinned Rust 1.99.1 toolchain
+Run Rust checks from `native/file-workbench-czkawka-ffi/` so its pinned Rust 1.99.1 toolchain
 is selected:
 
 ```powershell
@@ -246,7 +257,7 @@ Run the complete native build/check/test path on Windows x64:
 The runner builds the pinned real adapter plus two test-only DLL variants, sets
 the three native test directories for its child .NET process, then restores the
 environment. Native cases are optional and skipped in ordinary `dotnet test`
-when `FMA_NATIVE_LIBRARY_DIR` is absent; those skips are not native validation.
+when `FWB_NATIVE_LIBRARY_DIR` is absent; those skips are not native validation.
 Coverage includes known answers and unchanged sources, malformed requests and
 DLLs, ABI mismatch, bounded output, short-buffer retry, repeated disposal and
 cancellation while uploading inputs or while a worker is blocked. Cancellation
@@ -295,7 +306,7 @@ bypass the UI progress throttle explicitly rather than relying on wall-clock tim
 
 The native history/restore case now starts a fresh process with an absent native
 installation directory and no native-test environment variables. The child
-asserts zero FMA native modules before and after successful restoration. This is
+asserts zero File Workbench native modules before and after successful restoration. This is
 cold-start recovery evidence, not a claim that native process aborts are caught.
 All process markers and source files are isolated fixtures; test hosts and native
 fault fixtures must not be included in application packages.
@@ -306,7 +317,7 @@ settings without hidden fallback. The three new WPF tests cover unavailable
 options, locale changes, preserved queued snapshots, real Rust selection and
 Blake3 results, and demo-mode selection on the UI thread. The independent
 focused run passes Core 10 / GUI 3. The settings view was rendered and visually
-checked at 1440 px; `FMA_SNAPSHOT_DIR` saves `analysis-settings-zh.png`.
+checked at 1440 px; `FWB_SNAPSHOT_DIR` saves `analysis-settings-zh.png`.
 
 The real store saves selection asynchronously and serializes its database/memory
 update; demo selection stays on the caller's UI thread. Original job versions,
@@ -325,7 +336,7 @@ fixtures create their own parent directory and do not depend on test ordering.
 
 CLI tests assert versioned metadata/JSON, nonzero diagnostics instead of empty
 success, explicit native selection, and unchanged legacy `scan` defaults with
-lazy optional-library resolution. A real `fma.dll` process smoke test also parsed
+lazy optional-library resolution. A real `file-workbench.dll` process smoke test also parsed
 its stdout as JSON. [analysis-cli.md](analysis-cli.md) describes the command and
 process-metric limits. Engine comparison and similar-image acceptance remain
 pending.
@@ -353,13 +364,13 @@ Checked on 2026-10-23 with SDK 10.0.402 and `net10.0-windows`, with
 `TreatWarningsAsErrors` on (set in `Directory.Build.props`) and NuGet audit at its
 default:
 
-- `dotnet build file-merge-assistant.sln` succeeds for the Debug configuration.
+- `dotnet build messy-file-workbench.sln` succeeds for the Debug configuration.
 - `dotnet test tests/Core.Tests/Core.Tests.csproj` passes all 149 tests; VSTest
   reports under about a second of test time. (Later additions are listed under
   "Changes since this baseline".)
-- `dotnet list file-merge-assistant.sln package --vulnerable --include-transitive`
+- `dotnet list messy-file-workbench.sln package --vulnerable --include-transitive`
   reports no vulnerable packages.
-- Smoke check: `fma --help` and `fma scan` on a small folder succeed, and the
+- Smoke check: `file-workbench --help` and `file-workbench scan` on a small folder succeed, and the
   GUI opens its main window and stays responsive.
 
 The same build and tests also passed on SDK 8.0.426 with `net8.0-windows`
@@ -437,18 +448,18 @@ When a test hangs, VSTest writes a sequence attachment under
 
 - 2026-10-23, setup program and update check (PLAN-001 Tasks 2.1, 7.1, 7.4 to 7.6):
   - Behavior change: the recycle bin, scan cache and log file moved from
-    `fma-results\` under the working directory to `%LOCALAPPDATA%\FileMergeAssistant`
+    `file-workbench-results\` under the working directory to `%LOCALAPPDATA%\FileWorkbench`
     (`recycle-bin`, `cache`, `logs`); the GUI writes scan results to its `results`
-    folder. Files already in an old `fma-results\.recycle-bin` stay there and are no
+    folder. Files already in an old `file-workbench-results\.recycle-bin` stay there and are no
     longer listed; restore them with an older build or move them by hand. The CLI's
-    `--output` default (`./fma-results/`) is unchanged.
+    `--output` default (`./file-workbench-results/`) is unchanged.
   - New tests: `AppDataPathsTests`, `UpdateFeedTests` and `UpdateServiceTests`;
     `Test-SetUserPath.ps1` for the installer's PATH helper. The suite has 214 tests.
   - Setup program, checked on 2026-10-23 with the Debug build of 0.1.0 on the
     development machine:
     - Silent install with `/CLI`: files, owner markers, Start menu shortcut, registry and
       Apps & features entry all correct; PATH gained exactly `;<install>\cli` with its
-      REG_EXPAND_SZ kind kept; the installed `fma --version` reports 0.1.0.
+      REG_EXPAND_SZ kind kept; the installed `file-workbench --version` reports 0.1.0.
     - The installed app starts and stays responsive.
     - Setup while the app runs: exit code 2 after 30 seconds, with no file changed.
     - Update hand-off (`/S /WAITPID=<pid> /RELAUNCH`): setup waited for the app,
@@ -456,7 +467,7 @@ When a test hangs, VSTest writes a sequence attachment under
     - Silent uninstall: folder, shortcut and registry entries removed, and PATH
       byte-identical to the value saved before the test.
     - The GUI writes no log at startup, so the data folder appears only once the app logs
-      something; a CLI scan wrote its log to `%LOCALAPPDATA%\FileMergeAssistant\logs` and
+      something; a CLI scan wrote its log to `%LOCALAPPDATA%\FileWorkbench\logs` and
       created nothing in the working directory.
     - `https://github.com/sammykenny2/file-merge-assistant/releases.atom` answers 404
       while the repository is private, so the in-app check reports that the release source

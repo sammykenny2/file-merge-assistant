@@ -1,9 +1,9 @@
 using System.Text.Json;
-using FileMergeAssistant.Models;
-using FileMergeAssistant.Reporting;
+using FileWorkbench.Models;
+using FileWorkbench.Reporting;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Reporting;
+namespace FileWorkbench.Tests.Reporting;
 
 public class JsonReportGeneratorTests : IDisposable
 {
@@ -12,7 +12,7 @@ public class JsonReportGeneratorTests : IDisposable
 
   public JsonReportGeneratorTests()
   {
-    _tempDir = Path.Combine(Path.GetTempPath(), $"fma-test-{Guid.NewGuid():N}");
+    _tempDir = Path.Combine(Path.GetTempPath(), $"file-workbench-test-{Guid.NewGuid():N}");
     Directory.CreateDirectory(_tempDir);
   }
 

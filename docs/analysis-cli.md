@@ -26,7 +26,7 @@ its existing report formats and the existing operation defaults. The new
 ## Scope and results
 
 Each `analyze` invocation creates its own durable `analysis-<id>.db` under the
-FMA data directory (`FMA_DATA_DIR` can isolate it). It does not enqueue work into
+File Workbench data directory (`FWB_DATA_DIR` can isolate it). It does not enqueue work into
 the normal GUI index or create an operation plan. Its JSON contains the index
 path for inspection, per-source frozen job snapshots, generations, full file
 inventory, confirmed fingerprints, exact groups and per-file/terminal states.
@@ -34,7 +34,7 @@ Files with unique sizes remain in inventory as `NotContentCandidate` after a
 complete run. Empty files are eligible for exact-content evidence.
 
 Scope follows the workbench's default exclusions, regenerable-folder, cloud and
-link policies. Sources must be distinct and non-overlapping. The FMA data folder
+link policies. Sources must be distinct and non-overlapping. The File Workbench data folder
 is excluded by its physical location, including when configured through an
 alias. Sources inside that folder are rejected. Analysis reads source files;
 the index/cache writes are confined to the controlled data folder.
@@ -53,7 +53,7 @@ Session time includes source preparation, inventory, analysis and result
 validation, excluding command startup and native-library loading. I/O counters
 cover the process, including SQLite and other concurrent work; they are not
 physical disk-only measurements. Working-set samples and the process-lifetime
-peak are labelled separately. Each run starts with a fresh FMA index; the OS
+peak are labelled separately. Each run starts with a fresh File Workbench index; the OS
 filesystem cache is not controlled. These fields support later comparison and
 acceptance work, not an unmeasured claim that one engine is faster.
 

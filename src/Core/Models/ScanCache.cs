@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace FileMergeAssistant.Models;
+namespace FileWorkbench.Models;
 
 public record ScanCache
 {

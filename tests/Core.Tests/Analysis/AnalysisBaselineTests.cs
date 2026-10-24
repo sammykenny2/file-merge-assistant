@@ -1,7 +1,7 @@
-using FileMergeAssistant.Scanning;
+using FileWorkbench.Scanning;
 using Xunit;
 
-namespace FileMergeAssistant.Tests.Analysis;
+namespace FileWorkbench.Tests.Analysis;
 
 public sealed class AnalysisBaselineTests
 {

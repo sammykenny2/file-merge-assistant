@@ -1,6 +1,6 @@
-using FileMergeAssistant.Models;
+using FileWorkbench.Models;
 
-namespace FileMergeAssistant.Services;
+namespace FileWorkbench.Services;
 
 public interface ISmartMergeService
 {

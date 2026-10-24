@@ -1,6 +1,6 @@
-using FileMergeAssistant.Models;
+using FileWorkbench.Models;
 
-namespace FileMergeAssistant.Reporting;
+namespace FileWorkbench.Reporting;
 
 public interface IReportGenerator
 {
