@@ -122,6 +122,12 @@ Unicode，異常項目以 escaped 碼位報錯且保持 partial，未自動修�
 詳見 [filesystem evidence](../research/2026-10-24-windows-path-encoding.md)。
 這是 Task 5.1 的已知邊界修正；規模／實體 USB 量測與平台測試仍待後續 slice。
 
+Slice 5c tooling：六來源的可重建量測 host 與有整體期限／自有 child 管理的 runner
+已加入；空／重複矩陣不能形成假成功。兩引擎 5k／50k 的完整答案、warm 零後端讀取、
++1% 只分析新檔、長路徑／排除及模擬離線恢復均通過，300k 仍在執行。
+數值與未測項見 [acceptance baseline](../research/2026-10-24-analysis-acceptance.md)。
+GUI 互動、實體 USB 及 G5 仍待結果，未提升成熟度或切換預設。
+
 ### Phase 6：後續平台與 UI 技術驗證
 
 - [ ] Task 6.1：盤點並抽象化 Windows 路徑／磁碟／檔案身份及系統整合，將可攜的 Core／契約測試分離出目前 `net10.0-windows` 目標限制。

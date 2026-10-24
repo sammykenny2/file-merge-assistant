@@ -59,6 +59,16 @@ dotnet test tests/Core.Tests/Core.Tests.csproj --collect:"XPlat Code Coverage"
 
 ## Analysis Engine Baseline (2026-10-24)
 
+The [synthetic acceptance runner](../tests/acceptance-host/README.md) independently
+verifies six-source known groups/cache reuse/exclusions/long paths/source bytes
+and simulated offline recovery. Both engines pass the 5k and 50k primary-file
+cases; [recorded metrics](research/2026-10-24-analysis-acceptance.md) distinguish
+Debug/Release profiles, model notifications, OS-cache limits and index growth.
+300k and GUI/physical-device/clean-machine gates are not inferred from these runs.
+The runner rejects empty/duplicate matrices and records Running/TimedOut/Failed
+states under a whole-child deadline. Both finite and sustained output timeout
+probes passed without touching the installed FMA process.
+
 Slice 5b path-encoding validation passes **507 Core / 25 GUI / 12 CLI**, zero
 skips. The 13 focused cases also pass independently, including actual native
 requests, real lone-surrogate NTFS entries and a junction to such a target.
