@@ -75,7 +75,7 @@ jobs:
           TARGET: ${{ matrix.target }}
         run: |
           cargo +1.99.1 build --locked --release --target "$TARGET" --target-dir "$RUNNER_TEMP/cargo-target" -j 2
-          cargo +1.99.1 test --locked --target "$TARGET" --target-dir "$RUNNER_TEMP/cargo-target" -j 2
+          cargo +1.99.1 test --locked --release --target "$TARGET" --target-dir "$RUNNER_TEMP/cargo-target" -j 2
       - name: Test the portable .NET contracts with the actual native library
         env:
           TARGET: ${{ matrix.target }}

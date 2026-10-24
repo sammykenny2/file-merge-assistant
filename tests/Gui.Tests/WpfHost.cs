@@ -109,8 +109,8 @@ internal static class WpfHost
     {
       dispatcher = Dispatcher.CurrentDispatcher;
       SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(dispatcher));
-      var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-      app.InitializeComponent();
+      var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+      app.Resources.Source = new Uri("/FileMergeAssistant;component/Resources/ApplicationResources.xaml", UriKind.Relative);
       PresentationTraceSources.Refresh();
       PresentationTraceSources.DataBindingSource.Listeners.Add(Listener);
       PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Error;

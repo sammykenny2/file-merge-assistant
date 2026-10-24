@@ -7,6 +7,16 @@ scanning; native image evidence/review remains tested. Automatic Windows and
 arm64 Linux/macOS CI is restored. Earlier Debug/key-blocked results below are
 historical; current publication policy is [ADR-016](decisions/ADR-016-public-native-preview.md).
 
+The first hosted Windows CI exposed a test-host locale reset: WPF queued the real
+App startup, which later applied the runner's English OS preferences. The render
+host now uses a plain WPF Application and the same shared resource dictionary as
+the product, without constructing the product App. Its regression checks explicit preference/system-language state
+after Dispatcher flush and the absence of product windows. This avoids starting
+the tray/index as a rendering side effect. Product startup behavior is unchanged.
+The corrected render-only host passes all 26 GUI tests locally with no skips.
+Templates explicitly own their Theme dependency, so deferred static resources
+resolve when the shared dictionary is loaded outside the product App.
+
 Source-root service wiring adds seven regression cases in
 `Analysis/SourcePathServiceTests`: canonical/identity/ancestor aliases, app-data
 aliases, known identity becoming unknown/replaced without metadata changes,

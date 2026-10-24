@@ -1,52 +1,7 @@
 <Application x:Class="FileMergeAssistant.Gui.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:w="clr-namespace:FileMergeAssistant.Gui.Workbench"
-             xmlns:s="clr-namespace:FileMergeAssistant.Gui.Settings"
-             xmlns:conv="clr-namespace:FileMergeAssistant.Gui.Converters">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Application.Resources>
-    <ResourceDictionary>
-      <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="Resources/Styles.xaml" />
-        <ResourceDictionary Source="Resources/Theme.xaml" />
-        <ResourceDictionary>
-          <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
-          <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
-          <conv:NullToVisibilityConverter x:Key="NullToVisibility" />
-          <conv:InverseBooleanConverter x:Key="InverseBool" />
-          <w:BytesTextConverter x:Key="BytesText" />
-        </ResourceDictionary>
-        <ResourceDictionary Source="Resources/WorkbenchTemplates.xaml" />
-      </ResourceDictionary.MergedDictionaries>
-
-      <!-- Workbench screens -->
-      <DataTemplate DataType="{x:Type w:AddSourcesViewModel}">
-        <w:AddSourcesView />
-      </DataTemplate>
-      <DataTemplate DataType="{x:Type w:SourcesViewModel}">
-        <w:SourcesView />
-      </DataTemplate>
-      <DataTemplate DataType="{x:Type w:HubViewModel}">
-        <w:HubView />
-      </DataTemplate>
-      <DataTemplate DataType="{x:Type w:StackViewModel}">
-        <w:StackView />
-      </DataTemplate>
-      <DataTemplate DataType="{x:Type w:PlanViewModel}">
-        <w:PlanView />
-      </DataTemplate>
-      <DataTemplate DataType="{x:Type w:HistoryViewModel}">
-        <w:HistoryView />
-      </DataTemplate>
-      <DataTemplate DataType="{x:Type w:SinceViewModel}">
-        <w:SinceView />
-      </DataTemplate>
-      <DataTemplate DataType="{x:Type w:ImageReviewViewModel}">
-        <w:ImageReviewView />
-      </DataTemplate>
-      <DataTemplate DataType="{x:Type s:SettingsViewModel}">
-        <s:SettingsView />
-      </DataTemplate>
-    </ResourceDictionary>
+    <ResourceDictionary Source="Resources/ApplicationResources.xaml" />
   </Application.Resources>
 </Application>

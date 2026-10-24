@@ -2,6 +2,10 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:w="clr-namespace:FileMergeAssistant.Gui.Workbench">
 
+  <ResourceDictionary.MergedDictionaries>
+    <ResourceDictionary Source="Theme.xaml" />
+  </ResourceDictionary.MergedDictionaries>
+
   <!-- Status chip: text plus an icon; the colour only repeats what the text says. -->
   <DataTemplate DataType="{x:Type w:ChipInfo}">
     <Grid HorizontalAlignment="Left" VerticalAlignment="Center">
