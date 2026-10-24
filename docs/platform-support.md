@@ -32,9 +32,17 @@ and serialized shape; the Windows identity reader moved with the contracts.
 Core's existing `PathIdentity.Identify` delegates to it. No database schema or
 analysis contract version changes are required by this assembly extraction.
 
+The Windows workbench additionally accepts an `ISourcePathService` instance.
+Registration, canonical/overlap checks, captured root identity, repeated worker
+availability probes, isolated comparison/image sessions and image previews use
+that same service. The default keeps existing Windows behavior; fake-provider
+tests cover canonical/physical aliases, app-data rejection, unknown/replaced
+identities, changes between probes and resumption of the original frozen job.
+This implements a replaceable root-service boundary, not a Unix implementation.
+
 | Remaining area | Current dependency | Required before a complete port |
 |----------------|--------------------|---------------------------------|
-| `Core/Sources/PathIdentity`, `RootPaths`, source registration | Win32 physical path resolution, drive/UNC/subst aliases, Windows path comparison | Platform path/volume/alias providers and overlap tests |
+| `ISourcePathService`, Windows `PathIdentity`/`RootPaths` implementation | Replaceable registration/scope service; Win32 drive/UNC/subst aliases and name policy remain the default | Implement/verify target-specific providers; operation-path port remains separate |
 | Analysis observations | Win32 identity available; Unix metadata only | Stable non-Windows identity and replacement detection, including volume changes |
 | Inventory and source availability | Windows cloud/reparse flags, root identities, drive notifications | Explicit filesystem/link/cloud policies and unavailable-volume tests |
 | Plans/recycling/restore | Per-volume Windows paths, journal/identity revalidation | Platform-specific atomicity, permissions, crash/restore and cross-volume acceptance |
@@ -61,7 +69,7 @@ the portable verifier. Return the entire printed report directory, including
 build output, loader dependencies, Cargo graph, per-check status and errors.
 Testing a second volume separately still does not prove cross-volume operations.
 
-Windows-local evidence for this extraction: Core 507, GUI 25 and CLI 12 tests
+Windows-local evidence after root-service wiring: Core 514, GUI 25 and CLI 12 tests
 passed with zero skipped. Portable tests and published verifier are recorded in
 [testing](testing.md#portable-analysis-leaf); the verifier's symlink case is
 separately Skipped. Foreign native build/run results, USB/HDD, interactive GUI

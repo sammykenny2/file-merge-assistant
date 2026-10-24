@@ -37,8 +37,9 @@ public sealed record ScanJobSnapshot(int Version, string SourceId, AnalysisEngin
   }
 
   public static ScanJobSnapshot Capture(SqliteConnection connection, string sourceId, AnalysisEngineSnapshot engine,
-    IReadOnlyList<string> excludedRoots)
+    IReadOnlyList<string> excludedRoots, ISourcePathService? paths = null)
   {
+    paths ??= WindowsSourcePathService.Instance;
     var sources = ImmutableArray.CreateBuilder<ScanSourceSnapshot>();
     using var command = IndexDatabase.Command(connection,
       "SELECT id, root, skip_regenerable, skip_cloud, regenerable_names, exclusions, volume_serial, is_protected FROM sources ORDER BY position");
@@ -52,7 +53,7 @@ public sealed record ScanJobSnapshot(int Version, string SourceId, AnalysisEngin
         ExcludedRoots = excludedRoots.ToImmutableArray(),
       };
       // Do not probe an offline root. A captured identity additionally detects replacement of the root folder.
-      var identity = Directory.Exists(root) && OperatingSystem.IsWindows() ? PathIdentity.Identify(root) : null;
+      var identity = paths.DirectoryExists(root) ? paths.Identify(root) : null;
       sources.Add(new(source, reader.IsDBNull(6) ? null : reader.GetString(6), identity, reader.GetInt64(7) != 0));
     }
     return Create(sourceId, engine, sources.ToImmutable());
@@ -76,13 +77,14 @@ public sealed record ScanJobSnapshot(int Version, string SourceId, AnalysisEngin
     }
   }
 
-  public static bool IsOnline(ScanSourceSnapshot snapshot, IVolumeInfoProvider volumes)
+  public static bool IsOnline(ScanSourceSnapshot snapshot, IVolumeInfoProvider volumes, ISourcePathService? paths = null)
   {
+    paths ??= WindowsSourcePathService.Instance;
     var root = snapshot.Source.Root;
-    if (!Directory.Exists(root)) { return false; }
+    if (!paths.DirectoryExists(root)) { return false; }
     if (snapshot.VolumeSerial is { } expected && volumes.Describe(root)?.Serial != expected) { return false; }
     return snapshot.RootIdentity is not { } identity
-      || OperatingSystem.IsWindows() && PathIdentity.Identify(root) is { } current && identity.SameAs(current);
+      || paths.Identify(root) is { } current && identity.SameAs(current);
   }
 }
 

@@ -9,6 +9,10 @@ No version has been published yet.
 
 ## Unreleased
 
+- Route source registration and frozen-root checks through one replaceable path
+  service, including isolated analysis sessions and image previews. Keep Windows
+  defaults and saved snapshot shapes; Unix identity/operations remain unverified.
+
 - Bound large conflict/outcome views to recycled visible controls, retaining all
   models and radio choices. Add an isolated offscreen WPF scale probe; physical
   keyboard, focus-cue and high-DPI validation remain pending in the owner's VM.

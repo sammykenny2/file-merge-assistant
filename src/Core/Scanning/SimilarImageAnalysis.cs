@@ -16,7 +16,8 @@ public sealed record SimilarImageReport(int FormatVersion, string Outcome, int T
 }
 
 /// <summary>Global pair comparison over validated per-file evidence, with no exact-content plan or grouping.</summary>
-public sealed class SimilarImageAnalysis(AnalysisEngineRegistry engines, string? dataRoot = null, IVolumeInfoProvider? volumes = null)
+public sealed class SimilarImageAnalysis(AnalysisEngineRegistry engines, string? dataRoot = null, IVolumeInfoProvider? volumes = null,
+  ISourcePathService? sourcePaths = null)
 {
   public const int DefaultThreshold = 6;
   public const int MaximumThreshold = 16;
@@ -40,7 +41,7 @@ public sealed class SimilarImageAnalysis(AnalysisEngineRegistry engines, string?
     }
     if (threshold is < 0 or > MaximumThreshold) { throw new ArgumentOutOfRangeException(nameof(threshold)); }
     engines.Resolve(engine);
-    var session = new ReadOnlyAnalysisSession(engines, dataRoot, volumes);
+    var session = new ReadOnlyAnalysisSession(engines, dataRoot, volumes, sourcePaths);
     var report = sources.IsDefault
       ? await session.RunAsync(paths, engine, progress, cancellationToken).ConfigureAwait(false)
       : await session.RunConfiguredAsync(sources, engine, progress, cancellationToken).ConfigureAwait(false);

@@ -1,5 +1,14 @@
 # Testing Strategy
 
+Source-root service wiring adds seven regression cases in
+`Analysis/SourcePathServiceTests`: canonical/identity/ancestor aliases, app-data
+aliases, known identity becoming unknown/replaced without metadata changes,
+publication rejection followed by same-job resumption, and independent comparison
+sessions preserving the injected identity. Full Windows regression after this
+change passed Core 514, GUI 25, CLI 12 and portable analysis 21 with zero skips.
+The default provider retains Windows rules; no Unix provider or platform gate
+is inferred from fake-provider tests.
+
 The optional [offscreen WPF scale probe](../tests/gui-scale-host/README.md) uses
 10,001 in-memory stacks, 10,000 conflicts and the existing 200-row summary cap.
 It asserts bounded recycled controls, retained radio choices/outcome models and

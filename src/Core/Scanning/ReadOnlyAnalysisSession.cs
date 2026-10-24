@@ -29,8 +29,10 @@ public sealed class ReadOnlyAnalysisSession
   private readonly AnalysisEngineRegistry _engines;
   private readonly string _dataRoot;
   private readonly IVolumeInfoProvider _volumes;
+  private readonly ISourcePathService _paths;
 
-  public ReadOnlyAnalysisSession(AnalysisEngineRegistry engines, string? dataRoot = null, IVolumeInfoProvider? volumes = null)
+  public ReadOnlyAnalysisSession(AnalysisEngineRegistry engines, string? dataRoot = null, IVolumeInfoProvider? volumes = null,
+    ISourcePathService? sourcePaths = null)
   {
     _engines = engines;
     dataRoot ??= AppDataPaths.Root;
@@ -38,6 +40,7 @@ public sealed class ReadOnlyAnalysisSession
     if (!Path.IsPathFullyQualified(dataRoot)) { throw new ArgumentException("The analysis data directory must be absolute.", nameof(dataRoot)); }
     _dataRoot = Path.GetFullPath(dataRoot);
     _volumes = volumes ?? new Win32VolumeInfoProvider();
+    _paths = sourcePaths ?? WindowsSourcePathService.Instance;
   }
 
   public Task<AnalysisSessionReport> RunAsync(IReadOnlyList<string> paths, AnalysisEngineSnapshot engine,
@@ -65,32 +68,32 @@ public sealed class ReadOnlyAnalysisSession
   {
     var clock = Stopwatch.StartNew();
     var before = AnalysisProcessMetrics.Capture();
-    var owned = PathIdentity.Resolve(_dataRoot);
+    var owned = _paths.Resolve(_dataRoot);
     PathText.RequireSupported(owned, nameof(_dataRoot));
     foreach (var path in paths)
     {
-      var source = PathIdentity.Resolve(Path.GetFullPath(path));
-      if (LocationSuggester.Same(source, owned) || LocationSuggester.Inside(source, owned) || PathIdentity.SameOrInside(source, owned) == true)
+      var source = _paths.Resolve(Path.GetFullPath(path));
+      if (_paths.Same(source, owned) || _paths.Inside(source, owned) || _paths.SameOrInside(source, owned) == true)
       {
         throw new ArgumentException("An analysis source cannot be inside the application's data directory.", nameof(paths));
       }
     }
     Directory.CreateDirectory(_dataRoot);
     // Persist the physical location as the exclusion, including aliases whose final folder was just created.
-    var dataRoot = PathIdentity.Resolve(_dataRoot);
+    var dataRoot = _paths.Resolve(_dataRoot);
     PathText.RequireSupported(dataRoot, nameof(_dataRoot));
     var index = Path.Combine(dataRoot, $"analysis-{Guid.NewGuid():N}.db");
     // Claim a new name: no existing index or user work can be overwritten.
     using (File.Open(index, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
     var database = IndexDatabase.OpenOrCreate(index);
-    using (var setup = IndexedWorkbenchStore.Open(index, _volumes, context: null, startWorker: false, engines: _engines))
+    using (var setup = IndexedWorkbenchStore.Open(index, _volumes, context: null, startWorker: false, engines: _engines, sourcePaths: _paths))
     {
       if (engine.Capability == AnalysisCapability.ExactDuplicates) { setup.SelectNewJobEngine(engine); }
       var problems = await setup.AddSourcesAsync(paths, new SourceOptions(true, true, paths), startScan: true).ConfigureAwait(false);
       if (problems.Count > 0) { throw new ArgumentException(string.Join(Environment.NewLine, problems), nameof(paths)); }
     }
     if (!sources.IsDefault || engine.Capability == AnalysisCapability.SimilarImages) { BindConfiguredSources(database, engine, sources, dataRoot); }
-    using var worker = new ScanWorker(database, _volumes, [dataRoot], _engines);
+    using var worker = new ScanWorker(database, _volumes, [dataRoot], _engines, _paths);
     var canceled = false;
     worker.Start();
     worker.Wake();
@@ -113,7 +116,7 @@ public sealed class ReadOnlyAnalysisSession
     foreach (var source in finalJobs.SelectMany(job => job.Snapshot.Sources).DistinctBy(source => source.Source.Id))
     {
       if (cancellationToken.IsCancellationRequested) { break; }
-      if (ScanJobSnapshot.IsOnline(source, _volumes)) { online.Add(source.Source.Id); }
+      if (ScanJobSnapshot.IsOnline(source, _volumes, _paths)) { online.Add(source.Source.Id); }
     }
     if (finalJobs.Any(job => !online.Contains(job.SourceId))) { complete = false; }
     var files = ReadFiles(database, engine, online, ref complete, cancellationToken);
@@ -147,18 +150,21 @@ public sealed class ReadOnlyAnalysisSession
     return new(1, index, descriptor, engine, outcome, finalJobs, files, groups, AnalysisProcessMetrics.Difference(before, clock.ElapsedMilliseconds));
   }
 
-  private static void BindConfiguredSources(IndexDatabase database, AnalysisEngineSnapshot engine,
+  private void BindConfiguredSources(IndexDatabase database, AnalysisEngineSnapshot engine,
     ImmutableArray<ScanSourceSnapshot> sources, string dataRoot)
   {
     using var connection = database.Open();
     using var transaction = connection.BeginTransaction();
-    var registered = ScanJobSnapshot.Capture(connection, "binding", engine, [dataRoot]).Sources;
+    var registered = ScanJobSnapshot.Capture(connection, "binding", engine, [dataRoot], _paths).Sources;
     if (sources.IsDefault) { sources = registered; }
     var bound = registered.Select(item =>
     {
-      var policy = sources.Single(source => string.Equals(source.Source.Root, item.Source.Root, StringComparison.Ordinal));
+      var canonical = _paths.Resolve(item.Source.Root);
+      var matches = sources.Where(source => _paths.Same(_paths.Resolve(source.Source.Root), canonical)).ToArray();
+      if (matches.Length != 1) { throw new InvalidDataException("The registered source must map uniquely to its frozen source policy."); }
+      var policy = matches[0];
       return policy with { Source = policy.Source with { Id = item.Source.Id,
-        ExcludedRoots = policy.Source.ExcludedRoots.Append(dataRoot).Distinct(StringComparer.Ordinal).ToImmutableArray() } };
+        ExcludedRoots = policy.Source.ExcludedRoots.Append(dataRoot).Distinct(_paths.Comparer).ToImmutableArray() } };
     }).ToImmutableArray();
     foreach (var item in bound)
     {

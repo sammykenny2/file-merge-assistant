@@ -20,6 +20,7 @@ public sealed class ScanWorker : IDisposable
   private readonly IndexDatabase _database;
   private readonly AnalysisEngineRegistry _engines;
   private readonly IVolumeInfoProvider _volumes;
+  private readonly ISourcePathService _paths;
   private readonly IReadOnlyList<string> _excludedRoots;
   private readonly SemaphoreSlim _signal = new(0);
   private readonly CancellationTokenSource _shutdown = new();
@@ -33,11 +34,13 @@ public sealed class ScanWorker : IDisposable
   /// <param name="database">The index.</param>
   /// <param name="volumes">Checks that a source's folder is on the volume it was added from (ADR-010).</param>
   /// <param name="excludedRoots">Folders never scanned, such as the app's data folder with its recycle area.</param>
-  public ScanWorker(IndexDatabase database, IVolumeInfoProvider volumes, IReadOnlyList<string> excludedRoots, AnalysisEngineRegistry? engines = null)
+  public ScanWorker(IndexDatabase database, IVolumeInfoProvider volumes, IReadOnlyList<string> excludedRoots, AnalysisEngineRegistry? engines = null,
+    ISourcePathService? sourcePaths = null)
   {
     _database = database;
     _engines = engines ?? AnalysisEngineRegistry.ManagedOnly();
     _volumes = volumes;
+    _paths = sourcePaths ?? WindowsSourcePathService.Instance;
     _excludedRoots = excludedRoots;
   }
 
@@ -228,11 +231,11 @@ public sealed class ScanWorker : IDisposable
       return;
     }
     var own = snapshot.Sources.Single(item => item.Source.Id == sourceId);
-    var source = own.Source with { ExcludedRoots = own.Source.ExcludedRoots.Concat(_excludedRoots).Distinct(StringComparer.OrdinalIgnoreCase).ToArray() };
-    if (!ScanJobSnapshot.IsOnline(own, _volumes))
+    var source = own.Source with { ExcludedRoots = own.Source.ExcludedRoots.Concat(_excludedRoots).Distinct(_paths.Comparer).ToArray() };
+    if (!ScanJobSnapshot.IsOnline(own, _volumes, _paths))
     {
       // Missing, or another disk under the same letter: never index it as this source.
-      SetState(connection, jobId, "WaitingForSource", AppText.Get(Directory.Exists(source.Root) ? "scan.job.otherDrive" : "scan.job.offline"));
+      SetState(connection, jobId, "WaitingForSource", AppText.Get(_paths.DirectoryExists(source.Root) ? "scan.job.otherDrive" : "scan.job.offline"));
       return;
     }
     JobChanged?.Invoke(this, false);
@@ -257,11 +260,11 @@ public sealed class ScanWorker : IDisposable
     try
     {
       // The own root must never fall out of the guard between two probes.
-      var available = snapshot.Sources.Where(item => item.Source.Id == sourceId || ScanJobSnapshot.IsOnline(item, _volumes)).ToArray();
+      var available = snapshot.Sources.Where(item => item.Source.Id == sourceId || ScanJobSnapshot.IsOnline(item, _volumes, _paths)).ToArray();
       var roots = available.ToDictionary(item => item.Source.Id, item => item.Source.Root, StringComparer.Ordinal);
       void CheckScope()
       {
-        if (available.Any(item => !ScanJobSnapshot.IsOnline(item, _volumes)))
+        if (available.Any(item => !ScanJobSnapshot.IsOnline(item, _volumes, _paths)))
         {
           throw new ScanSourceUnavailableException(AppText.Get("scan.job.scopeChanged"));
         }

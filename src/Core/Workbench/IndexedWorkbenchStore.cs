@@ -43,6 +43,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
 
   private readonly IndexDatabase _database;
   private readonly IVolumeInfoProvider _volumes;
+  private readonly ISourcePathService _paths;
   private readonly SynchronizationContext? _context;
   private readonly ScanWorker _worker;
   private readonly AnalysisEngineRegistry _engines;
@@ -78,18 +79,19 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   private long _detectedSequence;
 
   private IndexedWorkbenchStore(IndexDatabase database, IVolumeInfoProvider volumes, SynchronizationContext? context, bool detectNow,
-    AnalysisEngineRegistry? engines)
+    AnalysisEngineRegistry? engines, ISourcePathService paths)
   {
     _database = database;
     _volumes = volumes;
+    _paths = paths;
     _context = context;
     _engines = engines ?? AnalysisEngineRegistry.CreateDefault();
     _newJobEngine = _engines.Snapshot(ManagedAnalysisEngine.EngineId, AnalysisCapability.ExactDuplicates, ContentFingerprints.XxHash128);
     LoadAnalysisSelection();
-    _areas = new RecycleAreaLocator(PathIdentity.Resolve(Path.GetDirectoryName(Path.GetFullPath(database.Path))!));
+    _areas = new RecycleAreaLocator(_paths.Resolve(Path.GetDirectoryName(Path.GetFullPath(database.Path))!));
     _executor = new PlanExecutor(_areas);
     ScanWorker.RecoverInterrupted(database);
-    _worker = new ScanWorker(database, volumes, [_areas.AppDataRoot], _engines);
+    _worker = new ScanWorker(database, volumes, [_areas.AppDataRoot], _engines, _paths);
     _worker.JobChanged += (_, ended) => QueueRefresh(detect: ended || _sinceDetect.Elapsed > DetectInterval);
     LoadDecisions();
     RecoverInterruptedRun();
@@ -116,11 +118,12 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   /// <param name="startWorker">False keeps queued jobs waiting (tests start it themselves).</param>
   /// <param name="detectNow">True detects stacks before returning; false detects them in the background (the app).</param>
   /// <param name="engines">The available analysis implementations; managed analysis is required.</param>
+  /// <param name="sourcePaths">Source naming/identity observations; existing Windows rules by default.</param>
   public static IndexedWorkbenchStore Open(string path, IVolumeInfoProvider? volumes = null, SynchronizationContext? context = null,
-    bool startWorker = true, bool detectNow = true, AnalysisEngineRegistry? engines = null)
+    bool startWorker = true, bool detectNow = true, AnalysisEngineRegistry? engines = null, ISourcePathService? sourcePaths = null)
   {
     var store = new IndexedWorkbenchStore(IndexDatabase.OpenOrCreate(path), volumes ?? new Win32VolumeInfoProvider(),
-      context ?? SynchronizationContext.Current, detectNow, engines);
+      context ?? SynchronizationContext.Current, detectNow, engines, sourcePaths ?? WindowsSourcePathService.Instance);
     if (startWorker)
     {
       store.StartScanning();
@@ -163,15 +166,15 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     => Task.Run(async () =>
     {
       var sources = CaptureOnlineSources(first);
-      return await new AnalysisEngineComparison(_engines, _areas.AppDataRoot, _volumes)
+      return await new AnalysisEngineComparison(_engines, _areas.AppDataRoot, _volumes, _paths)
         .RunConfiguredAsync(sources, first, second, progress, cancellationToken).ConfigureAwait(false);
     }, cancellationToken);
 
-  public ImageReviewArchive ImageReviews => new(_areas.AppDataRoot, _volumes);
+  public ImageReviewArchive ImageReviews => new(_areas.AppDataRoot, _volumes, _paths);
 
   public Task<SimilarImageReport> AnalyzeImagesAsync(AnalysisEngineSnapshot engine, int threshold,
     IProgress<ImmutableArray<AnalysisSessionJob>>? progress = null, CancellationToken cancellationToken = default)
-    => Task.Run(() => new SimilarImageAnalysis(_engines, _areas.AppDataRoot, _volumes)
+    => Task.Run(() => new SimilarImageAnalysis(_engines, _areas.AppDataRoot, _volumes, _paths)
       .RunConfiguredAsync(CaptureOnlineSources(engine), engine, threshold, progress, cancellationToken), cancellationToken);
 
   private ImmutableArray<ScanSourceSnapshot> CaptureOnlineSources(AnalysisEngineSnapshot engine)
@@ -179,8 +182,8 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     using var connection = _database.Open();
     var id = IndexDatabase.Scalar<string>(connection, "SELECT id FROM sources ORDER BY position LIMIT 1")
       ?? throw new InvalidOperationException("No sources are configured.");
-    var sources = ScanJobSnapshot.Capture(connection, id, engine, [_areas.AppDataRoot]).Sources
-      .Where(source => ScanJobSnapshot.IsOnline(source, _volumes)).ToImmutableArray();
+    var sources = ScanJobSnapshot.Capture(connection, id, engine, [_areas.AppDataRoot], _paths).Sources
+      .Where(source => ScanJobSnapshot.IsOnline(source, _volumes, _paths)).ToImmutableArray();
     if (sources.IsEmpty) { throw new InvalidOperationException("No configured source is online."); }
     return sources;
   }
@@ -282,7 +285,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     ArgumentNullException.ThrowIfNull(options);
     // Resolving real locations can wait on a slow or disconnected network drive; never on the interface thread.
     // Only sources known to be online are asked for their identity; an unplugged network drive would stall every check.
-    var online = _onlineRoots.Values.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var online = _onlineRoots.Values.ToHashSet(_paths.Comparer);
     var problems = await Task.Run(() => AddSources(paths, options, startScan, online)).ConfigureAwait(true);
     _worker.Wake();
     Apply(Build(detect: false, probe: false));
@@ -297,7 +300,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     {
       // Compare real locations: a junction, subst drive or mapped drive must not add the same folder twice (ADR-010).
       var existing = ReadSourceRoots(connection);
-      var appData = PathIdentity.Resolve(_areas.AppDataRoot);
+      var appData = _paths.Resolve(_areas.AppDataRoot);
       foreach (var raw in paths)
       {
         string path;
@@ -305,7 +308,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         try
         {
           path = Normalize(raw);
-          real = PathIdentity.Resolve(path);
+          real = _paths.Resolve(path);
           PathText.RequireSupported(real);
         }
         catch (ArgumentException)
@@ -313,27 +316,27 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
           problems.Add(AppText.Get("store.add.invalid", ("path", raw is null ? "<null>" : PathText.EscapeUnsupported(raw))));
           continue;
         }
-        if (!Directory.Exists(path))
+        if (!_paths.DirectoryExists(path))
         {
           problems.Add(AppText.Get("store.add.missing", ("path", path)));
           continue;
         }
-        if (LocationSuggester.Same(real, appData) || LocationSuggester.Inside(real, appData) || PathIdentity.SameOrInside(path, _areas.AppDataRoot) == true)
+        if (_paths.Same(real, appData) || _paths.Inside(real, appData) || _paths.SameOrInside(path, _areas.AppDataRoot) == true)
         {
           problems.Add(AppText.Get("store.add.appFolder", ("path", path)));
           continue;
         }
         // Names first (they also work for sources that are offline), then identity: a UNC path, junction, subst or mapped
         // drive can name a folder that is already a source.
-        var self = PathIdentity.Identify(path);
+        var self = _paths.Identify(path);
         string? clash = null;
         foreach (var e in existing)
         {
           var known = online.Contains(e.Root);
-          var same = LocationSuggester.Same(e.Root, real)
-            || (known && self is { } mine && PathIdentity.Identify(e.Root) is { } theirs && theirs.SameAs(mine));
-          var inside = !same && (LocationSuggester.Inside(real, e.Root) || (known && PathIdentity.SameOrInside(path, e.Root) == true));
-          var around = !same && !inside && (LocationSuggester.Inside(e.Root, real) || (known && PathIdentity.SameOrInside(e.Root, path) == true));
+          var same = _paths.Same(e.Root, real)
+            || (known && self is { } mine && _paths.Identify(e.Root) is { } theirs && theirs.SameAs(mine));
+          var inside = !same && (_paths.Inside(real, e.Root) || (known && _paths.SameOrInside(path, e.Root) == true));
+          var around = !same && !inside && (_paths.Inside(e.Root, real) || (known && _paths.SameOrInside(e.Root, path) == true));
           var key = same ? "store.add.same" : inside ? "store.add.inside" : around ? "store.add.around" : null;
           if (key is not null)
           {
@@ -358,7 +361,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
           VALUES ($id, $name, $root, $protected, $regen, $cloud, $names, $exclusions, $serial, $label, $kind, $at, $position)
           """,
           ("$id", id), ("$name", name), ("$root", real),
-          ("$protected", options.ProtectedPaths.Any(p => LocationSuggester.Same(p, path) || LocationSuggester.Same(p, real)) ? 1 : 0),
+          ("$protected", options.ProtectedPaths.Any(p => _paths.Same(p, path) || _paths.Same(p, real)) ? 1 : 0),
           ("$regen", options.SkipRegenerable ? 1 : 0), ("$cloud", options.SkipCloudOnly ? 1 : 0),
           ("$names", string.Join('\n', RegenerableFolders.Defaults)), ("$exclusions", string.Join('\n', DefaultExclusions)),
           // The drive's description is stored in the language of the moment, like every text written into the index.
@@ -1116,7 +1119,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
         var serial = reader.IsDBNull(6) ? null : reader.GetString(6);
         var isOnline = !probe && known.Contains(id)
           ? lastOnline.ContainsKey(id)
-          : Directory.Exists(root) && (serial is null || _volumes.Describe(root)?.Serial is not { } current || current == serial);
+          : _paths.DirectoryExists(root) && (serial is null || _volumes.Describe(root)?.Serial is not { } current || current == serial);
         if (isOnline)
         {
           online[id] = root;
@@ -1653,7 +1656,7 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
   private void QueueJob(SqliteConnection connection, string sourceId, string title, ScanJobKind kind, string reason)
   {
     var position = IndexDatabase.Scalar<long>(connection, "SELECT COALESCE(MAX(position), 0) + 1 FROM jobs");
-    var snapshot = ScanJobSnapshot.Capture(connection, sourceId, _newJobEngine, [_areas.AppDataRoot]);
+    var snapshot = ScanJobSnapshot.Capture(connection, sourceId, _newJobEngine, [_areas.AppDataRoot], _paths);
     IndexDatabase.Execute(connection,
       "INSERT INTO jobs(id, source_id, title, kind, state, phase, queued_at, position, reason, analysis_snapshot) VALUES ($id, $s, $t, $k, 'Queued', 'Discover', $at, $p, $r, $snapshot)",
       ("$id", "j" + Guid.NewGuid().ToString("N")[..10]), ("$s", sourceId), ("$t", title), ("$k", kind.ToString()),

@@ -111,12 +111,11 @@ public static class LocationSuggester
     return count;
   }
 
-  internal static bool Same(string a, string b) => string.Equals(a.TrimEnd('\\'), b.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+  internal static bool Same(string a, string b) => WindowsSourcePathService.Instance.Same(a, b);
 
   /// <summary>True when <paramref name="child"/> is strictly inside <paramref name="parent"/>.</summary>
   internal static bool Inside(string child, string parent)
   {
-    var p = parent.TrimEnd('\\') + "\\";
-    return child.Length > p.Length - 1 && !Same(child, parent) && child.StartsWith(p, StringComparison.OrdinalIgnoreCase);
+    return WindowsSourcePathService.Instance.Inside(child, parent);
   }
 }

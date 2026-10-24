@@ -17,7 +17,8 @@ public sealed record AnalysisComparisonReport(int FormatVersion, string Outcome,
 }
 
 /// <summary>Two sequential, independently validated read-only runs; differences never create a combined operation plan.</summary>
-public sealed class AnalysisEngineComparison(AnalysisEngineRegistry engines, string? dataRoot = null, IVolumeInfoProvider? volumes = null)
+public sealed class AnalysisEngineComparison(AnalysisEngineRegistry engines, string? dataRoot = null, IVolumeInfoProvider? volumes = null,
+  ISourcePathService? sourcePaths = null)
 {
   public Task<AnalysisComparisonReport> RunAsync(IReadOnlyList<string> paths, AnalysisEngineSnapshot first, AnalysisEngineSnapshot second,
     IProgress<AnalysisComparisonProgress>? progress = null, CancellationToken cancellationToken = default)
@@ -36,7 +37,7 @@ public sealed class AnalysisEngineComparison(AnalysisEngineRegistry engines, str
     {
       throw new ArgumentException("This comparison requires two exact-content configurations.", nameof(first));
     }
-    var session = new ReadOnlyAnalysisSession(engines, dataRoot, volumes);
+    var session = new ReadOnlyAnalysisSession(engines, dataRoot, volumes, sourcePaths);
     Task<AnalysisSessionReport> Run(AnalysisEngineSnapshot engine, int pass) => sources.IsDefault
       ? session.RunAsync(paths, engine, new ForwardProgress(pass, engine.EngineId, progress), cancellationToken)
       : session.RunConfiguredAsync(sources, engine, new ForwardProgress(pass, engine.EngineId, progress), cancellationToken);

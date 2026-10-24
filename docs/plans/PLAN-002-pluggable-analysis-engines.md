@@ -145,7 +145,7 @@ load-more 的同步累計時間不等於單次點擊或實體輸入延遲，限�
 
 ### Phase 6：後續平台與 UI 技術驗證
 
-- [ ] Task 6.1：盤點並抽象化 Windows 路徑／磁碟／檔案身份及系統整合，將可攜的 Core／契約測試分離出目前 `net10.0-windows` 目標限制。
+- [x] Task 6.1：盤點並抽象化 Windows 路徑／磁碟／檔案身份及系統整合，將可攜的 Core／契約測試分離出目前 `net10.0-windows` 目標限制。來源服務接線與可攜分析 leaf 已完成；真正 Unix provider 與平台執行證據仍由 6.2／6.3 驗證，不代表整套 Core 已移植。
 - [ ] Task 6.2：依可用硬體選定 macOS／Linux 平台及架構，建置對應 `.dylib`／`.so`，以小型資料驗證大小寫、Unicode、連結、權限與跨磁碟行為。
 - [ ] Task 6.3：記錄各平台與檔案系統的支援證據；尚未完成執行／還原驗收的平台先限制為分析與檢視，不標為完整 FMA 支援。
 - [x] Task 6.4：另行決定 Avalonia 技術驗證與 ADR-009 的後續狀態；只有通過驗證並取得 UI 採用決定後，才建立 GUI 移植計畫。現階段保留 WPF，Avalonia 驗證延後，未建立 GUI 移植計畫。
@@ -162,6 +162,15 @@ macOS arm64 的 source/vendor/self-contained [私有驗證包](../analysis-platf
 Unix 尚無物理檔案身份 provider，目標機 native build/run 與跨磁碟結果待產品
 負責人執行回傳；6.1 至 6.3 仍未全部完成，G6 未通過。ADR-009 已記錄保留
 WPF、延後 Avalonia 驗證的安排，並非已驗證或採用跨平台 GUI。
+
+Slice 6b：來源新增／canonical／overlap、快照 Capture／IsOnline、ScanWorker
+重複探測，以及比較／圖片 session／preview 均接同一個 `ISourcePathService`。
+Windows 預設保留既有行為，volume／startup 的現有介面沿用；未移植操作／GUI。
+七項 fake-provider 回歸涵蓋別名、未知／替換身份、探測途中變更、不發布部分結果
+及同 Job ID 恢復。Core 514／GUI 25／CLI 12／分析 21 零略過；實際 Unix provider
+及目標 filesystem 結果仍待驗，本 slice 不提升非 Windows 支援或 G6 狀態。
+獨立審閱另確認 canonical casing 變更以同一服務唯一配對，保留原 frozen Root／
+RootIdentity；大小寫回歸與修正後完整測試通過，6.1 的本機抽象範圍完成。
 
 ## Files to Create/Modify
 

@@ -27,12 +27,14 @@ public sealed class ImageReviewArchive
   private const int MaximumErrors = 500;
   private static readonly ConcurrentDictionary<string, SemaphoreSlim> SaveGates = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
   private readonly IVolumeInfoProvider _volumes;
+  private readonly ISourcePathService _paths;
   public string DirectoryPath { get; }
 
-  public ImageReviewArchive(string dataRoot, IVolumeInfoProvider? volumes = null)
+  public ImageReviewArchive(string dataRoot, IVolumeInfoProvider? volumes = null, ISourcePathService? sourcePaths = null)
   {
     if (!Path.IsPathFullyQualified(dataRoot)) { throw new ArgumentException("The archive root must be absolute.", nameof(dataRoot)); }
-    DirectoryPath = Path.Combine(PathIdentity.Resolve(dataRoot), "image-reviews");
+    _paths = sourcePaths ?? WindowsSourcePathService.Instance;
+    DirectoryPath = Path.Combine(_paths.Resolve(dataRoot), "image-reviews");
     _volumes = volumes ?? new Win32VolumeInfoProvider();
   }
 
@@ -99,7 +101,7 @@ public sealed class ImageReviewArchive
     var source = document.Sources.Single(item => item.Source.Id == file.SourceId);
     void Check()
     {
-      if (file.Status != "PerceptualEvidence" || !ScanJobSnapshot.IsOnline(source, _volumes)
+      if (file.Status != "PerceptualEvidence" || !ScanJobSnapshot.IsOnline(source, _volumes, _paths)
         || !SourceScanner.Approved(source.Source, Path.GetRelativePath(source.Source.Root, file.Path), new FileInfo(file.Path))
         || ImageSourceScanner.IsCloudOnly(File.GetAttributes(file.Path)) || !file.Observation.Matches(FileObservation.Capture(file.Path)))
       {
@@ -136,14 +138,12 @@ public sealed class ImageReviewArchive
 
   private string RequireOwnedPath(string path)
   {
-    if (!Path.IsPathFullyQualified(path) || !string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), DirectoryPath,
-      OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
+    if (!Path.IsPathFullyQualified(path) || !_paths.Comparer.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), DirectoryPath)
       || !Path.GetFileName(path).StartsWith("review-", StringComparison.Ordinal) || Path.GetExtension(path) != ".json")
     {
       throw new ArgumentException("Choose an image review in this application's image-reviews folder.", nameof(path));
     }
-    if (Directory.Exists(DirectoryPath) && !string.Equals(PathIdentity.Resolve(DirectoryPath), DirectoryPath,
-      OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
+    if (_paths.DirectoryExists(DirectoryPath) && !_paths.Comparer.Equals(_paths.Resolve(DirectoryPath), DirectoryPath)
       || File.Exists(path) && new FileInfo(path).LinkTarget is not null)
     {
       throw new IOException("The image review archive must use its own physical directory and regular files.");

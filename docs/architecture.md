@@ -48,6 +48,16 @@ have size/time only. This extraction does not make source registration, durable
 workflows, operations or GUI portable. See the [platform matrix](platform-support.md)
 for the remaining Windows dependencies and target-machine validation kit.
 
+`ISourcePathService` now separates root existence, canonical paths, name/ancestor
+comparison and physical identity from source registration and frozen-scope
+checks. The store passes the same instance through capture, worker checks,
+read-only comparison/image sessions and preview validation. Its default
+`WindowsSourcePathService` keeps the existing Win32/Windows naming behavior.
+Volume facts remain behind `IVolumeInfoProvider`; startup keys already use
+`IStartupKeys`. These seams do not implement Unix root identities, port Windows
+operations, or change persisted snapshot/identity fields. Alternative providers
+must preserve those identity meanings or use an explicit migration/new-job policy.
+
 ## Exact-content flow
 
 Source registration resolves physical roots and rejects overlap/aliases and
