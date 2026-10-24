@@ -340,7 +340,7 @@ CI. Existing workflow history is preserved.
 To permit manual runs again, explicitly re-enable the workflow:
 
 ```powershell
-gh workflow enable ci.yaml --repo sammykenny2/file-merge-assistant
+gh workflow enable ci.yaml --repo sammykenny2/messy-file-workbench
 ```
 
 Automatic CI also requires restoring the `push` and `pull_request` events in the

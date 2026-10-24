@@ -42,7 +42,7 @@ public class UpdateFeedTests
   }
 
   [Theory]
-  [InlineData("sammykenny2/file-merge-assistant", true)]
+  [InlineData("sammykenny2/messy-file-workbench", true)]
   [InlineData("owner/app", true)]
   [InlineData("owner", false)]
   [InlineData("owner/app/extra", false)]

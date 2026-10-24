@@ -164,7 +164,7 @@ flowchart TD
 
 - [產品需求](../requirements.md)
 - [GUI 設計交接](../ux-design-brief.md)
-- [原始基準的掃描流程（0754699）](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Gui/ViewModels/ScanViewModel.cs)
-- [原始基準的結果操作（0754699）](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Gui/ViewModels/ResultsViewModel.cs)
+- [原始基準的掃描流程（0754699）](https://github.com/sammykenny2/messy-file-workbench/blob/0754699/src/Gui/ViewModels/ScanViewModel.cs)
+- [原始基準的結果操作（0754699）](https://github.com/sammykenny2/messy-file-workbench/blob/0754699/src/Gui/ViewModels/ResultsViewModel.cs)
 - [現有 JSON 儲存](../../src/Core/Services/JsonScanResultStore.cs)
 - [測試現況](../testing.md)

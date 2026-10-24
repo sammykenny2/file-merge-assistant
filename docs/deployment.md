@@ -197,6 +197,20 @@ for testing). **The check cannot work while that repository is private**: GitHub
 says the release source was not found. Make the repository public, or point `UpdateRepository` at a public
 repository that holds only releases, before publishing the first release.
 
+### Repository rename compatibility
+
+The public repository was renamed from `sammykenny2/file-merge-assistant` to
+`sammykenny2/messy-file-workbench` on 2026-10-25. New builds use the new
+`UpdateRepository`. Repository naming does not change the current assembly,
+installer, CLI, data-directory or Registry identifiers, or the update manifest
+and asset filenames. Existing tags and published assets are retained.
+
+The published 0.3.0 Preview still embeds the old repository. Its metadata
+requests deliberately reject redirects, so that binary cannot follow the
+repository rename during an update check. Obtain the next Preview manually
+from [GitHub Releases](https://github.com/sammykenny2/messy-file-workbench/releases).
+Changing source configuration does not update already-published binaries.
+
 ## Publishing a release
 
 Publication is explicitly authorized for the experimental 0.3.0 Preview:

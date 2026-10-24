@@ -46,8 +46,8 @@ File Merge Assistant helps you clean up years of accumulated duplicate files acr
 
 ```powershell
 # Clone the repository
-git clone https://github.com/sammykenny2/file-merge-assistant.git
-cd file-merge-assistant
+git clone https://github.com/sammykenny2/messy-file-workbench.git
+cd messy-file-workbench
 
 # Restore dependencies
 dotnet restore

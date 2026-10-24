@@ -44,7 +44,7 @@ File Merge Assistant 的目標是讓使用者透過 Windows GUI，持續整理�
 | 執行整理 | GUI 自動保留按鈕會直接呼叫執行；Dry Run 預設未勾選 | 保留建議先形成待審閱計畫，再確認執行 |
 | 還原 | GUI 提供專用回收區與全部還原 | 按操作批次追蹤結果，清楚標示可還原範圍 |
 
-當時實作依據（固定於 `0754699`）：[GUI 掃描](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Gui/ViewModels/ScanViewModel.cs)、[CLI 掃描](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Cli/Commands/ScanCommand.cs)、[JSON 儲存](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Core/Services/JsonScanResultStore.cs)、[重複判定](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Core/Services/DuplicateDetector.cs)、[GUI 整理](https://github.com/sammykenny2/file-merge-assistant/blob/0754699/src/Gui/ViewModels/ResultsViewModel.cs)。目前建置與測試狀態另見 [testing.md](testing.md)。
+當時實作依據（固定於 `0754699`）：[GUI 掃描](https://github.com/sammykenny2/messy-file-workbench/blob/0754699/src/Gui/ViewModels/ScanViewModel.cs)、[CLI 掃描](https://github.com/sammykenny2/messy-file-workbench/blob/0754699/src/Cli/Commands/ScanCommand.cs)、[JSON 儲存](https://github.com/sammykenny2/messy-file-workbench/blob/0754699/src/Core/Services/JsonScanResultStore.cs)、[重複判定](https://github.com/sammykenny2/messy-file-workbench/blob/0754699/src/Core/Services/DuplicateDetector.cs)、[GUI 整理](https://github.com/sammykenny2/messy-file-workbench/blob/0754699/src/Gui/ViewModels/ResultsViewModel.cs)。目前建置與測試狀態另見 [testing.md](testing.md)。
 
 ## 第一階段需求草案
 

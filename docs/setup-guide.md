@@ -6,7 +6,7 @@ Python and Node.js are not application prerequisites.
 
 ## Run a local package
 
-Preview binaries are listed in [GitHub Releases](https://github.com/sammykenny2/file-merge-assistant/releases);
+Preview binaries are listed in [GitHub Releases](https://github.com/sammykenny2/messy-file-workbench/releases);
 local build artifacts are also experimental.
 The NSIS installer installs for the current user. The portable ZIP contains
 `app/` and `cli/`; keep them together so both entry points use the same DLL.

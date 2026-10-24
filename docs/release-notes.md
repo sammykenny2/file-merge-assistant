@@ -5,7 +5,7 @@ starts with `Summary:` is the plain-text summary that the in-app update check sh
 whole entry becomes the GitHub release text. `scripts/windows/Get-ReleaseNotes.ps1` reads both, and the release
 workflow refuses to start without an entry for the version. See [deployment.md](deployment.md).
 
-Published previews appear in [GitHub Releases](https://github.com/sammykenny2/file-merge-assistant/releases).
+Published previews appear in [GitHub Releases](https://github.com/sammykenny2/messy-file-workbench/releases).
 
 ## 0.3.0
 

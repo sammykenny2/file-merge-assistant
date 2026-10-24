@@ -15,7 +15,7 @@
     <Authors>sammykenny2</Authors>
     <Copyright>Copyright (c) 2025-2026 sammykenny2</Copyright>
     <!-- GitHub repository (owner/name) whose public releases the update check reads. -->
-    <UpdateRepository>sammykenny2/file-merge-assistant</UpdateRepository>
+    <UpdateRepository>sammykenny2/messy-file-workbench</UpdateRepository>
   </PropertyGroup>
 
   <ItemGroup>
