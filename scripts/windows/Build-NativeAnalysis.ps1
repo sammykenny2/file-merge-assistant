@@ -28,6 +28,11 @@ $profile = $Configuration.ToLowerInvariant()
 $target = 'x86_64-pc-windows-msvc'
 $adapterTarget = Join-Path $adapterRoot 'target'
 $fixtureTarget = Join-Path $fixtureRoot 'target'
+foreach ($flagVariable in @('RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_BUILD_RUSTFLAGS', 'CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS')) {
+    if ([Environment]::GetEnvironmentVariable($flagVariable, 'Process')) {
+        throw "Custom $flagVariable would override the pinned static-CRT package settings. Clear it in this process before building."
+    }
+}
 if (-not [Environment]::Is64BitProcess -or $env:PROCESSOR_ARCHITECTURE -ne 'AMD64') {
     throw 'This build script currently validates Windows x64 only.'
 }
@@ -40,13 +45,13 @@ function Invoke-Checked {
 
 Push-Location $adapterRoot
 try {
-    $buildArguments = @('build', '--locked', '--target', $target, '--target-dir', $adapterTarget)
+    $buildArguments = @('+1.99.1', 'build', '--locked', '--target', $target, '--target-dir', $adapterTarget)
     if ($Configuration -eq 'Release') { $buildArguments += '--release' }
     Invoke-Checked 'cargo' $buildArguments
     if ($Test) {
-        Invoke-Checked 'cargo' @('fmt', '--all', '--', '--check')
-        Invoke-Checked 'cargo' @('test', '--locked', '--target', $target, '--target-dir', $adapterTarget)
-        Invoke-Checked 'cargo' @('clippy', '--locked', '--target', $target, '--target-dir', $adapterTarget, '--all-targets', '--no-deps', '--', '-D', 'warnings')
+        Invoke-Checked 'cargo' @('+1.99.1', 'fmt', '--all', '--', '--check')
+        Invoke-Checked 'cargo' @('+1.99.1', 'test', '--locked', '--target', $target, '--target-dir', $adapterTarget)
+        Invoke-Checked 'cargo' @('+1.99.1', 'clippy', '--locked', '--target', $target, '--target-dir', $adapterTarget, '--all-targets', '--no-deps', '--', '-D', 'warnings')
     }
 } finally { Pop-Location }
 

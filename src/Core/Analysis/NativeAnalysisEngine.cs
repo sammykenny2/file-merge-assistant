@@ -16,7 +16,7 @@ public sealed class NativeAnalysisEngine : IFileAnalysisEngine
   /// <param name="nativeDirectory">Trusted installation directory, never a scanned source or working-directory search.</param>
   public NativeAnalysisEngine(string? nativeDirectory = null)
   {
-    nativeDirectory ??= Path.Combine(AppContext.BaseDirectory, "runtimes", RuntimeInformation.RuntimeIdentifier, "native");
+    nativeDirectory ??= NativeAnalysisPaths.Resolve(AppContext.BaseDirectory);
     if (!Path.IsPathFullyQualified(nativeDirectory)) { throw new ArgumentException("The native installation directory must be absolute.", nameof(nativeDirectory)); }
     Descriptor = new(EngineId, "Czkawka", Version, UpstreamCommit, 1, 1, RuntimeInformation.RuntimeIdentifier,
       AnalysisAvailability.MissingDependency, "The optional Czkawka native library is not installed.",
@@ -27,8 +27,7 @@ public sealed class NativeAnalysisEngine : IFileAnalysisEngine
       Descriptor = Descriptor with { Availability = AnalysisAvailability.Unsupported, UnavailableReason = "No native adapter is provided for this architecture." };
       return;
     }
-    var fileName = OperatingSystem.IsWindows() ? "fma_czkawka_ffi.dll" : OperatingSystem.IsMacOS() ? "libfma_czkawka_ffi.dylib" : "libfma_czkawka_ffi.so";
-    var libraryPath = Path.Combine(nativeDirectory, fileName);
+    var libraryPath = Path.Combine(nativeDirectory, NativeAnalysisPaths.LibraryName);
     if (!File.Exists(libraryPath)) { return; }
     try
     {

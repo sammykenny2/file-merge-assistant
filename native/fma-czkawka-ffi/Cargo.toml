@@ -4,6 +4,7 @@ version = "0.2.0"
 edition = "2024"
 rust-version = "1.99.1"
 publish = false
+license = "MIT"
 description = "Read-only Czkawka analysis adapter for File Merge Assistant"
 
 [lib]

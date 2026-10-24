@@ -53,7 +53,9 @@ before anything is changed.
 ## Building the setup program
 
 Requirements: Windows x64, the .NET 10 SDK (`global.json` selects the latest installed 10.0 feature band), and
-internet access the first time (NuGet packages, .NET runtime packs and, if needed, NSIS).
+internet access the first time (NuGet/runtime packs, Cargo sources and, if needed, NSIS).
+Native-by-default packaging also requires rustup, Rust 1.99.1, MSVC x64 C++ build
+tools and a Windows SDK. End-user machines do not need these SDKs.
 
 ```powershell
 # Debug build: no license key needed; not for release.
@@ -65,12 +67,52 @@ $env:SixLaborsLicenseKey = '<key>'
 ```
 
 The script runs the Core tests (skip with `-SkipTests`), publishes the GUI and the CLI for win-x64, collects license
-notices into `app\Licenses`, and compiles `installer/FileMergeAssistant.nsi`. Results go to `build/` (ignored by Git):
+notices into `app\Licenses`, stages the actual native DLL and compiles
+`installer/FileMergeAssistant.nsi`. Every run uses a new retained
+`build/installer/run-<id>` directory; it does not recursively clear a shared stage.
+Results go to `build/` (ignored by Git):
 
 - Release: `FileMergeAssistant-<version>-x64-setup.exe`, its `.sha256`, and
   `file-merge-assistant-update-windows.json`, the update manifest.
 - Debug: `FileMergeAssistant-<version>-x64-debug-setup.exe` and its `.sha256`. No update manifest is written, so a
   Debug build can never be offered as an update. Its Apps & features name ends in "(Debug build)".
+- A matching `FileMergeAssistant-<version>-x64[-debug]-portable.zip` and checksum.
+  Keep its `app/` and `cli/` folders together.
+- `FileMergeAssistant-<version>-czkawka-<adapter-version>[-debug]-source.zip`
+  and checksum: the pinned native wrapper, vendored locked sources, notices and
+  offline rebuild instructions. `app/Licenses/Rust/SOURCE.json` names the exact
+  matching archive/checksum. Preserve it alongside the binaries.
+
+`app/runtimes/win-x64/native` owns the DLL; a marked sibling `cli/` shares it.
+The CLI cleanup policy still removes only its executable/marker and preserves
+unrelated files. The application never searches PATH, CWD or scan sources for a
+module. Static CRT packaging is checked against the DLL's actual PE imports.
+Test DLLs and scan-host executables are excluded. `-WithoutNative` explicitly
+builds a managed-only package without adding fallback behavior.
+
+The builder runs `Test-AnalysisPackage.ps1` against the real self-contained CLI
+with a system-only child PATH and isolated data. This is sanitized-host evidence,
+not a claim that the host has no SDK or that installation passed in a clean VM.
+Run publish and solution tests sequentially because they share `obj/` outputs.
+
+### Native dependency notices
+
+The resolved non-development Cargo graph currently contains 411 package records,
+including build dependencies; it is a conservative inventory, not proof that all
+are linked into the DLL. In addition to MIT, it includes rawler's LGPL-2.1 and
+symphonia's MPL-2.0. The source archive preserves the full locked rebuild input.
+Missing crate notices are supplemented from the exact upstream commits with
+URL/SHA-256 provenance in
+[third-party-notices](../native/fma-czkawka-ffi/third-party-notices/README.md).
+
+Three pinned MIT declarations still lack standalone upstream notice text:
+realfft 3.5.0, rusty-chromaprint 0.3.0 and simd_helpers 0.1.0. Native export fails
+closed by default. Only internal Debug packaging retains `DeclaredOnly`,
+`MISSING-NOTICE.txt` and `noticeCollectionComplete=false` and proceeds with an
+explicit warning. Release packaging does not permit that flag. Notice collection
+and a supplied source archive are not a legal compliance certification; resolve
+the recorded gaps before public redistribution. ImageSharp's missing key remains
+a separate Release gate.
 
 The setup program is not signed yet, so Windows SmartScreen may warn before it runs (ADR-012 leaves signing open).
 
@@ -154,29 +196,35 @@ repository that holds only releases, before publishing the first release.
 
 Not done yet; the project is too early. When it is time:
 
-1. Add the `SIXLABORS_LICENSE_KEY` repository secret and make the update repository public (see above).
+1. Resolve the native notice gaps, add the `SIXLABORS_LICENSE_KEY` repository secret
+   and make the update repository public (see above). Complete clean-machine acceptance.
 2. On a branch, raise `<Version>` in `Directory.Build.props`, add its entry to `docs/release-notes.md`, and merge to
    `main`.
 3. Run the workflow: `gh workflow run release.yml --ref main` (or Actions > Release > Run workflow).
 4. The workflow refuses a version whose tag or release already exists, builds the Release setup program on
-   `windows-latest`, and creates the prerelease `v<version>` with the setup program, its `.sha256` and the update
-   manifest. A failed run publishes nothing.
+   `windows-latest`, and creates the prerelease `v<version>` with the setup/portable
+   binaries, native source archive, their checksums and the update manifest.
+   A failed run publishes nothing. The workflow remains manual-only and has not
+   been run for this integration.
 
 ## Testing the setup program
 
 - `scripts/windows/Test-SetUserPath.ps1` tests the PATH helper against a scratch registry key; the real PATH is not
   touched.
-- To test a full install on a machine, first save the user PATH, then install silently with the command-line tool,
-  check the files, shortcut, registry and PATH, start the app once, uninstall silently, and compare the PATH with the
-  saved value:
+- The owner will run clean install/upgrade/uninstall checks in Windows Sandbox or
+  a VM. Generate a retained kit after the Debug build:
 
 ```powershell
-$Saved = (Get-Item HKCU:\Environment).GetValue('Path', '', 'DoNotExpandEnvironmentNames')
-Start-Process .\build\FileMergeAssistant-0.1.0-x64-debug-setup.exe -ArgumentList '/S', '/CLI' -Wait
-# ...checks...
-Start-Process "$env:LOCALAPPDATA\Programs\FileMergeAssistant\uninstall.exe" -ArgumentList '/S' -Wait
-$Saved -ceq (Get-Item HKCU:\Environment).GetValue('Path', '', 'DoNotExpandEnvironmentNames')
+.\scripts\windows\New-AnalysisValidationKit.ps1
 ```
 
-The uninstaller copies itself to a temporary folder and returns at once, so wait a few seconds before checking that
-the files are gone.
+The generated README provides exact PowerShell 5.1/7 commands. The lifecycle
+script requires `-DisposableMachine` and refuses existing FMA registration,
+processes, startup entries, shortcuts or user data. It checks foreign-folder
+refusal, optional CLI/PATH preservation, native loading, payload replacement and
+uninstall preservation of user data/foreign CLI files. It observes asynchronous
+uninstall completion and retains diagnostics on failure. Baseline and current
+ProductVersion/SHA-256 distinguish a real lower-version upgrade, same-version
+payload replacement and reinstall. No supplied baseline means reinstall only.
+Manual GUI/DPI behavior is recorded separately, never counted as script success.
+The currently running host installation has not been replaced or uninstalled.

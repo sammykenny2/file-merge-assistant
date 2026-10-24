@@ -4,14 +4,15 @@
 
 .DESCRIPTION
     Runs the Core tests, publishes the GUI (self-contained, win-x64) and the fma command-line tool (self-contained
-    single file), collects license notices for the bundled .NET runtime and NuGet packages, and compiles
+    single file), stages the pinned native adapter with its rebuild source, collects runtime/NuGet/Cargo notices, and compiles
     installer/FileMergeAssistant.nsi with NSIS.
 
     The version, publisher and update repository come from Directory.Build.props. makensis.exe is taken from
     -NsisPath, PATH or Program Files; otherwise the pinned portable NSIS archive is downloaded into build/tools and
-    its SHA-256 is checked, so a new machine needs only Windows x64, the .NET 10 SDK and internet access.
+    its SHA-256 is checked. Native-by-default builds also need rustup, pinned Rust 1.99.1,
+    and the MSVC x64 C++/Windows SDK build tools. End-user machines need none of these SDKs.
 
-    Results go to build/ (build/installer is the work folder and is replaced on every run):
+    Results go to build/ (each build/installer/run-<id> work folder is kept for inspection):
       Release: FileMergeAssistant-<version>-x64-setup.exe, its .sha256, and file-merge-assistant-update-windows.json,
                the manifest the in-app update check reads from the GitHub release.
       Debug:   FileMergeAssistant-<version>-x64-debug-setup.exe and its .sha256. No update manifest is written, so a
@@ -41,6 +42,9 @@
 .PARAMETER SkipTests
     Skip the Core tests, for example when they just ran.
 
+.PARAMETER WithoutNative
+    Explicit managed-only package. The optional native engine remains unavailable; no runtime fallback is added.
+
 .EXAMPLE
     .\scripts\windows\Build-Installer.ps1 -Configuration Debug
 
@@ -66,7 +70,9 @@ param(
     [switch]$UsePinnedNsis,
 
     [Parameter(Mandatory = $false)]
-    [switch]$SkipTests
+    [switch]$SkipTests,
+
+    [switch]$WithoutNative
 )
 
 $ErrorActionPreference = 'Stop'
@@ -261,6 +267,7 @@ try {
     $env:DOTNET_NOLOGO = '1'
     $Properties = Get-ProjectProperties
     $Version = $Properties.Version
+    $Suffix = if ($Configuration -eq 'Release') { '' } else { '-' + $Configuration.ToLowerInvariant() }
     Write-Output "File Merge Assistant $Version ($Configuration)"
 
     if (-not $SkipTests) {
@@ -270,8 +277,15 @@ try {
         }
     }
 
-    $Work = Join-Path $ProjectRoot 'build/installer'
-    if (Test-Path -LiteralPath $Work) { Remove-Item -LiteralPath $Work -Recurse -Force }
+    $BuildRoot = [IO.Path]::GetFullPath((Join-Path $ProjectRoot 'build'))
+    $WorkParent = Join-Path $BuildRoot 'installer'
+    foreach ($Probe in @($BuildRoot, $WorkParent)) {
+        if ((Test-Path -LiteralPath $Probe) -and ((Get-Item -LiteralPath $Probe -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "The build output must not traverse a reparse point: $Probe"
+        }
+    }
+    $Work = [IO.Path]::GetFullPath((Join-Path $WorkParent ('run-' + [Guid]::NewGuid().ToString('N'))))
+    if (-not $Work.StartsWith($BuildRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Invalid installer work directory.' }
     $Stage = Join-Path $Work 'stage'
     $AppStage = Join-Path $Stage 'app'
     $CliStage = Join-Path $Stage 'cli'
@@ -289,16 +303,38 @@ try {
     }
     Copy-Item -LiteralPath (Join-Path $CliPublish 'fma.exe') -Destination $CliStage
 
+    # The CLI shares the mandatory sibling app payload only when both package folders are marked.
+    foreach ($PackageDirectory in @($AppStage, $CliStage)) {
+        [IO.File]::WriteAllText((Join-Path $PackageDirectory '.installed-by-file-merge-assistant-setup'),
+            "Owned File Merge Assistant package directory.`n", [Text.UTF8Encoding]::new($false))
+    }
+
     Copy-Item -LiteralPath (Join-Path $ProjectRoot 'LICENSE') -Destination (Join-Path $AppStage 'LICENSE.txt')
     Copy-LicenseNotices $AppStage @(
         (Join-Path $ProjectRoot 'src/Gui/obj/project.assets.json'),
         (Join-Path $ProjectRoot 'src/Cli/obj/project.assets.json'))
 
+    $NativeSourceArchive = $null
+    if (-not $WithoutNative) {
+        $SourceKit = Join-Path $Work 'native-source'
+        & (Join-Path $PSScriptRoot 'Export-NativeAnalysis.ps1') -Destination $AppStage -SourceKitRoot $SourceKit `
+            -Configuration Release -AllowIncompleteNotices:($Configuration -eq 'Debug')
+        $NativeManifest = Get-Content -LiteralPath (Join-Path $AppStage 'runtimes/win-x64/native/native-manifest.json') -Raw | ConvertFrom-Json
+        $NativeSourceArchive = Join-Path $Work "FileMergeAssistant-$Version-czkawka-$($NativeManifest.engineVersion)$Suffix-source.zip"
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        [IO.Compression.ZipFile]::CreateFromDirectory($SourceKit, $NativeSourceArchive, [IO.Compression.CompressionLevel]::Optimal, $false)
+        $SourceSha = Write-Checksum $NativeSourceArchive
+        $SourceReference = [ordered]@{ formatVersion = 1; archive = (Split-Path -Leaf $NativeSourceArchive); sha256 = $SourceSha }
+        [IO.File]::WriteAllText((Join-Path $AppStage 'Licenses/Rust/SOURCE.json'),
+            ($SourceReference | ConvertTo-Json) + "`n", [Text.UTF8Encoding]::new($false))
+        & (Join-Path $PSScriptRoot 'Test-AnalysisPackage.ps1') -PackageRoot $Stage `
+            -FixturesRoot (Join-Path $ProjectRoot 'tests/Fixtures') -ReportParent (Join-Path $Work 'verification')
+    }
+
     $Makensis = Resolve-Makensis
     $NsisReported = (& $Makensis /VERSION) -join ''
     if ($NsisReported -notmatch '^v?3\.') { throw "NSIS 3 is required; $Makensis reports '$NsisReported'." }
 
-    $Suffix = if ($Configuration -eq 'Release') { '' } else { '-' + $Configuration.ToLowerInvariant() }
     $SetupName = "FileMergeAssistant-$Version-x64$Suffix-setup.exe"
     $Setup = Join-Path $Work $SetupName
     Invoke-Checked 'NSIS compile' {
@@ -308,6 +344,14 @@ try {
     }
     $Sha256 = Write-Checksum $Setup
     $Delivered = @($Setup, "$Setup.sha256")
+    if ($NativeSourceArchive) { $Delivered += @($NativeSourceArchive, "$NativeSourceArchive.sha256") }
+
+    # Keep app/ and cli/ together: the CLI resolves the same package-owned adapter as the GUI.
+    $Portable = Join-Path $Work "FileMergeAssistant-$Version-x64$Suffix-portable.zip"
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [IO.Compression.ZipFile]::CreateFromDirectory($Stage, $Portable, [IO.Compression.CompressionLevel]::Optimal, $false)
+    $null = Write-Checksum $Portable
+    $Delivered += @($Portable, "$Portable.sha256")
 
     if ($Configuration -eq 'Release') {
         if (-not $PSBoundParameters.ContainsKey('UpdateSummary')) {

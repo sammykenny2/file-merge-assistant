@@ -1,0 +1,224 @@
+{
+  "formatVersion": 1,
+  "packages": [
+    {
+      "name": "alloc-stdlib",
+      "version": "0.2.4",
+      "repository": "https://github.com/dropbox/rust-alloc-no-stdlib",
+      "commit": "ae42d22078b98549e987d2f03d12df7b984fde47",
+      "provenance": "crate .cargo_vcs_info.json",
+      "files": [
+        {
+          "path": "alloc-stdlib-0.2.4/LICENSE",
+          "upstreamPath": "LICENSE",
+          "url": "https://raw.githubusercontent.com/dropbox/rust-alloc-no-stdlib/ae42d22078b98549e987d2f03d12df7b984fde47/LICENSE",
+          "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae"
+        }
+      ]
+    },
+    {
+      "name": "crc-catalog",
+      "version": "2.5.0",
+      "repository": "https://github.com/akhilles/crc-catalog",
+      "commit": "ed4ad631f22b05055c21a3a4127eb7cf6d75bb62",
+      "provenance": "crate .cargo_vcs_info.json",
+      "files": [
+        {
+          "path": "crc-catalog-2.5.0/LICENSES/Apache-2.0.txt",
+          "upstreamPath": "LICENSES/Apache-2.0.txt",
+          "url": "https://raw.githubusercontent.com/akhilles/crc-catalog/ed4ad631f22b05055c21a3a4127eb7cf6d75bb62/LICENSES/Apache-2.0.txt",
+          "sha256": "d3cdb764b98283ee7c3a3cea8d374e2a2957322374378d1f3263f4d512741fc3"
+        },
+        {
+          "path": "crc-catalog-2.5.0/LICENSES/MIT.txt",
+          "upstreamPath": "LICENSES/MIT.txt",
+          "url": "https://raw.githubusercontent.com/akhilles/crc-catalog/ed4ad631f22b05055c21a3a4127eb7cf6d75bb62/LICENSES/MIT.txt",
+          "sha256": "5ef8fcfb6cccec8fcae043c834099a60c8b7406408db576e026d2b7e67dc5cf5"
+        }
+      ]
+    },
+    {
+      "name": "fluent-langneg",
+      "version": "0.13.1",
+      "repository": "https://github.com/projectfluent/fluent-langneg-rs",
+      "commit": "7fdc590466ea63ca2367ac10fb1b881fe561f1a8",
+      "provenance": "crate .cargo_vcs_info.json",
+      "files": [
+        {
+          "path": "fluent-langneg-0.13.1/LICENSE-APACHE",
+          "upstreamPath": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/projectfluent/fluent-langneg-rs/7fdc590466ea63ca2367ac10fb1b881fe561f1a8/LICENSE-APACHE",
+          "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+        },
+        {
+          "path": "fluent-langneg-0.13.1/LICENSE-MIT",
+          "upstreamPath": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/projectfluent/fluent-langneg-rs/7fdc590466ea63ca2367ac10fb1b881fe561f1a8/LICENSE-MIT",
+          "sha256": "016fcc02048817d628b04b140c54db290fd9d29a5e8a55b77871194e810716ac"
+        }
+      ]
+    },
+    {
+      "name": "intl_pluralrules",
+      "version": "7.0.2",
+      "repository": "https://github.com/zbraniecki/pluralrules",
+      "commit": "d0715d5b7cca72e228d6e6c4de154bd30dfdd06a",
+      "provenance": "crate .cargo_vcs_info.json",
+      "files": [
+        {
+          "path": "intl_pluralrules-7.0.2/intl_pluralrules/LICENSE-APACHE",
+          "upstreamPath": "intl_pluralrules/LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/zbraniecki/pluralrules/d0715d5b7cca72e228d6e6c4de154bd30dfdd06a/intl_pluralrules/LICENSE-APACHE",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        },
+        {
+          "path": "intl_pluralrules-7.0.2/intl_pluralrules/LICENSE-MIT",
+          "upstreamPath": "intl_pluralrules/LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/zbraniecki/pluralrules/d0715d5b7cca72e228d6e6c4de154bd30dfdd06a/intl_pluralrules/LICENSE-MIT",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ]
+    },
+    {
+      "name": "lofty_attr",
+      "version": "0.12.0",
+      "repository": "https://github.com/Serial-ATA/lofty-rs",
+      "commit": "c3f512327e871779e2be066eecef09bb106a794f",
+      "provenance": "crate .cargo_vcs_info.json",
+      "files": [
+        {
+          "path": "lofty_attr-0.12.0/LICENSE-APACHE",
+          "upstreamPath": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/Serial-ATA/lofty-rs/c3f512327e871779e2be066eecef09bb106a794f/LICENSE-APACHE",
+          "sha256": "33ee463a651c2dd0417e68e97d97c811c7bb19280c2116bff9906fe8d2718551"
+        },
+        {
+          "path": "lofty_attr-0.12.0/LICENSE-MIT",
+          "upstreamPath": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/Serial-ATA/lofty-rs/c3f512327e871779e2be066eecef09bb106a794f/LICENSE-MIT",
+          "sha256": "0884e92e74c08412d08bb7cbd121e3c09cbf2ae357972440b06f81b3305b0176"
+        }
+      ]
+    },
+    {
+      "name": "lofty",
+      "version": "0.24.0",
+      "repository": "https://github.com/Serial-ATA/lofty-rs",
+      "commit": "2341386035be969a5590cd1c488bf91786fc365a",
+      "provenance": "crate .cargo_vcs_info.json",
+      "files": [
+        {
+          "path": "lofty-0.24.0/LICENSE-APACHE",
+          "upstreamPath": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/Serial-ATA/lofty-rs/2341386035be969a5590cd1c488bf91786fc365a/LICENSE-APACHE",
+          "sha256": "33ee463a651c2dd0417e68e97d97c811c7bb19280c2116bff9906fe8d2718551"
+        },
+        {
+          "path": "lofty-0.24.0/LICENSE-MIT",
+          "upstreamPath": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/Serial-ATA/lofty-rs/2341386035be969a5590cd1c488bf91786fc365a/LICENSE-MIT",
+          "sha256": "0884e92e74c08412d08bb7cbd121e3c09cbf2ae357972440b06f81b3305b0176"
+        }
+      ]
+    },
+    {
+      "name": "ogg_pager",
+      "version": "0.7.2",
+      "repository": "https://github.com/Serial-ATA/lofty-rs",
+      "commit": "76ff7093a1f6a98c60297de4695709d04c8c1f47",
+      "provenance": "crate .cargo_vcs_info.json",
+      "files": [
+        {
+          "path": "ogg_pager-0.7.2/LICENSE-APACHE",
+          "upstreamPath": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/Serial-ATA/lofty-rs/76ff7093a1f6a98c60297de4695709d04c8c1f47/LICENSE-APACHE",
+          "sha256": "33ee463a651c2dd0417e68e97d97c811c7bb19280c2116bff9906fe8d2718551"
+        },
+        {
+          "path": "ogg_pager-0.7.2/LICENSE-MIT",
+          "upstreamPath": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/Serial-ATA/lofty-rs/76ff7093a1f6a98c60297de4695709d04c8c1f47/LICENSE-MIT",
+          "sha256": "0884e92e74c08412d08bb7cbd121e3c09cbf2ae357972440b06f81b3305b0176"
+        }
+      ]
+    },
+    {
+      "name": "profiling-procmacros",
+      "version": "1.0.18",
+      "repository": "https://github.com/aclysma/profiling",
+      "commit": "8271551172eb6fa4cba47369aedd93790c623df9",
+      "provenance": "crate .cargo_vcs_info.json",
+      "files": [
+        {
+          "path": "profiling-procmacros-1.0.18/LICENSE-APACHE",
+          "upstreamPath": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-APACHE",
+          "sha256": "10d30a673cd5e9349bdc02aeb48f14b3386d27d0da32df8f0a555d4aa16aa551"
+        },
+        {
+          "path": "profiling-procmacros-1.0.18/LICENSE-MIT",
+          "upstreamPath": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-MIT",
+          "sha256": "c8167fdeeed46d3f244d3f85c5bf998ce889343691c32be2c61a8bc4b5c08333"
+        }
+      ]
+    },
+    {
+      "name": "profiling",
+      "version": "1.0.18",
+      "repository": "https://github.com/aclysma/profiling",
+      "commit": "8271551172eb6fa4cba47369aedd93790c623df9",
+      "provenance": "crate .cargo_vcs_info.json",
+      "files": [
+        {
+          "path": "profiling-1.0.18/LICENSE-APACHE",
+          "upstreamPath": "LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-APACHE",
+          "sha256": "10d30a673cd5e9349bdc02aeb48f14b3386d27d0da32df8f0a555d4aa16aa551"
+        },
+        {
+          "path": "profiling-1.0.18/LICENSE-MIT",
+          "upstreamPath": "LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-MIT",
+          "sha256": "c8167fdeeed46d3f244d3f85c5bf998ce889343691c32be2c61a8bc4b5c08333"
+        }
+      ]
+    },
+    {
+      "name": "pulp-wasm-simd-flag",
+      "version": "0.1.1",
+      "repository": "https://github.com/sarah-quinones/pulp",
+      "commit": "5eb07fd7b68edf0a5e19f71737d315f72a510295",
+      "provenance": "crate .cargo_vcs_info.json",
+      "files": [
+        {
+          "path": "pulp-wasm-simd-flag-0.1.1/LICENSE",
+          "upstreamPath": "LICENSE",
+          "url": "https://raw.githubusercontent.com/sarah-quinones/pulp/5eb07fd7b68edf0a5e19f71737d315f72a510295/LICENSE",
+          "sha256": "d64f878c89bd5f1e5ada7e4aad57690b122727cf5229b7b87ea1980c188da1d9"
+        }
+      ]
+    },
+    {
+      "name": "zune-inflate",
+      "version": "0.2.54",
+      "repository": "https://github.com/etemesi254/zune-image",
+      "commit": "69502ce83fdfecdd0beefd677e2abb3781b29d98",
+      "provenance": "crate .cargo_vcs_info.json",
+      "files": [
+        {
+          "path": "zune-inflate-0.2.54/LICENSE-ZLIB",
+          "upstreamPath": "LICENSE-ZLIB",
+          "url": "https://raw.githubusercontent.com/etemesi254/zune-image/69502ce83fdfecdd0beefd677e2abb3781b29d98/LICENSE-ZLIB",
+          "sha256": "7fa429541e55b1509909e058f2d21a37467e4958ec713b357f6e0cf9dc4ee352"
+        },
+        {
+          "path": "zune-inflate-0.2.54/LICENSE.md",
+          "upstreamPath": "LICENSE.md",
+          "url": "https://raw.githubusercontent.com/etemesi254/zune-image/69502ce83fdfecdd0beefd677e2abb3781b29d98/LICENSE.md",
+          "sha256": "e870d7fd7819a9f0453c62798cb52ae95d148a8c91dc2de1d983f997143c72de"
+        }
+      ]
+    }
+  ]
+}

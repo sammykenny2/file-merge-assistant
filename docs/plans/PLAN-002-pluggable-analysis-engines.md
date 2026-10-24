@@ -104,6 +104,17 @@
 
 **Gate G5**：AC-E10 通過、量測與已知限制可查，且獨立審閱完成，才可更改預設。所有歷史與既有任務保持可讀，不以回退程式版本取代資料遷移相容設計。
 
+2026-10-24，Slice 5a：Windows x64 Debug NSIS／portable 與 native Release DLL、
+固定相依的離線重建來源、實際 notice 清單及 Sandbox／VM 驗證腳本已加入。
+Core 494／GUI 25／CLI 12、Rust 13 零略過通過；系統 PATH 的正式 CLI 與
+PowerShell 5.1 測試通過。11 個缺漏 crate notices 從完整上游 commit 補入，
+另 3 項缺原文明列 DeclaredOnly，原生匯出預設停止，僅內部 Debug 檢視包可保留
+診斷繼續；Release 不放行。ImageSharp key 仍未取得。產品負責人會在 Windows
+Sandbox／VM 執行安裝／更新／卸載驗證；本機既有安裝與執行中程序未改動。
+獨立審閱通過此 private Debug 打包 slice；Kit 的 18 份 checksum、portable 的
+SOURCE.json 對應來源 ZIP，以及最終來源包離線 Rust 13 項測試均已確認。
+Task 5.2／G5 仍待外部結果與發佈條件，Task 5.1 及平台驗證仍須繼續，未切換預設。
+
 ### Phase 6：後續平台與 UI 技術驗證
 
 - [ ] Task 6.1：盤點並抽象化 Windows 路徑／磁碟／檔案身份及系統整合，將可攜的 Core／契約測試分離出目前 `net10.0-windows` 目標限制。

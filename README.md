@@ -39,7 +39,7 @@ File Merge Assistant helps you clean up years of accumulated duplicate files acr
 - [x] Stack-by-stack workbench GUI ([GUI flow mock](./docs/gui-flow-mock.md)): all 7 screens; real index, staged scanning and stack detection; running the plan: copy and verify into the keeper, per-volume recycle areas, retry and restore; `--demo` shows the mock's data. Large-scale and release acceptance remain separate gates.
 - [x] Tray icon, startup behaviour (start at sign-in, keep running in the tray, open the window after a sign-in start) and check for updates from the tray or Settings ([ADR-014](./docs/decisions/ADR-014-tray-startup-and-display-language.md))
 - [x] English and Traditional Chinese display languages ([i18n](./docs/i18n.md)), switched at once from Settings > General
-- [x] Experimental pluggable analysis: managed exact-content algorithms, pinned native Czkawka BLAKE3, separate engine comparison, and [PNG/JPEG manual review](./docs/image-review.md). Native staging/installer and scale acceptance remain PLAN-002 Phase 5.
+- [x] Experimental pluggable analysis: managed exact-content algorithms, pinned native Czkawka BLAKE3, separate engine comparison, and [PNG/JPEG manual review](./docs/image-review.md). Local Debug NSIS/portable packaging includes the native DLL and rebuild source; clean-machine, scale and public-release acceptance remain PLAN-002 Phase 5.
 
 ## Quick Start
 

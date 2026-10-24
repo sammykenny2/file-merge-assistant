@@ -5,3 +5,6 @@
 # Windows batch files need CRLF.
 *.bat text eol=crlf
 *.cmd text eol=crlf
+
+# Preserve the exact upstream notice bytes validated by sources.json SHA-256.
+native/fma-czkawka-ffi/third-party-notices/** -text

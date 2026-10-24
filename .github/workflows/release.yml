@@ -1,11 +1,12 @@
 # Preview release of the Windows setup program. Manual only, and intentionally not run yet: the project is too early to
 # publish. Before the first run (docs/deployment.md, "Publishing a release"):
 #   - add the SIXLABORS_LICENSE_KEY repository secret, because Release builds of ImageSharp need a Six Labors key;
+#   - resolve the native notice-collection gaps documented in native/fma-czkawka-ffi/third-party-notices/README.md;
 #   - make the repository public (or point UpdateRepository in Directory.Build.props at a public releases repository),
 #     because the in-app update check reads the public release feed and cannot see a private repository.
 #
 # Builds the version in Directory.Build.props from the selected commit on main and publishes one GitHub prerelease
-# tagged v<version> with the setup program, its .sha256 and file-merge-assistant-update-windows.json, the manifest the
+# tagged v<version> with the setup/portable binaries, native rebuild source, checksums and the update manifest the
 # in-app update check reads. An existing tag or release is never replaced: bump the version to publish again. The
 # release text and the update summary come from that version's entry in docs/release-notes.md. The release is created
 # only after the build succeeds, so a failed run publishes nothing.
@@ -36,6 +37,12 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
+      - name: Prepare the pinned native toolchain
+        shell: pwsh
+        run: |
+          if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) { throw 'The Windows build host needs rustup and MSVC C++/Windows SDK build tools.' }
+          rustup toolchain install 1.99.1 --profile minimal
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned Rust toolchain installation failed.' }
       - name: Resolve the version
         id: version
         shell: pwsh
@@ -88,6 +95,10 @@ jobs:
           path: |
             build/FileMergeAssistant-${{ steps.version.outputs.version }}-x64-setup.exe
             build/FileMergeAssistant-${{ steps.version.outputs.version }}-x64-setup.exe.sha256
+            build/FileMergeAssistant-${{ steps.version.outputs.version }}-x64-portable.zip
+            build/FileMergeAssistant-${{ steps.version.outputs.version }}-x64-portable.zip.sha256
+            build/FileMergeAssistant-${{ steps.version.outputs.version }}-czkawka-*-source.zip
+            build/FileMergeAssistant-${{ steps.version.outputs.version }}-czkawka-*-source.zip.sha256
             build/file-merge-assistant-update-windows.json
             build/release-notes.md
           if-no-files-found: error
@@ -125,4 +136,8 @@ jobs:
             --title "File Merge Assistant ${VERSION} (preview)" --notes-file "$RUNNER_TEMP/notes.md" \
             "dist/FileMergeAssistant-${VERSION}-x64-setup.exe" \
             "dist/FileMergeAssistant-${VERSION}-x64-setup.exe.sha256" \
+            "dist/FileMergeAssistant-${VERSION}-x64-portable.zip" \
+            "dist/FileMergeAssistant-${VERSION}-x64-portable.zip.sha256" \
+            dist/FileMergeAssistant-${VERSION}-czkawka-*-source.zip \
+            dist/FileMergeAssistant-${VERSION}-czkawka-*-source.zip.sha256 \
             dist/file-merge-assistant-update-windows.json

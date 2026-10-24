@@ -7,6 +7,18 @@ workflow refuses to start without an entry for the version. See [deployment.md](
 
 No version has been published yet.
 
+## Unreleased
+
+- Experimental versioned C# and Czkawka analysis, frozen persistent jobs/evidence,
+  read-only engine comparison and separate PNG/JPEG candidate review in WPF/CLI.
+- Windows x64 local Debug installer/portable packages include the native adapter,
+  dependency inventory and offline rebuild source. A retained validation kit is
+  available for the owner's Sandbox/VM; clean install/upgrade/uninstall results
+  are still pending.
+- Managed XxHash128 remains the default. Release application builds still need
+  the missing ImageSharp key and resolution of three native notice-collection
+  gaps. No public release, default promotion or non-Windows GUI support is claimed.
+
 ## 0.2.1
 
 Summary: File Merge Assistant now stays in the tray, can start when you sign in, checks for updates from the tray or Settings, and speaks English or Traditional Chinese, switched at once in Settings.

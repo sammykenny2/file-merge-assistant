@@ -70,6 +70,12 @@ mod tests {
   use std::collections::BTreeMap;
   use std::fs;
 
+  #[cfg(all(windows, target_env = "msvc"))]
+  #[test]
+  fn windows_package_uses_the_pinned_static_crt_configuration() {
+    const { assert!(cfg!(target_feature = "crt-static")) };
+  }
+
   #[derive(Deserialize)]
   #[serde(rename_all = "camelCase")]
   struct Fixture {

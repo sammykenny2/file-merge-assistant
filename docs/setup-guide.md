@@ -1,124 +1,94 @@
 # Setup Guide
 
-## Experimental analysis engines
+FMA currently runs on Windows x64 with a C#/.NET 10 WPF GUI, CLI and SQLite
+index. The optional analysis DLL is a pinned Rust wrapper around Czkawka core.
+Python and Node.js are not application prerequisites.
 
-The WPF Settings page now offers exact-content engine/algorithm selection for
-new jobs. Both implementations remain Experimental; the initial choice is still
-managed XxHash128. Changing it does not change queued, paused or resumed jobs.
-Restart creates a new job with the new choice. Missing optional native binaries
-are shown as unavailable rather than falling back to another engine.
+## Run a local package
 
-The native adapter is loaded from `runtimes/<rid>/native` below the application's
-directory. `scripts/windows/Build-NativeAnalysis.ps1 -Test` builds and checks the
-pinned Windows x64 adapter and its isolated fixtures; it does not yet install the
-DLL into the GUI output. Application staging/installer integration is PLAN-002
-Phase 5. Never copy the deliberately invalid DLLs from `native/test-libraries`
-into an application directory. Release application builds still require a valid
-ImageSharp license; Debug validation is separate.
+Build artifacts are local and experimental; no release has been published.
+The NSIS installer installs for the current user. The portable ZIP contains
+`app/` and `cli/`; keep them together so both entry points use the same DLL.
+End users need neither a .NET SDK/runtime nor a Rust/MSVC toolchain.
 
-The WPF "Image review" page provides independent PNG/JPEG analysis, side-by-side
-previews and persistent manual notes; saved reviews can be reopened without the
-optional engine. See [image-review.md](image-review.md) for scope and limits.
-CLI `similar-images` uses the same registry and validator, with its separate
-versioned analysis JSON described in [analysis-cli.md](analysis-cli.md).
+For an isolated GUI preview, extract the ZIP into a new folder and run:
 
-> Environment setup and installation instructions.
-
-## Prerequisites
-
-- [ ] Prerequisite 1 (e.g., Python 3.10+)
-- [ ] Prerequisite 2 (e.g., Node.js 24 LTS)
-- [ ] Prerequisite 3 (e.g., Docker)
-
-## Installation
-
-### 1. Clone Repository
-
-```bash
-git clone https://github.com/username/project-name.git
-cd project-name
+```powershell
+$env:FMA_DATA_DIR = Join-Path $env:TEMP ('fma-preview-' + [guid]::NewGuid().ToString('N'))
+.\app\FileMergeAssistant.exe
 ```
 
-### 2. Environment Setup
+Use generated/sample folders initially. `--demo` shows simulated workbench data.
+Closing the window may keep FMA in the tray; use its Exit command to stop it.
+Do not install over a running instance. Data and installation ownership are
+explained in [deployment](deployment.md).
 
-```bash
-# Copy environment template
-cp .env.example .env
+## Build on Windows x64
 
-# Edit .env with your values
-# (Add specific variables that need to be configured)
+Install the .NET 10 SDK selected by `global.json`. To build the optional native
+adapter, also install rustup, Rust 1.99.1 and Visual Studio C++ x64 build tools
+with a Windows SDK. The Cargo lockfile pins the upstream commit; no sibling fork
+checkout is used. The local validation baseline uses .NET SDK 10.0.402.
+
+```powershell
+dotnet restore file-merge-assistant.sln
+dotnet build file-merge-assistant.sln --configuration Debug
+.\scripts\windows\Build-NativeAnalysis.ps1 -Test
 ```
 
-### 3. Dependencies
+The last command runs Rust fmt/tests/clippy and the complete Debug .NET solution
+against the real native DLL and isolated test DLLs. Without native fixtures,
+several integration tests are skipped; that does not establish native acceptance.
+Avoid running publish and solution tests simultaneously: they share restore/build
+outputs. See [testing](testing.md) for individual commands and recorded results.
 
-#### Python Project
+To build NSIS, portable binaries and the native rebuild source:
 
-```bash
-# Create virtual environment
-python -m venv .venv
-
-# Activate (Windows)
-.venv\Scripts\activate
-
-# Activate (Linux/macOS)
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-# or
-pip install -e ".[dev]"
+```powershell
+.\scripts\windows\Build-Installer.ps1 -Configuration Debug
+.\scripts\windows\New-AnalysisValidationKit.ps1
 ```
 
-#### Node.js Project
+`build/` contains ignored artifacts. Each installer run retains a unique working
+folder for inspection. `-WithoutNative` explicitly builds a managed-only package.
+Native binary output uses Release/static CRT even when the .NET application is
+Debug; measurements must distinguish those configurations.
 
-```bash
-npm install
-# or
-yarn install
+Release application builds remain blocked without a valid ImageSharp key. Native
+notice collection also has three explicit unresolved items; see
+[the pinned inventory](../native/fma-czkawka-ffi/third-party-notices/README.md).
+Only internal Debug inspection packaging preserves those diagnostics and proceeds.
+This is not a public redistribution or license-compliance acceptance result.
+
+## Development entry points
+
+```powershell
+dotnet run --project src/Gui --configuration Debug
+dotnet run --project src/Cli --configuration Debug -- engines
+dotnet run --project src/Cli --configuration Debug -- analyze C:\Samples --engine csharp
 ```
 
-### 4. Database Setup (if applicable)
+A source build does not automatically copy the native DLL into GUI/CLI output.
+A normal application looks only under its executable-relative
+`runtimes/<rid>/native` directory. A marked packaged `cli/` can share its marked
+sibling `app/` DLL. It never searches scanned folders, the current directory or
+PATH. Test-specific environment variables do not alter production resolution.
+Use the package builder for a complete GUI/CLI payload. Never stage DLLs from
+`native/test-libraries` or the test-only scan host.
 
-```bash
-# (Add database setup commands)
-```
+## Experimental analysis workflow
 
-### 5. Verify Installation
+Add multiple folders to the workbench's persistent queue. Settings selects the
+engine/algorithm for new exact-content jobs; existing jobs retain their frozen
+engine/version/scope. The default remains managed XxHash128. Both engines remain
+Experimental; missing or incompatible native modules produce explicit diagnostics.
 
-```bash
-# Run tests to verify setup
-pytest  # Python
-npm test  # Node.js
-```
+The separate Image review page handles PNG/JPEG candidates, parallel previews
+and saved manual notes. Existing reviews can reopen without the optional engine.
+Similarity does not create exact-content operation plans. See
+[image review](image-review.md) and [analysis CLI](analysis-cli.md) for limits.
 
-## Running the Project
-
-### Development Mode
-
-```bash
-# Python
-python main.py
-
-# Node.js
-npm run dev
-```
-
-### Production Mode
-
-```bash
-# (Add production run commands)
-```
-
-## Common Issues
-
-### Issue 1: [Problem Description]
-
-**Solution**: (How to fix)
-
-### Issue 2: [Problem Description]
-
-**Solution**: (How to fix)
-
----
-
-*Last updated: YYYY-MM-DD*
+Windows clean install/update/uninstall checks belong in the owner's Sandbox/VM,
+using the generated validation kit. Pi arm64/Wayland and Apple Silicon macOS
+validation will be run by the owner separately; WPF is not a cross-platform GUI.
+CI stays manual-only, and this work does not publish artifacts or push commits.

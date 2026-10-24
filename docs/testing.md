@@ -59,6 +59,24 @@ dotnet test tests/Core.Tests/Core.Tests.csproj --collect:"XPlat Code Coverage"
 
 ## Analysis Engine Baseline (2026-10-24)
 
+Slice 5a packaging changes pass **494 Core / 25 GUI / 12 CLI**, zero skips,
+and **13 Rust** tests plus fmt/clippy via `Build-NativeAnalysis.ps1 -Test`.
+The published self-contained CLI also passes known-answer exact/image analysis,
+unchanged-source and missing-DLL diagnostics with a system-only child PATH.
+Windows PowerShell 5.1 was exercised separately; this remains sanitized-host
+evidence, not clean VM installation acceptance. The exported vendored source
+was rebuilt/tested offline (13 passed), using a normalized absolute target path
+to avoid an MSVC LNK1104 path-length failure with a long `..` output path.
+
+`Test-AnalysisPackage.ps1` checks x64 PE imports/checksum, manifest versus loaded
+engine/ABI/commit, declared notice files and explicit incomplete-notice records.
+The default native exporter was exercised and correctly fails on the three
+recorded notice gaps; only internal Debug application packaging opts into a
+diagnostic inspection artifact. No Release key was supplied or bypassed.
+Use the kit from `New-AnalysisValidationKit.ps1` for the owner's Windows
+Sandbox/VM install/reinstall/upgrade/uninstall checks. Those and manual GUI/DPI
+checks remain unrun here. Details are in [deployment](deployment.md).
+
 Slice 4c full solution validation passes **461 Core / 20 GUI / 10 CLI**, zero
 skips with all three native fixture directories configured. Comparison tests
 cover independent indexes, normalized groups, source changes, second-run

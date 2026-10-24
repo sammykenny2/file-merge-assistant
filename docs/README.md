@@ -43,7 +43,7 @@ cross-platform UI options are reassessed.
 
 | Document | Status | Description |
 |----------|--------|-------------|
-| [setup-guide.md](./setup-guide.md) | Template | Environment setup |
+| [setup-guide.md](./setup-guide.md) | Current | Windows SDK/toolchain setup, local package preview and experimental analysis workflow |
 | [testing.md](./testing.md) | Complete | .NET test commands, validation results, and known baseline issues |
 | [analysis-cli.md](./analysis-cli.md) | Implemented: experimental engines | Versioned metadata, exact analysis, engine comparison and similar-image candidate commands |
 | [image-review.md](./image-review.md) | Implemented: experimental Windows | WPF candidate viewing, persistent manual review, scope/evidence/thumbnail limits and compatibility |
