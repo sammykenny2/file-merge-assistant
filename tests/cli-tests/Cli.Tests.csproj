@@ -15,5 +15,6 @@
     <Compile Include="../Core.Tests/Analysis/KnownAnswerDataset.cs" Link="Fixtures/KnownAnswerDataset.cs" />
     <Compile Include="../Core.Tests/Scanning/TempTree.cs" Link="Fixtures/TempTree.cs" />
     <None Include="../Fixtures/analysis/known-answer.json" Link="Fixtures/analysis/known-answer.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../Fixtures/similar-images/*" Link="Fixtures/similar-images/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

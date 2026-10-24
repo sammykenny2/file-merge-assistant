@@ -18,6 +18,7 @@ public enum NavSection
   Plan,
   History,
   Settings,
+  Images,
 }
 
 /// <summary>How an item of the status strip under the header is drawn.</summary>
@@ -80,6 +81,7 @@ public partial class MainViewModel : ObservableObject, INavigator
   public bool IsHistorySelected => Section == NavSection.History;
 
   public bool IsSettingsSelected => Section == NavSection.Settings;
+  public bool IsImagesSelected => Section == NavSection.Images;
 
 
   public bool HasPending => PendingCount > 0;
@@ -97,6 +99,7 @@ public partial class MainViewModel : ObservableObject, INavigator
   public void ShowHistory(string? batchId = null) => Show(NavSection.History, new HistoryViewModel(_store, this, batchId));
 
   public void ShowSince() => Show(NavSection.Hub, new SinceViewModel(_store, this));
+  public void ShowImages() => Show(NavSection.Images, new ImageReviewViewModel(_store, this));
 
   public void ShowSettings()
   {
@@ -123,6 +126,9 @@ public partial class MainViewModel : ObservableObject, INavigator
       case NavSection.Settings:
         ShowSettings();
         break;
+      case NavSection.Images:
+        ShowImages();
+        break;
       default:
         ShowHub();
         break;
@@ -136,6 +142,7 @@ public partial class MainViewModel : ObservableObject, INavigator
     OnPropertyChanged(nameof(IsPlanSelected));
     OnPropertyChanged(nameof(IsHistorySelected));
     OnPropertyChanged(nameof(IsSettingsSelected));
+    OnPropertyChanged(nameof(IsImagesSelected));
   }
 
   partial void OnPendingCountChanged(int value) => OnPropertyChanged(nameof(HasPending));

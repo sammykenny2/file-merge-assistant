@@ -78,6 +78,8 @@
           </Button>
           <Button Content="{l:T header.nav.history}" Style="{StaticResource NavTab}" Tag="{Binding IsHistorySelected}"
                   Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:NavSection.History}" />
+          <Button Content="{l:T images.title}" Style="{StaticResource NavTab}" Tag="{Binding IsImagesSelected}"
+                  Command="{Binding NavigateCommand}" CommandParameter="{x:Static vm:NavSection.Images}" />
         </StackPanel>
       </DockPanel>
     </Border>

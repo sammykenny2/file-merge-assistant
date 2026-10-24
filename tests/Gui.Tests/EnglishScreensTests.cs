@@ -113,6 +113,9 @@ public sealed partial class EnglishScreensTests : IDisposable
       Check("hub after the run");
       main.ShowSettings();
       Check("settings");
+      main.ShowImages();
+      Check("image review");
+      main.ShowSettings();
 
       // Switching back redraws the open screen in Chinese without reopening it.
       AppText.Apply("zh-TW", []);

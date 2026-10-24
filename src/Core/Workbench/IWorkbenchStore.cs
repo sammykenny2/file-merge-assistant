@@ -55,6 +55,10 @@ public interface IWorkbenchStore
   Task<AnalysisComparisonReport> CompareEnginesAsync(AnalysisEngineSnapshot first, AnalysisEngineSnapshot second,
     IProgress<AnalysisComparisonProgress>? progress = null, CancellationToken cancellationToken = default);
 
+  ImageReviewArchive ImageReviews { get; }
+  Task<SimilarImageReport> AnalyzeImagesAsync(AnalysisEngineSnapshot engine, int threshold,
+    IProgress<System.Collections.Immutable.ImmutableArray<AnalysisSessionJob>>? progress = null, CancellationToken cancellationToken = default);
+
   /// <summary>All known stacks, including pending, converged and kept-all ones.</summary>
   IReadOnlyList<Stack> Stacks { get; }
 

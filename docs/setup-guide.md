@@ -16,6 +16,12 @@ Phase 5. Never copy the deliberately invalid DLLs from `native/test-libraries`
 into an application directory. Release application builds still require a valid
 ImageSharp license; Debug validation is separate.
 
+The WPF "Image review" page provides independent PNG/JPEG analysis, side-by-side
+previews and persistent manual notes; saved reviews can be reopened without the
+optional engine. See [image-review.md](image-review.md) for scope and limits.
+CLI `similar-images` uses the same registry and validator, with its separate
+versioned analysis JSON described in [analysis-cli.md](analysis-cli.md).
+
 > Environment setup and installation instructions.
 
 ## Prerequisites

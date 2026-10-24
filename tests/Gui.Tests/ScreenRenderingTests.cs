@@ -96,6 +96,8 @@ public class ScreenRenderingTests
       Assert.IsType<FileMergeAssistant.Gui.Settings.SettingsViewModel>(main.CurrentPage);
       Assert.True(main.IsSettingsSelected);
       Snap("16-settings");
+      main.ShowImages();
+      Snap("17-images");
     });
 
     Assert.Empty(errors);
@@ -153,6 +155,8 @@ public class ScreenRenderingTests
     public void ShowHistory(string? batchId = null)
     {
     }
+
+    public void ShowImages() { }
 
     public void ShowSince()
     {

@@ -16,7 +16,7 @@ These important documents live in the project root:
 | Document | Status | Description |
 |----------|--------|-------------|
 | [requirements.md](./requirements.md) | Draft | GUI product requirements, current gaps, priorities, and open decisions |
-| [architecture.md](./architecture.md) | Template | System architecture |
+| [architecture.md](./architecture.md) | Current | WPF/CLI, C# Core, native analysis, persistence and operation boundaries |
 | [api.md](./api.md) | Template | API specification (REST/WebSocket) |
 
 ## GUI Product and Design
@@ -45,7 +45,8 @@ cross-platform UI options are reassessed.
 |----------|--------|-------------|
 | [setup-guide.md](./setup-guide.md) | Template | Environment setup |
 | [testing.md](./testing.md) | Complete | .NET test commands, validation results, and known baseline issues |
-| [analysis-cli.md](./analysis-cli.md) | Implemented: exact content | Versioned engine metadata, read-only analysis and engine comparison commands, scope, JSON outcomes and measurement limits |
+| [analysis-cli.md](./analysis-cli.md) | Implemented: experimental engines | Versioned metadata, exact analysis, engine comparison and similar-image candidate commands |
+| [image-review.md](./image-review.md) | Implemented: experimental Windows | WPF candidate viewing, persistent manual review, scope/evidence/thumbnail limits and compatibility |
 | [deployment.md](./deployment.md) | Draft | Building the Windows setup program, versions, in-app updates, start at sign-in and publishing releases |
 | [i18n.md](./i18n.md) | Complete | Display languages, the language catalogs and how the window switches language |
 | [release-notes.md](./release-notes.md) | Draft | Release notes per version; the source of the update summary and release text |

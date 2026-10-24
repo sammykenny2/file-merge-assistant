@@ -41,6 +41,10 @@ public sealed class DemoWorkbenchStore : IWorkbenchStore
   public AnalysisEngineSnapshot NewJobEngine { get; private set; } = AnalysisEngineRegistry.ManagedOnly()
     .Snapshot(ManagedAnalysisEngine.EngineId, AnalysisCapability.ExactDuplicates, ContentFingerprints.XxHash128);
   public string? AnalysisConfigurationError => null;
+  public ImageReviewArchive ImageReviews => new(FileMergeAssistant.Infrastructure.AppDataPaths.Root);
+  public Task<SimilarImageReport> AnalyzeImagesAsync(AnalysisEngineSnapshot engine, int threshold,
+    IProgress<System.Collections.Immutable.ImmutableArray<AnalysisSessionJob>>? progress = null, CancellationToken cancellationToken = default)
+    => throw new InvalidOperationException("Image analysis requires real sources.");
 
   public Task<AnalysisComparisonReport> CompareEnginesAsync(AnalysisEngineSnapshot first, AnalysisEngineSnapshot second,
     IProgress<AnalysisComparisonProgress>? progress = null, CancellationToken cancellationToken = default)

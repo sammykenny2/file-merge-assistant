@@ -36,15 +36,16 @@ File Merge Assistant helps you clean up years of accumulated duplicate files acr
 - [x] Watch mode (directory monitoring)
 - [x] Space savings dashboard / analytics
 - [x] PowerShell script export
-- [ ] Stack-by-stack workbench GUI ([GUI flow mock](./docs/gui-flow-mock.md)): all 7 screens; real index, staged scanning and stack detection; running the plan: copy and verify into the keeper, per-volume recycle areas, retry and restore; `--demo` shows the mock's data
+- [x] Stack-by-stack workbench GUI ([GUI flow mock](./docs/gui-flow-mock.md)): all 7 screens; real index, staged scanning and stack detection; running the plan: copy and verify into the keeper, per-volume recycle areas, retry and restore; `--demo` shows the mock's data. Large-scale and release acceptance remain separate gates.
 - [x] Tray icon, startup behaviour (start at sign-in, keep running in the tray, open the window after a sign-in start) and check for updates from the tray or Settings ([ADR-014](./docs/decisions/ADR-014-tray-startup-and-display-language.md))
 - [x] English and Traditional Chinese display languages ([i18n](./docs/i18n.md)), switched at once from Settings > General
+- [x] Experimental pluggable analysis: managed exact-content algorithms, pinned native Czkawka BLAKE3, separate engine comparison, and [PNG/JPEG manual review](./docs/image-review.md). Native staging/installer and scale acceptance remain PLAN-002 Phase 5.
 
 ## Quick Start
 
 ```powershell
 # Clone the repository
-git clone https://github.com/username/file-merge-assistant.git
+git clone https://github.com/sammykenny2/file-merge-assistant.git
 cd file-merge-assistant
 
 # Restore dependencies
@@ -80,9 +81,10 @@ See [docs/](./docs/) for detailed documentation:
 - [Deployment](./docs/deployment.md) — build the Windows setup program, in-app updates, and the release workflow
 - [Release Notes](./docs/release-notes.md) — changes per version
 
-The next GUI's multi-source queue, persistent index, and reviewed operation plans
-are draft requirements. They are not implemented by the current preview; see the
-requirements baseline before treating existing feature checkboxes as GUI readiness.
+The current WPF workbench includes a multi-source queue, SQLite index and reviewed
+operation plans. Legacy CLI feature checkboxes above do not establish GUI or
+platform acceptance. Analysis engines remain Experimental; see PLAN-002 and
+[testing](./docs/testing.md) for measured coverage and remaining deployment gates.
 
 ## Project Structure
 

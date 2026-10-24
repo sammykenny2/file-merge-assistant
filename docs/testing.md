@@ -94,6 +94,17 @@ cloud/identity changes, final coverage, exact publication and scanner/session
 regressions. The global 2000-image guard bounds pair comparison after per-source
 analysis; it does not bound the sum of decoding across multiple sources.
 
+Slice 4e / Windows x64 Debug G4 passes **493 Core / 25 GUI / 12 CLI**, zero
+skips, with the real native adapter and test libraries configured. Independent
+review passes **Core archive 8 / GUI review 5 / CLI 12**, zero skips. The new page
+is covered by Chinese/demo and English screen walks, actual source-policy
+capture, candidate preview and persistent choices, missing-native-registry
+reopen, cloud/replaced-file rejection, 1×6000 / 6000×1 / 64×32 thumbnail bounds,
+stale/concurrent archive saves, malformed rules and open-then-leave cancellation.
+The screenshot was inspected at 1440 px. See [image-review.md](image-review.md)
+for the user workflow and resource limits. This is component/integration
+validation; scale, staging/installer, Release and non-Windows gates remain open.
+
 Before PLAN-002 implementation, commit `a01ba97` passed the full solution suite:
 404 Core and 16 GUI tests, SDK 10.0.402. The new shared known-answer fixture is
 checked independently by `AnalysisBaselineTests` and the native adapter's Rust

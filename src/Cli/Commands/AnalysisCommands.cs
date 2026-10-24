@@ -94,6 +94,41 @@ public static class AnalysisCommands
     return command;
   }
 
+  public static Command SimilarImages(IServiceProvider services, string? dataRoot = null)
+  {
+    var command = new Command("similar-images", "Read-only PNG/JPEG candidates for manual review; outputs versioned JSON, never an exact-content operation plan");
+    var paths = new Argument<string[]>("paths", "Source folders") { Arity = ArgumentArity.OneOrMore };
+    var engine = new Option<string>("--engine", () => NativeAnalysisEngine.EngineId, "Engine supporting image-mean8-d8-v1");
+    var distance = new Option<int>("--distance", () => SimilarImageAnalysis.DefaultThreshold, "Maximum Hamming distance in bits, 0..16; lower is closer");
+    command.AddArgument(paths);
+    command.AddOption(engine);
+    command.AddOption(distance);
+    command.SetHandler(async context =>
+    {
+      try
+      {
+        var registry = services.GetRequiredService<AnalysisEngineRegistry>();
+        var snapshot = registry.Snapshot(context.ParseResult.GetValueForOption(engine)!, AnalysisCapability.SimilarImages, PerceptualFingerprints.Mean8D8);
+        var report = await new SimilarImageAnalysis(registry, dataRoot).RunAsync(context.ParseResult.GetValueForArgument(paths), snapshot,
+          context.ParseResult.GetValueForOption(distance), cancellationToken: context.GetCancellationToken());
+        context.Console.Out.WriteLine(report.ToJson());
+        context.ExitCode = report.IsComplete ? 0 : report.Outcome == "Canceled" ? 130 : 2;
+      }
+      catch (OperationCanceledException)
+      {
+        context.Console.Out.WriteLine(JsonSerializer.Serialize(new { formatVersion = 1, isComplete = false, outcome = "Canceled" }));
+        context.ExitCode = 130;
+      }
+      catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or InvalidOperationException or DbException)
+      {
+        context.Console.Out.WriteLine(JsonSerializer.Serialize(new { formatVersion = 1, isComplete = false,
+          outcome = error is AnalysisEngineUnavailableException unavailable ? unavailable.Availability.ToString() : "Failed", error = error.Message }));
+        context.ExitCode = 2;
+      }
+    });
+    return command;
+  }
+
   private static AnalysisEngineSnapshot Select(AnalysisEngineRegistry registry, string id, string? algorithm)
   {
     var descriptor = registry.Descriptors.SingleOrDefault(item => item.Id == id)

@@ -37,6 +37,8 @@ Slice 4a 已提供 WPF 精確內容引擎選擇及任務快照顯示。新任務
 
 Slice 4b 的 CLI `engines`／`analyze` 已接同一套精確內容契約，提供明確引擎／算法及版本 1 JSON。每次唯讀 run 使用獨立索引，保存完整清單與固定任務快照；不建立操作計畫，也不更動原 `scan` 的格式或預設。詳細行為見 [analysis-cli.md](../analysis-cli.md)。比較報告及相似圖片仍待後續，G4 尚未完成。
 
+2026-10-24 Slice 4e 已通過 Windows x64 Debug G4：WPF 引擎選擇／唯讀比較、版本化 CLI 及相似圖片人工審閱均已接入；圖片註記獨立保存，不寫入精確操作決定。原生 adapter 0.2.0／ABI 1，圖片算法 `image-mean8-d8-v1`。縮放／重壓縮／旋轉／裁切 corpus 及裁切漏判有量測；兩引擎仍 Experimental、C# 預設保留。規模、staging／安裝、Release 與非 Windows 驗收仍待 Phase 5／6。參考[圖片流程](../image-review.md)、[目前架構](../architecture.md)及 PLAN-002。
+
 ## 目標
 
 - 可明確選擇引擎，支援功能與驗證程度不必相同。
@@ -53,6 +55,7 @@ Slice 4b 的 CLI `engines`／`analyze` 已接同一套精確內容契約，提�
 - 不承諾任意時刻可強制終止原生函式，或在同程序原生崩潰後繼續工作。
 
 ## 使用者故事
+
 
 - US-E01：為一個分析任務選擇引擎，知道它支援哪些功能及是否仍為實驗性。
 - US-E02：使用相同範圍分別執行兩個引擎，比較結果，不產生兩份重複的檔案操作。

@@ -162,18 +162,28 @@ public sealed class IndexedWorkbenchStore : IWorkbenchStore, IDisposable
     IProgress<AnalysisComparisonProgress>? progress = null, CancellationToken cancellationToken = default)
     => Task.Run(async () =>
     {
-      ImmutableArray<ScanSourceSnapshot> sources;
-      using (var connection = _database.Open())
-      {
-        var id = IndexDatabase.Scalar<string>(connection, "SELECT id FROM sources ORDER BY position LIMIT 1")
-          ?? throw new InvalidOperationException("No sources are configured.");
-        sources = ScanJobSnapshot.Capture(connection, id, first, [_areas.AppDataRoot]).Sources
-          .Where(source => ScanJobSnapshot.IsOnline(source, _volumes)).ToImmutableArray();
-      }
-      if (sources.IsEmpty) { throw new InvalidOperationException("No configured source is online."); }
+      var sources = CaptureOnlineSources(first);
       return await new AnalysisEngineComparison(_engines, _areas.AppDataRoot, _volumes)
         .RunConfiguredAsync(sources, first, second, progress, cancellationToken).ConfigureAwait(false);
     }, cancellationToken);
+
+  public ImageReviewArchive ImageReviews => new(_areas.AppDataRoot, _volumes);
+
+  public Task<SimilarImageReport> AnalyzeImagesAsync(AnalysisEngineSnapshot engine, int threshold,
+    IProgress<ImmutableArray<AnalysisSessionJob>>? progress = null, CancellationToken cancellationToken = default)
+    => Task.Run(() => new SimilarImageAnalysis(_engines, _areas.AppDataRoot, _volumes)
+      .RunConfiguredAsync(CaptureOnlineSources(engine), engine, threshold, progress, cancellationToken), cancellationToken);
+
+  private ImmutableArray<ScanSourceSnapshot> CaptureOnlineSources(AnalysisEngineSnapshot engine)
+  {
+    using var connection = _database.Open();
+    var id = IndexDatabase.Scalar<string>(connection, "SELECT id FROM sources ORDER BY position LIMIT 1")
+      ?? throw new InvalidOperationException("No sources are configured.");
+    var sources = ScanJobSnapshot.Capture(connection, id, engine, [_areas.AppDataRoot]).Sources
+      .Where(source => ScanJobSnapshot.IsOnline(source, _volumes)).ToImmutableArray();
+    if (sources.IsEmpty) { throw new InvalidOperationException("No configured source is online."); }
+    return sources;
+  }
 
   private void LoadAnalysisSelection()
   {

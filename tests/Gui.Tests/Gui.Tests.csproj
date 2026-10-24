@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Gui\Gui.csproj" />
+    <None Include="../Fixtures/similar-images/*" Link="Fixtures/similar-images/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

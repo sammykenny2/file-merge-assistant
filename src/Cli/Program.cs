@@ -30,6 +30,7 @@ static class Program
       rootCommand.AddCommand(AnalysisCommands.Engines(services));
       rootCommand.AddCommand(AnalysisCommands.Analyze(services));
       rootCommand.AddCommand(AnalysisCommands.Compare(services));
+        rootCommand.AddCommand(AnalysisCommands.SimilarImages(services));
 
       return await rootCommand.InvokeAsync(args);
     }

@@ -41,6 +41,9 @@
       <DataTemplate DataType="{x:Type w:SinceViewModel}">
         <w:SinceView />
       </DataTemplate>
+      <DataTemplate DataType="{x:Type w:ImageReviewViewModel}">
+        <w:ImageReviewView />
+      </DataTemplate>
       <DataTemplate DataType="{x:Type s:SettingsViewModel}">
         <s:SettingsView />
       </DataTemplate>

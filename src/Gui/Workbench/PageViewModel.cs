@@ -15,6 +15,7 @@ public interface INavigator
   void ShowStack(string stackId);
   void ShowPlan();
   void ShowHistory(string? batchId = null);
+  void ShowImages();
 
   /// <summary>「自上次以來」: what changed since the last visit.</summary>
   void ShowSince();

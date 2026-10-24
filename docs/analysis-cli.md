@@ -1,8 +1,8 @@
 # Versioned analysis CLI
 
-`engines` and `analyze` use the same registry, engine snapshots, source policies
-and result validator as the WPF workbench. They currently expose exact-content
-analysis. The initial managed algorithm is `xxh128-v1`; native Czkawka uses
+`engines`, `analyze` and `similar-images` use the same registry, engine snapshots, source policies
+and result validator as the WPF workbench. Exact-content and experimental image
+analysis are available. The initial managed algorithm is `xxh128-v1`; native Czkawka uses
 `blake3-v1`. Both remain Experimental.
 
 ```powershell
@@ -85,3 +85,21 @@ Agreement between engines does not establish correctness. Each engine is also
 checked against the shared known-answer fixture; see
 [the comparison evidence](research/2026-10-24-engine-comparison.md). File
 observations are checks at particular times, not an atomic filesystem snapshot.
+
+## Similar-image candidates
+
+```powershell
+dotnet run --project src/Cli --no-build -- similar-images C:\Samples D:\Backup --distance 6
+```
+
+The initial image engine is `czkawka`, algorithm `image-mean8-d8-v1`; managed
+image analysis is unsupported. A matching optional native library must be staged
+as described above. `--distance` is the maximum Hamming distance, 0–16 bits,
+default 6. Its version 1 JSON includes the independent analysis index, frozen
+jobs, per-file perceptual evidence, candidate pairs and error diagnostics.
+`exactGroups` is empty; no operation plan is produced. Exit codes follow `analyze`.
+
+Only PNG/JPEG is enabled. Image count/pair limits, crop misses and the distinction
+between a candidate and exact content are documented in
+[Image review](image-review.md). The WPF page adds parallel viewing and persistent
+manual notes; CLI JSON is a separate analysis format, not a WPF review archive.

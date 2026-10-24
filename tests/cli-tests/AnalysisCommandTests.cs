@@ -3,6 +3,7 @@ using System.CommandLine.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using FileMergeAssistant.Analysis;
+using FileMergeAssistant.Tests.Scanning;
 using FileMergeAssistant.Cli.Commands;
 using FileMergeAssistant.Infrastructure;
 using FileMergeAssistant.Localization;
@@ -29,6 +30,7 @@ public sealed class AnalysisCommandTests
     root.AddCommand(AnalysisCommands.Engines(services));
     root.AddCommand(AnalysisCommands.Analyze(services, dataRoot));
     root.AddCommand(AnalysisCommands.Compare(services, dataRoot));
+    root.AddCommand(AnalysisCommands.SimilarImages(services, dataRoot));
     return root;
   }
 
@@ -119,6 +121,39 @@ public sealed class AnalysisCommandTests
     Assert.NotEqual(json.RootElement.GetProperty("first").GetProperty("indexPath").GetString(), json.RootElement.GetProperty("second").GetProperty("indexPath").GetString());
     Assert.True(json.RootElement.GetProperty("second").GetProperty("metrics").TryGetProperty("processReadBytes", out _));
     Assert.All(dataset.Files, file => Assert.Equal(file.Bytes, File.ReadAllBytes(file.Path)));
+  }
+
+  [CliNativeFact]
+  public async Task Image_Command_Produces_Review_Pairs_With_Defined_Distance_And_No_Exact_Groups()
+  {
+    using var tree = new TempTree();
+    var fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", "similar-images");
+    File.Copy(Path.Combine(fixture, "a-original.png"), tree.PathOf("original.png"));
+    File.Copy(Path.Combine(fixture, "a-resize.png"), tree.PathOf("resize.png"));
+    var registry = new AnalysisEngineRegistry([new ManagedAnalysisEngine(), new NativeAnalysisEngine(Environment.GetEnvironmentVariable("FMA_NATIVE_LIBRARY_DIR"))]);
+    using var services = new ServiceCollection().AddSingleton(registry).BuildServiceProvider();
+    var console = new TestConsole();
+    Assert.Equal(0, await Root(services, DataRoot()).InvokeAsync(["similar-images", tree.Root, "--distance", "6"], console));
+    using var json = JsonDocument.Parse(console.Out.ToString()!);
+    Assert.True(json.RootElement.GetProperty("isComplete").GetBoolean());
+    Assert.Equal(1, json.RootElement.GetProperty("pairs").GetArrayLength());
+    Assert.Equal(0, json.RootElement.GetProperty("pairs")[0].GetProperty("distance").GetInt32());
+    Assert.Equal(0, json.RootElement.GetProperty("analysis").GetProperty("exactGroups").GetArrayLength());
+    Assert.Contains("Hamming", json.RootElement.GetProperty("distanceDefinition").GetString(), StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task An_Unsupported_Image_Engine_Is_Diagnosed_Before_An_Index_Is_Created()
+  {
+    using var tree = new TempTree();
+    var data = DataRoot();
+    using var services = new ServiceCollection().AddSingleton(AnalysisEngineRegistry.ManagedOnly()).BuildServiceProvider();
+    var console = new TestConsole();
+    Assert.Equal(2, await Root(services, data).InvokeAsync(["similar-images", tree.Root, "--engine", "csharp"], console));
+    using var json = JsonDocument.Parse(console.Out.ToString()!);
+    Assert.Equal("Unsupported", json.RootElement.GetProperty("outcome").GetString());
+    Assert.False(json.RootElement.GetProperty("isComplete").GetBoolean());
+    Assert.False(Directory.Exists(data));
   }
 
   [Fact]
