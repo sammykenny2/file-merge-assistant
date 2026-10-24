@@ -70,8 +70,17 @@ foreach ($rid in @('win-x64', 'linux-arm64', 'osx-arm64')) {
 $hashingNotices = Join-Path $licenses 'System.IO.Hashing'
 New-Item -ItemType Directory -Path $hashingNotices -Force | Out-Null
 $hashingNoticeFiles = @(Get-ChildItem -LiteralPath (Join-Path $packages 'system.io.hashing/10.0.13') -File | Where-Object { $_.Name -match '^(LICENSE|THIRD-PARTY-NOTICES)' })
-if (-not ($hashingNoticeFiles | Where-Object { $_.Name -match '^LICENSE' })) { throw 'System.IO.Hashing license text is missing.' }
+$supplement = Join-Path $root 'third-party-notices/system.io.hashing-10.0.13'
+$hashingSource = Get-Content -LiteralPath (Join-Path $supplement 'SOURCE.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+[xml]$hashingSpec = Get-Content -LiteralPath (Join-Path $packages 'system.io.hashing/10.0.13/system.io.hashing.nuspec') -Raw -Encoding UTF8
+if ($hashingSpec.package.metadata.id -ne $hashingSource.package -or $hashingSpec.package.metadata.version -ne $hashingSource.version -or
+    $hashingSpec.package.metadata.repository.commit -ne $hashingSource.commit -or
+    (Get-FileHash -LiteralPath (Join-Path $supplement $hashingSource.file) -Algorithm SHA256).Hash -ne $hashingSource.sha256) {
+    throw 'Pinned System.IO.Hashing notice provenance/checksum mismatch.'
+}
+$hashingNoticeFiles += Get-Item -LiteralPath (Join-Path $supplement $hashingSource.file)
 $hashingNoticeFiles | Copy-Item -Destination $hashingNotices
+Copy-Item -LiteralPath (Join-Path $supplement 'SOURCE.json') -Destination $hashingNotices
 $metadata = [ordered]@{
     formatVersion = 1; kind = 'private-analysis-platform-verification'; sourceCommit = ((& git -C $root rev-parse HEAD) -join '').Trim()
     sourceWorktreeDirty = [bool]((& git -C $root -c core.excludesFile=.gitignore status --porcelain) -join '')

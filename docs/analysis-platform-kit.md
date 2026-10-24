@@ -17,6 +17,11 @@ redistribution. The target script records its actual Cargo dependency graph.
 ImageSharp is absent from this verifier; the separate full FMA Release build
 still needs the owner's missing ImageSharp key.
 
+System.IO.Hashing's NuGet package carries an MIT expression and third-party
+notices but no license-text file. Its original MIT text is supplied from the
+exact repository commit recorded by its nuspec; `Licenses/System.IO.Hashing/`
+includes the text and SHA-256/provenance, checked during kit creation.
+
 ## Prerequisites
 
 - 64-bit Linux arm64 with glibc, or Apple Silicon macOS, using a regular user.

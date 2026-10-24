@@ -8,3 +8,4 @@
 
 # Preserve the exact upstream notice bytes validated by sources.json SHA-256.
 native/fma-czkawka-ffi/third-party-notices/** -text
+third-party-notices/**/LICENSE* -text

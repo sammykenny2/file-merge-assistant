@@ -235,6 +235,16 @@ function Copy-LicenseNotices([string]$AppStage, [string[]]$AssetsFiles) {
                 -not ($Notices | Where-Object { $_.FullName -eq (Resolve-Path -LiteralPath $LicenseFile).Path })) {
                 $Notices += Get-Item -LiteralPath $LicenseFile
             }
+            if ($Library.Name -eq 'System.IO.Hashing/10.0.13') {
+                $Supplement = Join-Path $ProjectRoot 'third-party-notices/system.io.hashing-10.0.13'
+                $NoticeSource = Get-Content -LiteralPath (Join-Path $Supplement 'SOURCE.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+                if (-not $Nuspec -or $Metadata.id -ne $NoticeSource.package -or $Metadata.version -ne $NoticeSource.version -or
+                    $Metadata.repository.commit -ne $NoticeSource.commit -or
+                    (Get-FileHash -LiteralPath (Join-Path $Supplement $NoticeSource.file) -Algorithm SHA256).Hash -ne $NoticeSource.sha256) {
+                    throw 'Pinned System.IO.Hashing notice provenance/checksum mismatch.'
+                }
+                $Notices += Get-Item -LiteralPath (Join-Path $Supplement $NoticeSource.file), (Join-Path $Supplement 'SOURCE.json')
+            }
             if ($Notices.Count -gt 0) {
                 $Target = Join-Path $LicenseRoot ($Library.Name -replace '/', ' ')
                 New-Item -ItemType Directory -Path $Target -Force | Out-Null
