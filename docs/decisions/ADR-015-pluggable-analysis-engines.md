@@ -6,11 +6,11 @@ Accepted（2026-10-24：產品負責人要求將雙引擎策略整理為 ADR、S
 
 詳細契約見 [SPEC-002](../specs/SPEC-002-pluggable-analysis-engines.md)，實作順序與驗證閘門見 [PLAN-002](../plans/PLAN-002-pluggable-analysis-engines.md)。SPEC 已核准分階段實作，PLAN 進行中；實作提交先不 push。
 
-## 背景
+## 背景（決策前查閱基準）
 
 - 目前 FMA GUI 與 CLI 使用 C# Core。工作台的 `SourceScanner` 同時負責探索、候選確認及索引更新；內容指紋使用帶有 `xxh128:` 標記的 XxHash128。CLI 仍有另一條服務式掃描路徑，兩個入口尚未統一為可切換引擎。
 - FMA 的來源識別、完整索引、佇列、疊與審閱決定、操作計畫、回收及還原，並不是單一重複檔掃描工具可以取代的功能。保留這些產品流程於 C# Core。
-- `czkawka_core` 提供重複檔案、相似圖片與影片等分析工具。查閱版本為 12.0.2、commit `eb8b91dbb4d25dff416202674ee0de84ee4b5e5c`；它提供 Rust API，尚無供 FMA 直接呼叫的 C ABI。這是評估基準，不是本 repo 已安裝的相依。
+- `czkawka_core` 提供重複檔案、相似圖片與影片等分析工具。查閱版本為 12.0.2、commit `eb8b91dbb4d25dff416202674ee0de84ee4b5e5c`；它提供 Rust API，當時尚無供 FMA 呼叫的 C ABI。這是決策前的評估基準；後續固定相依與自有 C ABI 實作見 PLAN-002。
 - 自有 C# 實作仍有價值，但功能與大量資料驗證尚不完整，不要求它立刻與上游全部工具功能相同。
 - 使用者的主要資料與實際大量驗證環境在 Windows；macOS／Linux 是後續希望提供的使用平台，但可用的真實資料與驗證資源較少。
 
@@ -23,7 +23,10 @@ Accepted（2026-10-24：產品負責人要求將雙引擎策略整理為 ADR、S
 - **C# 引擎**：逐步從既有分析程式抽出，先支援精確內容去重，標示各能力的實際完成與驗證程度。
 - **Czkawka 引擎**：由 FMA 擁有的薄 Rust 包裝依賴固定版本的 `czkawka_core`，建置為 `cdylib`，C# 透過 P/Invoke 呼叫。先驗證 Windows x64；其他平台使用對應的原生程式庫。
 
-以下是目標架構，不代表這些介接元件已存在：
+以下為決策採用的責任邊界；逐段實作與驗收以 PLAN-002 為準。
+Phase 6 已將中立契約與兩個適配抽成 `src/analysis/`、`net10.0` leaf，由
+Windows Core 單向引用；Core 仍擁有來源／索引／操作責任。這沒有移植整套
+Core 或 WPF，平台缺口見 [支援矩陣](../platform-support.md)。
 
 ```text
 [FMA GUI] --+

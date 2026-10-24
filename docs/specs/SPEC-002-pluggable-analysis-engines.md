@@ -23,7 +23,9 @@
 - `files.hash` 保存既有帶標記的內容指紋；疊偵測依賴它，執行器的複製驗證也使用現有 XxHash128 路徑。
 - 尚無 `IFileAnalysisEngine`、引擎 registry、Rust FFI 程式庫、引擎設定或引擎專用契約測試。下列需求與型別名稱均為目標，不是目前 API。
 
-2026-10-24 Slice 1 已建立 `src/Core/Analysis/` 的共用契約、registry 與 `ManagedAnalysisEngine`，工作台已委派候選分析；Slice 2 建立 Windows x64 C ABI 與 `NativeAnalysisEngine` 並通過獨立 interop 審閱。持久快照與 GUI／CLI 選擇仍未接入，預設仍為 C#。完成紀錄與測試見 PLAN-002，以上清單保留為原始查閱基準。
+2026-10-24 Slice 1／2 建立共用契約、registry、C# 適配及 Windows x64 C ABI。
+當時尚未接入的持久快照與 GUI／CLI 選擇已由 Slice 3／4 完成，詳見下方及
+PLAN-002。以上清單保留為原始查閱基準；目前預設仍是 C# XxHash128。
 
 目前契約使用不可變 record 與 `ImmutableArray`：`AnalysisRequest` 包含 Job ID、`AnalysisEngineSnapshot` 及明確候選；`IFileAnalysisEngine.AnalyzeAsync` 非同步逐批回傳 `AnalysisBatch`，帶序號、逐檔證據、群組、進度及 final／complete 標記。`AnalysisResultValidator` 驗證全部輸出及完整覆蓋；未收到 final、未知／重複 ID、算法不符、無完整相同證據的精確群組均拒絕。C# 目前僅宣告精確內容分析（xxh128-v1、sha256-v1），成熟度為 Experimental，沒有提供相似圖片能力。
 
@@ -38,6 +40,13 @@ Slice 4a 已提供 WPF 精確內容引擎選擇及任務快照顯示。新任務
 Slice 4b 的 CLI `engines`／`analyze` 已接同一套精確內容契約，提供明確引擎／算法及版本 1 JSON。每次唯讀 run 使用獨立索引，保存完整清單與固定任務快照；不建立操作計畫，也不更動原 `scan` 的格式或預設。詳細行為見 [analysis-cli.md](../analysis-cli.md)。比較報告及相似圖片仍待後續，G4 尚未完成。
 
 2026-10-24 Slice 4e 已通過 Windows x64 Debug G4：WPF 引擎選擇／唯讀比較、版本化 CLI 及相似圖片人工審閱均已接入；圖片註記獨立保存，不寫入精確操作決定。原生 adapter 0.2.0／ABI 1，圖片算法 `image-mean8-d8-v1`。縮放／重壓縮／旋轉／裁切 corpus 及裁切漏判有量測；兩引擎仍 Experimental、C# 預設保留。規模、staging／安裝、Release 與非 Windows 驗收仍待 Phase 5／6。參考[圖片流程](../image-review.md)、[目前架構](../architecture.md)及 PLAN-002。
+
+Phase 5／6 更新：已建立 private Debug Windows NSIS／portable、離線 native
+重建來源及 owner-run VM 腳本；乾淨安裝／更新／卸載與 Release 條件仍待驗。
+唯讀契約與適配已抽成 `src/analysis/`、`net10.0` leaf，另有 Pi arm64／
+macOS arm64 驗證包；目標機 native build/run、Unix 物理身份及跨磁碟結果待回傳。
+完整 Core／CLI／WPF 仍是 Windows 工作流程，未宣告非 Windows 支援或 GUI 移植。
+現況與缺口見 [平台矩陣](../platform-support.md)及 PLAN-002，這些交付不等於 G5／G6 通過。
 
 ## 目標
 
@@ -161,11 +170,11 @@ Slice 4b 的 CLI `engines`／`analyze` 已接同一套精確內容契約，提�
 
 ## Open Questions
 
-- [ ] 上游公開 API 能否滿足逐檔證據、候選批次與中斷的契約；是否需要最小 API 擴充？
-- [ ] 索引與舊計畫的具體遷移 schema、比較／驗證算法如何分離？
-- [ ] ABI 批次上限、資源限制及驗收效能門檻，依量測如何設定？
-- [ ] macOS／Linux 的首批平台／架構與本機測試環境為何？
-- [ ] Avalonia 的驗證範圍與採用決定另行處理；本規格不授權 GUI 移植。
+- [x] 上游公開 API：逐檔 hash 適配通過 G0／G2，decoder／圖片證據通過 Windows G4；不需修改外部 fork，契約範圍見 PLAN-002。
+- [x] 遷移與驗證：schema 5、分代證據、內容摘要及獨立操作驗證已通過 Windows G3；不清空舊索引。
+- [ ] ABI 固定上限與 worker 限制已寫入 [ABI.md](../../native/fma-czkawka-ffi/ABI.md)；正式性能門檻仍待量測與產品決定，不能由小型測試推定。
+- [x] 首批機器選為 owner 的 Pi arm64／labwc Wayland 及 Apple Silicon macOS；確切 OS／filesystem 由 kit 在目標機蒐集，執行結果仍待驗。
+- [x] 本階段保留 WPF，Avalonia 驗證延後；後續採用未決，未授權 GUI 移植，見 ADR-009。
 
 ---
 

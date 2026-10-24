@@ -228,3 +228,24 @@ ProductVersion/SHA-256 distinguish a real lower-version upgrade, same-version
 payload replacement and reinstall. No supplied baseline means reinstall only.
 Manual GUI/DPI behavior is recorded separately, never counted as script success.
 The currently running host installation has not been replaced or uninstalled.
+
+## Return new analysis jobs to the managed engine
+
+In Settings, select the C# engine and XxHash128 or SHA-256 for future exact-content
+jobs. Existing jobs keep their original engine/version/scope. A native job with
+its exact library missing waits with a diagnostic. If its original version
+cannot be restored, use **Rescan from the start / 從頭重新掃描** to create a new
+job with the current settings; Resume preserves the original snapshot. There is no hidden
+fallback or reinterpretation of existing evidence.
+
+Historical plans and restore do not require the native analysis DLL. Do not
+replace a loaded DLL while FMA is running; modules remain resident for native
+worker safety. Returning to C# does not require deleting the index or history.
+It also does not mean downgrading the application executable or restoring an
+older database schema; those are separate compatibility decisions.
+
+The Windows VM and Pi/macOS private verification payloads have their own README
+and checksums. See [the platform matrix](platform-support.md) and
+[target kit instructions](analysis-platform-kit.md) for measured scope and
+owner-run cases. Source/dependency notices accompany the payloads; this does not
+clear the missing ImageSharp key or the three unresolved native notice texts.

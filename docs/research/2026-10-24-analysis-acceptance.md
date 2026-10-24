@@ -8,6 +8,10 @@ bytes RAM (31.7 GiB), NTFS fixed C: volume. .NET SDK 10.0.402; FMA Core Debug
 at `0f2696e` with the then-uncommitted acceptance host; native adapter 0.2.0,
 Rust 1.99.1 Release, upstream `eb8b91dbb4d25dff416202674ee0de84ee4b5e5c`.
 Suite JSON records the actual host/Core/native binary SHA-256 values.
+This long suite uses the frozen `0f2696e` host/Core copies and the original
+runner loaded at launch. The later bounded runner (`1e05021`) and portable
+assembly extraction (`c6592ae`) have separate tests; this run does not measure
+their rebuilt binaries.
 
 ## Completed cases
 
@@ -17,12 +21,13 @@ Suite JSON records the actual host/Core/native binary SHA-256 values.
 | 5,000 | Czkawka BLAKE3 | 9.793 | 20.201 | 15.410 | 253 |
 | 50,000 | C# XxHash128 | 88.621 | 104.717 | 128.671 | 2,503 |
 | 50,000 | Czkawka BLAKE3 | 96.452 | 141.846 | 138.619 | 2,503 |
+| 300,000 | C# XxHash128 | 479.041 | 673.619 | 747.831 | 15,003 |
 
 Each case has six sources, 19 extra indexed entries, 600 measured regenerable
 files and six excluded files. All completed cases match the independent
 content-family oracle, preserve source bytes, skip the junction and pass
 simulated offline waiting/inventory retention/resume. Warm backend inputs are
-zero; +1% backend inputs are exactly 50 or 500. This verifies content-cache reuse,
+zero; +1% backend inputs are exactly 50, 500 or 3,000. This verifies content-cache reuse,
 not that a warm full workbench rescan is faster.
 
 The 50k first populated model notification arrived after 7.841 s (C#) and 6.943 s
@@ -31,6 +36,14 @@ working-set peaks stayed below 192 MB in these runs. Index growth is material:
 after three phases the main DB was 405,704,704 bytes (C#) / 458,428,416 bytes
 (native), plus WAL/SHM. Complete evidence generations are retained; no retention
 policy or destructive history cleanup was added by this test.
+
+The completed C# 300k case also passed simulated offline recovery and retained
+all 303,019 indexed entries after the +1% phase. At that phase's boundary the
+main DB was 2,434,420,736 bytes, WAL 127,031,992 bytes, and sampled process working
+set 617,742,336 bytes. Process-reported read transfers were 53,299,341,832 bytes
+for that rescan; these include cached/SQLite activity and are not physical disk
+reads. This is a material indexing/retained-generation cost, not evidence that
+hash-library speed alone determines application performance.
 
 Raw retained evidence:
 
@@ -49,8 +62,10 @@ generation/verification warm it, and small development builds/tests and unrelate
 host activity were not isolated. .NET is Debug while Rust is Release. Do not use
 the table as an optimized speed comparison or performance guarantee.
 
-The 300k cases are still running and are not counted as passing here. Physical
-USB/HDD, controlled cold disk cache, GUI input latency/10k-row scrolling and
+The Czkawka 300k case is still running and is not counted as passing here. The
+separate [offscreen WPF probe](2026-10-24-wpf-scale.md) measures synthetic UI
+layout/recycling, not input during a real scan. Physical USB/HDD, controlled
+cold disk cache, physical GUI input, full hub load-more and
 clean-VM lifecycle acceptance remain unverified. Managed XxHash128 stays the
 default; both engines remain Experimental and G5 is not passed.
 

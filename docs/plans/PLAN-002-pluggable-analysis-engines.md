@@ -98,7 +98,7 @@
 - [ ] Task 5.1：按 ADR-011 的決策或記錄的暫定規模，在 Windows 量測冷／暖快取、多來源、新增 1% 檔案、USB／離線、連結與長路徑。記錄硬體及缺測項目，不宣稱未量測的速度。
 - [ ] Task 5.2：乾淨環境驗證原生產物、NSIS 安裝／更新／卸載、架構及 ABI 檢查、無 Rust 工具鏈執行；保留可選引擎不可用的診斷。按實際相依處理授權，ImageSharp 發佈條件仍依 ADR-012。
 - [ ] Task 5.3：按能力與 Windows 版本記錄驗收成熟度；產品負責人依報告決定是否把原生能力設為新任務預設。C# 未驗證能力仍為實驗性，無隱藏 fallback。
-- [ ] Task 5.4：更新 setup／testing／deployment／release notes，記錄已交付範圍、回退方式與仍未支援能力；CI 不因本階段自動恢復。
+- [x] Task 5.4：更新 setup／testing／deployment／release notes，記錄已交付範圍、回退方式與仍未支援能力；CI 不因本階段自動恢復。外部驗證回傳後仍須補實際結果，不提前宣告 G5。
 
 **Deliverables**：Windows 驗收報告、可安裝套件及明確的預設值決定。
 

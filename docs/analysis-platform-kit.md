@@ -45,12 +45,12 @@ includes the text and SHA-256/provenance, checked during kit creation.
 
 ## Run on the target
 
-Extract the complete kit into a new directory with a short path. Keep its source,
-vendor, tests and bin folders together. From that directory:
-
 The builder writes a unique `analysis-platform-<id>.zip` and adjacent `.sha256`.
 Verify that outer hash before extraction; the target runner also verifies every
 listed inner file before compiling or executing payloads.
+
+Extract the complete kit into a new directory with a short path. Keep its source,
+vendor, tests and bin folders together. From that directory:
 
 ```bash
 bash scripts/testing/verify-analysis-platform.sh
